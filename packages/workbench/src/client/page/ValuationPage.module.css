@@ -1,4 +1,4 @@
-.page { max-width: 1060px; margin: 0 auto; padding: 28px 18px 64px; }
+.page { max-width: 1060px; margin: 0 auto; padding: 28px 18px 64px; height: 100%; overflow-y: auto; }
 
 .kick { font-size: 12px; font-weight: 800; letter-spacing: .14em; color: #0c6379; display: flex; align-items: center; gap: 8px; }
 .kick::before { content: ""; width: 8px; height: 8px; border-radius: 2px; background: #0e7490; }
