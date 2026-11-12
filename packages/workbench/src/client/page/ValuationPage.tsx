@@ -1,37 +1,93 @@
 /**
- * The valuation workbench page: skeleton entry for the six-step batch flow.
- * Next milestone: interactive steps mirroring the static prototype
- * valuation-batch-workbench.html (参数确认 → 选择指数 → 成分券权重 →
- * 估值日期 → 并行度 → 运行报告), driven by a page-directed agent preset.
+ * The valuation workbench page: the interactive six-step batch flow
+ * mirroring the static prototype valuation-batch-workbench.html
+ * (参数确认 → 选择指数 → 成分券权重 → 估值日期 → 并行度 → 运行报告).
+ * All data on this page is demo data generated locally.
  */
 
+import { Fragment, useMemo, useState } from 'react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import { zh } from '../locales'
+import { genConstituents, type BatchParams } from './data'
+import css from './ValuationPage.module.css'
+import { DateStep } from './steps/DateStep'
+import { IndexStep } from './steps/IndexStep'
+import { ParallelStep } from './steps/ParallelStep'
+import { ParamsStep } from './steps/ParamsStep'
+import { RunStep } from './steps/RunStep'
+import { WeightsStep } from './steps/WeightsStep'
+
+const STEP_KEYS = ['step.1', 'step.2', 'step.3', 'step.4', 'step.5', 'step.6']
 
 export function ValuationPage(props: PropsLocale) {
   const t = (key: string): string => {
     try { return props.t(key) } catch { /* 页面首帧 locale 未就绪时用字典兜底 */ }
     return zh[key] ?? key
   }
-  const steps = ['step.1', 'step.2', 'step.3', 'step.4', 'step.5', 'step.6']
+  const [step, setStep] = useState(0)
+  const [params, setParams] = useState<BatchParams>({ sentiment: 10, dcf: 40, comp: 40, sent: 20 })
+  const [indexSel, setIndexSel] = useState('上证50')
+  const [date, setDate] = useState<Date>(() => new Date())
+  const [parallel, setParallel] = useState<3 | 10>(3)
+  const list = useMemo(() => genConstituents(), [])
+
+  const jump = (i: number) => setStep(Math.max(0, Math.min(STEP_KEYS.length - 1, i)))
+
   return (
-    <div style={{ padding: '28px 32px', maxWidth: 880 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, margin: '0 0 6px' }}>{t('page.title')}</h1>
-      <p style={{ color: '#5c6875', margin: '0 0 20px', fontSize: 14 }}>{t('page.lede')}</p>
-      <ol style={{ display: 'flex', flexWrap: 'wrap', gap: 8, listStyle: 'none', padding: 0, margin: '0 0 20px' }}>
-        {steps.map((key, i) => (
-          <li key={key} style={{ border: '1px solid #dbe1e8', borderRadius: 999, padding: '6px 14px', fontSize: 13, color: '#0c6379', fontWeight: 600 }}>
-            {i + 1} · {t(key)}
-          </li>
+    <div className={css.page}>
+      <header>
+        <div className={css.kick}>指数估值跑批 · 方案对比与落地安排</div>
+        <h1 className={css.h1}>{t('page.title')}</h1>
+        <p className={css.lead}>
+          两套估值技能部署在同一环境、跑同一批指数成分券，<strong>用估值替代价格、按权重合成指数点位</strong>。先以上证50 跑通，不纠结准不准，先出结果。
+        </p>
+        <div className={css.badge}>演示原型 · 表单与数据均为示例，不提交真实任务</div>
+      </header>
+
+      <ol className={css.steps}>
+        {STEP_KEYS.map((key, i) => (
+          <Fragment key={key}>
+            {i > 0 && <li className={css.stepArrow}>→</li>}
+            <li
+              className={`${css.stepLi} ${i < step ? css.stepLiDone : ''} ${i === step ? css.stepLiCur : ''}`}
+              onClick={() => jump(i)}
+            >
+              <span className={css.stepNo}>{i + 1}</span>{t(key)}
+            </li>
+          </Fragment>
         ))}
       </ol>
-      <div style={{ border: '1px solid #dbe1e8', borderRadius: 12, padding: 16, background: '#eef2f6' }}>
-        <p style={{ fontWeight: 700, margin: '0 0 8px', fontSize: 14 }}>{t('formula.title')}</p>
-        <p style={{ margin: '4px 0', fontSize: 13 }}>{t('formula.a')}</p>
-        <p style={{ margin: '4px 0', fontSize: 13 }}>{t('formula.b')}</p>
-        <p style={{ margin: '10px 0 0', fontSize: 12.5, color: '#b45309' }}>{t('formula.warn')}</p>
-      </div>
-      <p style={{ color: '#5c6875', fontSize: 13, marginTop: 20 }}>{t('page.skeleton')}</p>
+
+      <main>
+        {step === 0 && (
+          <div className={css.panel}><ParamsStep params={params} onChange={setParams} /></div>
+        )}
+        {step === 1 && (
+          <div className={css.panel}><IndexStep indexSel={indexSel} onSelect={setIndexSel} /></div>
+        )}
+        {step === 2 && (
+          <div className={css.panel}><WeightsStep list={list} /></div>
+        )}
+        {step === 3 && (
+          <div className={css.panel}><DateStep date={date} onSelect={setDate} /></div>
+        )}
+        {step === 4 && (
+          <div className={css.panel}><ParallelStep parallel={parallel} onSelect={setParallel} /></div>
+        )}
+        {step === 5 && (
+          <div className={css.panel}>
+            <RunStep params={params} indexSel={indexSel} date={date} parallel={parallel} list={list} />
+          </div>
+        )}
+      </main>
+
+      <nav className={css.nav}>
+        <button className={`${css.btn} ${css.btnGhost}`} disabled={step === 0} onClick={() => jump(step - 1)}>← 上一步</button>
+        <button className={css.btn} disabled={step === STEP_KEYS.length - 1} onClick={() => jump(step + 1)}>下一步 →</button>
+      </nav>
+      <p className={css.footnote}>
+        演示数据由前端本地生成，不请求真实行情与估值服务 · 下一里程碑：接真实参数与跑批执行
+      </p>
     </div>
   )
 }
