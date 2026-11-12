@@ -1,0 +1,14 @@
+# 估值跑批工作台 bundle：一行声明（client 插件）。行 id 一律以 `valuation-` 开头。
+#
+#   valuation-workbench          六步工作台（client 插件）。占用与上游 ui-workbench
+#                                **同一个面板 id 与同一个侧栏入口**，所以 valuation
+#                                profile 必须先关上游那一行（ui-workbench disabled: true）。
+#
+# 后续里程碑的五行扩展（对应 FactorLab 的形态）：
+#   valuation-data              成分券/权重/市值数据连接（MCP 或 skill 文件系统）
+#   valuation-skills            随包交付的估值技能（陈老师 zip 解包后放 skills/）
+#   valuation-preset-chat       聊天里的六步 SOP 预设
+#   valuation-preset-workbench  六步工作台专用预设：流程归页面，agent 只做当前步取证
+- insert:
+    - id: valuation-workbench
+      name: '@valuation/workbench'

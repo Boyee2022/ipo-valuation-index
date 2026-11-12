@@ -1,0 +1,8 @@
+{
+  "name": "valuation-workbench",
+  "private": true,
+  "packageManager": "pnpm@11.28.5",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  }
+}

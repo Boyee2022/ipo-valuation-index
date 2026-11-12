@@ -1,0 +1,6 @@
+- id: ui-workbench
+  disabled: true
+# 品牌名由 @valuation/workbench 注入的 sidebar.brand.name 插槽提供；
+# 禁用上游品牌插件，避免其先注册的 FactorLab 占位胜出。
+- id: ui-brand-official
+  disabled: true

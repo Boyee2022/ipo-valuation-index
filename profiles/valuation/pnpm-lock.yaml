@@ -1,0 +1,13 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: false
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@valuation/workbench':
+        specifier: link:/Users/boyisong/workspace/valuation-workbench/packages/workbench
+        version: link:../../../workspace/valuation-workbench/packages/workbench

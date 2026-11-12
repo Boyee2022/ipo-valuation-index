@@ -1,0 +1,17 @@
+{
+  "name": "dsh-profile-valuation",
+  "private": true,
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-web-app",
+        "@valuation/workbench"
+      ],
+      "patchReload": "live"
+    }
+  },
+  "dependencies": {
+    "@valuation/workbench": "link:/Users/boyisong/workspace/valuation-workbench/packages/workbench"
+  }
+}
