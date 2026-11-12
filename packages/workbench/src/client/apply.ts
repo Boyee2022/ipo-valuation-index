@@ -50,6 +50,24 @@ export function apply(ctx: ClientContext): void {
     observer.observe(node, { childList: true, characterData: true, subtree: true })
     return () => observer.disconnect()
   }, 'valuation-workbench: product title')
+  // The new-session hero headline is baked into the shared ui-conversation
+  // package ("探索指数，构建策略", its own locale namespace, no per-instance
+  // override); rewrite the rendered text node to instance-appropriate copy.
+  ctx.effect(() => {
+    const SOURCE = '探索指数，构建策略'
+    const rewrite = (): void => {
+      if (!document.body || !document.body.textContent || !document.body.textContent.includes(SOURCE)) return
+      const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
+      while (walker.nextNode()) {
+        const node = walker.currentNode as Text
+        if (node.nodeValue === SOURCE) node.nodeValue = '探索指数估值，合成指数点位'
+      }
+    }
+    rewrite()
+    const observer = new MutationObserver(rewrite)
+    observer.observe(document.body, { childList: true, characterData: true, subtree: true })
+    return () => observer.disconnect()
+  }, 'valuation-workbench: hero headline')
   ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({
     name: 'sidebar.brand.name',
   }, BrandName))
