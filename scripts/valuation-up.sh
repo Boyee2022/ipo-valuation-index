@@ -1,5 +1,5 @@
 #!/bin/bash
-# 一键启动：估值跑批 Web 服务（绑定单个内网地址，默认 3081）
+# 一键启动：估值跑批 Web 服务（绑定单个内网地址，默认 3081）+ 批跑执行服务（3089）
 # 幂等：已在运行则跳过。用法： bash ~/workspace/valuation-up.sh
 set -uo pipefail
 export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
@@ -34,7 +34,7 @@ HOST="${VALUATION_HOST:-$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifad
 [ -n "$HOST" ] || fail "取不到内网 IP；请用 VALUATION_HOST=<ip> 指定"
 cd "$REPO" || fail "无法进入 $REPO"
 
-echo "[1/1] Web 服务 ${HOST}:${PORT} (profile ${PROFILE}, DSH_HOME ${DSH_HOME})"
+echo "[1/2] Web 服务 ${HOST}:${PORT} (profile ${PROFILE}, DSH_HOME ${DSH_HOME})"
 if listening; then
   echo "      already running"
 else
@@ -61,6 +61,38 @@ else
   echo "      started (pid $(cat "$PIDFILE"))"
 fi
 
+# ── 批跑执行服务（3089，纯标准库 Python；技能目录在 ~/.dsh-valuation，失败不阻断 Web 服务） ──
+BATCH_REPO="$HOME/workspace/valuation-workbench"
+BATCHLOG="$LOGDIR/batch.log"
+BATCHPID="$LOGDIR/batch.pid"
+BPORT="${VALUATION_BATCH_PORT:-3089}"
+batch_listening() { lsof -nP -iTCP:"$BPORT" -sTCP:LISTEN >/dev/null 2>&1; }
+
+echo "[2/2] 批跑服务 ${HOST}:${BPORT}（上证50 真实跑批）"
+if [ -f "$BATCH_REPO/packages/batch/server.py" ]; then
+  if batch_listening; then
+    echo "      already running"
+  else
+    : > "$BATCHLOG"
+    nohup python3 -u "$BATCH_REPO/packages/batch/server.py" </dev/null >>"$BATCHLOG" 2>&1 &
+    echo $! > "$BATCHPID"
+    j=0
+    while [ "$j" -lt 15 ]; do
+      batch_listening && break
+      j=$((j + 1)); sleep 1
+    done
+    if batch_listening; then
+      echo "      started (pid $(cat "$BATCHPID"))"
+    else
+      echo "      FAIL: 启动失败，日志尾部：" >&2
+      tail -n 20 "$BATCHLOG" >&2
+      rm -f "$BATCHPID"
+    fi
+  fi
+else
+  echo "      skipped（缺少 $BATCH_REPO/packages/batch/server.py）"
+fi
+
 URL=""
 i=0
 while [ "$i" -lt 10 ]; do
@@ -71,5 +103,6 @@ done
 echo
 echo "就绪"
 echo "  内网 : ${URL:-http://${HOST}:${PORT}/  （token 未生成，见日志）}"
+echo "  批跑 : http://${HOST}:${BPORT}  （日志 $BATCHLOG）"
 echo "  停止 : bash ~/workspace/valuation-down.sh"
 echo "  日志 : $WEBLOG"

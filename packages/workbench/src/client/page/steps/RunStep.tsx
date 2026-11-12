@@ -1,4 +1,4 @@
-/** Step 6 运行与报告：演示跑批 + 逐券结果 + 拟合点位对比。 */
+/** Step 6 运行与报告：真实跑批（Mac 批跑服务 3089）+ 服务不可达时回退演示跑批。 */
 
 import { useEffect, useRef, useState } from 'react'
 import {
@@ -11,6 +11,7 @@ import {
   type Constituent,
   type ValuationResult,
 } from '../data'
+import { pollJob, reportUrl, runBatch, type JobStatus } from '../api'
 import css from '../ValuationPage.module.css'
 import { ReportModal } from '../ReportModal'
 
@@ -19,33 +20,139 @@ interface LogLine {
   kind: 'ok' | 'dim' | 'info'
 }
 
+const STAT_N = 1000
+
 export function RunStep(props: {
   params: BatchParams
   indexSel: string
   date: Date
   parallel: 3 | 10
   list: Constituent[]
+  realMode: boolean
+  realErr: string | null
+  realAsOf: string
 }) {
-  const { params, indexSel, date, parallel, list } = props
+  const { params, indexSel, date, parallel, list, realMode, realErr, realAsOf } = props
   const total = list.length
   const [running, setRunning] = useState(false)
+  const [mode, setMode] = useState<'demo' | 'real' | null>(null)
   const [done, setDone] = useState(0)
   const [logs, setLogs] = useState<LogLine[]>([])
   const [results, setResults] = useState<ValuationResult[] | null>(null)
+  const [job, setJob] = useState<JobStatus | null>(null)
   const [modalIdx, setModalIdx] = useState<number | null>(null)
   const timerRef = useRef<number | null>(null)
+  const pollRef = useRef<number | null>(null)
+  const seenRef = useRef<Set<number>>(new Set())
+  const failRef = useRef(0)
+  const jobIdRef = useRef<string | null>(null)
 
   useEffect(() => () => {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current)
+    if (pollRef.current !== null) window.clearInterval(pollRef.current)
   }, [])
 
   const push = (text: string, kind: LogLine['kind'] = 'info') =>
     setLogs(prev => [...prev, { text, kind }])
 
-  const start = () => {
+  const stopPolling = () => {
+    if (pollRef.current !== null) {
+      window.clearInterval(pollRef.current)
+      pollRef.current = null
+    }
+  }
+
+  const pollOnce = async (jobId: string) => {
+    try {
+      const st = await pollJob(jobId)
+      failRef.current = 0
+      setJob(st)
+      setDone(st.done)
+      for (const r of st.rows) {
+        if (seenRef.current.has(r.idx)) continue
+        if (r.status === 'ok') {
+          seenRef.current.add(r.idx)
+          push(`[完成] ${r.name} · 中枢/股 ${r.per_share?.toFixed(2) ?? '—'} · 置信度 ${r.confidence_level ?? '—'}`, 'ok')
+        } else if (r.status === 'skip') {
+          seenRef.current.add(r.idx)
+          push(`[跳过] ${r.name} · ${r.error ?? '未产出结果'}`, 'dim')
+        }
+      }
+      if (st.state === 'done') {
+        stopPolling()
+        setRunning(false)
+        const s = st.summary
+        push(`[完成] ${st.total} 条处理完毕：估值 ${s?.ok ?? 0} 条 · 跳过 ${s?.skip ?? 0} 条`, 'ok')
+        push(`[合成] 拟合点位 ${s?.fitted_point?.toFixed(2) ?? '—'} · 指数收盘 ${s?.index_close?.toFixed(2) ?? '—'}`, 'ok')
+      } else if (st.state === 'error') {
+        stopPolling()
+        setRunning(false)
+        push(`[错误] 任务异常：${(st.error ?? '').split('\n')[0]}`, 'dim')
+      }
+    } catch {
+      failRef.current += 1
+      push(`[轮询] 第 ${failRef.current} 次查询失败，继续重试`, 'dim')
+      if (failRef.current >= 6) {
+        stopPolling()
+        setRunning(false)
+        push('[提示] 连续查询失败，已停止跟踪；任务仍在服务端继续，可点「恢复跟踪」续看', 'dim')
+      }
+    }
+  }
+
+  const startReal = async () => {
+    stopPolling()
     setRunning(true)
+    setMode('real')
     setDone(0)
     setResults(null)
+    setJob(null)
+    setLogs([])
+    seenRef.current = new Set()
+    failRef.current = 0
+    push(`[准备] 上证50 成分券 ${total} 条 · 并行度 ${parallel} · 统计抽样 ${STAT_N} · 数据时点 ${realAsOf} · 估值日期 ${fmtDateShort(date)}（参考口径）`, 'dim')
+    try {
+      const { job_id } = await runBatch({
+        index: 'sh50',
+        parallel,
+        stat_n: STAT_N,
+        weights: { dcf: params.dcf / 100, comp: params.comp / 100, sent: params.sent / 100 },
+        sentiment_rounds: params.sentiment,
+      })
+      jobIdRef.current = job_id
+      push(`[任务] ${job_id} 已提交，开始跟踪`, 'dim')
+      pollOnce(job_id)
+      pollRef.current = window.setInterval(() => pollOnce(job_id), 2500)
+    } catch (e) {
+      setRunning(false)
+      push(`[错误] 提交任务失败：${e instanceof Error ? e.message : String(e)} · 批跑服务不可达`, 'dim')
+    }
+  }
+
+  const stop = () => {
+    stopPolling()
+    if (timerRef.current !== null) window.clearTimeout(timerRef.current)
+    timerRef.current = null
+    setRunning(false)
+    push(mode === 'real' ? '[停止] 已停止跟踪；任务仍在服务端继续执行，可点「恢复跟踪」续看' : '[停止] 演示跑批已手动停止', 'dim')
+  }
+
+  const resume = () => {
+    if (!jobIdRef.current) return
+    const jobId = jobIdRef.current
+    setRunning(true)
+    push('[恢复] 继续跟踪任务进度', 'dim')
+    pollOnce(jobId)
+    pollRef.current = window.setInterval(() => pollOnce(jobId), 2500)
+  }
+
+  const startDemo = () => {
+    stopPolling()
+    setRunning(true)
+    setMode('demo')
+    setDone(0)
+    setResults(null)
+    setJob(null)
     setLogs([])
     const all = list.map((c, i) => valuationPair(c, i))
     setResults(all)
@@ -80,14 +187,9 @@ export function RunStep(props: {
     timerRef.current = window.setTimeout(tick, 260)
   }
 
-  const stop = () => {
-    if (timerRef.current !== null) window.clearTimeout(timerRef.current)
-    timerRef.current = null
-    setRunning(false)
-    push('[停止] 演示跑批已手动停止', 'dim')
-  }
-
-  const finished = results !== null && !running && done >= total
+  const finished = mode === 'demo' && results !== null && !running && done >= total
+  const realDone = mode === 'real' && job !== null && job.state === 'done'
+  const realPartial = mode === 'real' && job !== null && job.state !== 'done'
   const vA = finished ? synthLevel(list, results!.map(r => r.chen)) : 0
   const vB = finished ? synthLevel(list, results!.map(r => r.shi)) : 0
   const pA = finished ? synthLevel(list, results!.map(r => r.price)) : 1
@@ -101,23 +203,53 @@ export function RunStep(props: {
   const sx = (i: number) => 4 + (i / (pts.length - 1)) * 312
   const sy = (v: number) => 80 - ((v - lo) / (hi - lo)) * 74
 
+  const progTotal = mode === 'real' && job ? job.total : total
+  const prog = progTotal > 0 ? (done / progTotal) * 100 : 0
+  const summ = realDone && job && job.summary ? job.summary : null
+  const diffPct =
+    summ && summ.fitted_point != null && summ.index_close
+      ? `${(((summ.fitted_point / summ.index_close) - 1) * 100).toFixed(2)}%`
+      : '—'
+
   return (
     <section>
       <h2>运行与报告</h2>
-      <p className={css.sub}>并行跑批，逐家生成报告，最后输出总结报告；两版拟合点位并排对比。</p>
+      <p className={css.sub}>
+        {realMode
+          ? '真实跑批：批跑服务逐券执行「输入组装 → 估值引擎 → 统计校验 → HTML 报告 → 八项机检」，按权重合成拟合点位。'
+          : '并行跑批，逐家生成报告，最后输出总结报告；两版拟合点位并排对比。'}
+      </p>
       <div className={css.review}>
         <div className={css.chip}>指数 <b>{indexSel}</b></div>
         <div className={css.chip}>估值日期 <b>{fmtDateShort(date)}</b></div>
         <div className={css.chip}>方法加权 <b>DCF {params.dcf}% · 可比 {params.comp}% · 舆情 {params.sent}%</b></div>
         <div className={css.chip}>舆情轮数 <b>≤ {params.sentiment} 轮</b></div>
         <div className={css.chip}>并行度 <b>每批 {parallel} 条</b></div>
+        {realMode && <div className={css.chip}>数据时点 <b>{realAsOf}</b></div>}
       </div>
       <div className={css.runbox}>
-        <button className={css.btn} disabled={running} onClick={start}>
-          {finished ? '重新演示跑批' : '开始演示跑批'}
-        </button>
-        {running && <button className={`${css.btn} ${css.btnGhost}`} style={{ marginLeft: 10 }} onClick={stop}>停止</button>}
-        <div className={css.progress}><i style={{ width: `${(done / total) * 100}%` }} /></div>
+        {realMode ? (
+          <>
+            <button className={css.btn} disabled={running} onClick={startReal}>
+              {realDone ? '重新跑批' : '开始跑批（真实执行）'}
+            </button>
+            {running && <button className={`${css.btn} ${css.btnGhost}`} style={{ marginLeft: 10 }} onClick={stop}>停止</button>}
+            {!running && realPartial && <button className={`${css.btn} ${css.btnGhost}`} style={{ marginLeft: 10 }} onClick={resume}>恢复跟踪</button>}
+          </>
+        ) : (
+          <>
+            <button className={css.btn} disabled={running} onClick={startDemo}>
+              {finished ? '重新演示跑批' : '开始演示跑批'}
+            </button>
+            {running && <button className={`${css.btn} ${css.btnGhost}`} style={{ marginLeft: 10 }} onClick={stop}>停止</button>}
+          </>
+        )}
+        {!realMode && (
+          <p className={css.hint} style={{ margin: '10px 0 0' }}>
+            批跑服务未连接（{realErr ?? '未知原因'}）→ 当前为演示模式，不请求真实服务。
+          </p>
+        )}
+        <div className={css.progress}><i style={{ width: `${prog}%` }} /></div>
         {logs.length > 0 && (
           <div className={css.log}>
             {logs.map((l, i) => (
@@ -186,6 +318,100 @@ export function RunStep(props: {
               i={modalIdx}
               r={results![modalIdx]}
               w={list[modalIdx].w}
+              onClose={() => setModalIdx(null)}
+            />
+          )}
+        </div>
+      )}
+      {realDone && summ && job && (
+        <div className={css.result}>
+          <div className={css.repGrid}>
+            <div className={css.sumcard}>
+              <h4>拟合点位 · 陈老师口径</h4>
+              <p className={css.level}>{summ.fitted_point != null ? summ.fitted_point.toFixed(2) : '—'} <small>（加权合成 · 真实执行）</small></p>
+              <p className={css.delta}>指数收盘 {summ.index_close != null ? summ.index_close.toFixed(2) : '—'} · 偏离 {diffPct}</p>
+            </div>
+            <div className={css.cmp2}>
+              <h4>本次跑批</h4>
+              <table>
+                <tbody>
+                  <tr><th>拟合点位</th><td>{summ.fitted_point != null ? summ.fitted_point.toFixed(2) : '—'}</td></tr>
+                  <tr><th>指数收盘</th><td>{summ.index_close != null ? summ.index_close.toFixed(2) : '—'}</td></tr>
+                  <tr><th>样本</th><td>{summ.total} 条</td></tr>
+                  <tr><th>出估值 / 跳过</th><td>{summ.ok} / {summ.skip}</td></tr>
+                  <tr><th>数据时点（权重）</th><td>{realAsOf}</td></tr>
+                  <tr><th>任务</th><td className={css.mono}>{job.id}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className={css.detailList} style={{ marginTop: 16 }}>
+            <h4>逐券结果（点击查看明细 · 报告新窗口打开）</h4>
+            {job.rows.map(r => {
+              const ok = r.status === 'ok'
+              const ratio = ok && r.per_share != null && r.close ? (r.per_share / r.close).toFixed(2) : null
+              return (
+                <button key={r.idx} className={css.drow} onClick={() => setModalIdx(r.idx)}>
+                  <span className={css.drowNm}>
+                    {r.name}
+                    {!ok && <span className={`${css.tag} ${css.tagWarn}`} style={{ marginLeft: 8 }}>跳过</span>}
+                    {ok && r.warnings && r.warnings.length > 0 && <span className={`${css.tag} ${css.tagMut}`} style={{ marginLeft: 8 }}>预警 {r.warnings.length}</span>}
+                  </span>
+                  <span className={css.drowVals}>
+                    <span>价 {r.close != null ? r.close.toFixed(2) : '—'}</span>
+                    <span>中枢/股 <b>{ok && r.per_share != null ? r.per_share.toFixed(2) : '—'}</b></span>
+                    <span>估值/价 <b>{ratio ?? '—'}</b></span>
+                    {ok && r.report && (
+                      <span className={css.linkBtn} onClick={e => { e.stopPropagation(); window.open(reportUrl(job.id, r.report!), '_blank', 'noopener') }}>报告 ↗</span>
+                    )}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          <div className={css.note}>
+            拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)；跳过券不计入分子分母。估值中枢为引擎综合中枢（DCF/可比/舆情按 {params.dcf}/{params.comp}/{params.sent} 加权），逐券口径见各券报告。本结果为探索性研究参考，不构成投资建议。
+          </div>
+          {modalIdx !== null && (
+            <ReportModal
+              name={job.rows.find(r => r.idx === modalIdx)?.name ?? '—'}
+              i={modalIdx}
+              r={results?.[modalIdx] ?? { price: 0, chen: 0, shi: 0 }}
+              w={job.rows.find(r => r.idx === modalIdx)?.weight ?? 0}
+              real={job.rows.find(r => r.idx === modalIdx) ?? null}
+              jobId={job.id}
+              onClose={() => setModalIdx(null)}
+            />
+          )}
+        </div>
+      )}
+      {realPartial && job && job.rows.length > 0 && (
+        <div className={css.detailList} style={{ marginTop: 16 }}>
+          <h4>逐券进度（已完成 {job.done}/{job.total}）</h4>
+          {job.rows.map(r => {
+            const ok = r.status === 'ok'
+            return (
+              <button key={r.idx} className={css.drow} onClick={() => setModalIdx(r.idx)}>
+                <span className={css.drowNm}>
+                  {r.name}
+                  {r.status === 'skip' && <span className={`${css.tag} ${css.tagWarn}`} style={{ marginLeft: 8 }}>跳过</span>}
+                  {(r.status === 'pending' || r.status === 'running') && <span className={css.tag} style={{ marginLeft: 8 }}>等待中</span>}
+                </span>
+                <span className={css.drowVals}>
+                  <span>价 {r.close != null ? r.close.toFixed(2) : '—'}</span>
+                  <span>中枢/股 <b>{ok && r.per_share != null ? r.per_share.toFixed(2) : '—'}</b></span>
+                </span>
+              </button>
+            )
+          })}
+          {modalIdx !== null && (
+            <ReportModal
+              name={job.rows.find(r => r.idx === modalIdx)?.name ?? '—'}
+              i={modalIdx}
+              r={results?.[modalIdx] ?? { price: 0, chen: 0, shi: 0 }}
+              w={job.rows.find(r => r.idx === modalIdx)?.weight ?? 0}
+              real={job.rows.find(r => r.idx === modalIdx) ?? null}
+              jobId={job.id}
               onClose={() => setModalIdx(null)}
             />
           )}

@@ -1,5 +1,5 @@
 #!/bin/bash
-# 一键停止：估值跑批 Web 服务。幂等：已停止则跳过。
+# 一键停止：估值跑批 Web 服务（3081）+ 批跑执行服务（3089）。幂等：已停止则跳过。
 # 用法： bash ~/workspace/valuation-down.sh
 set -uo pipefail
 export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
@@ -14,7 +14,7 @@ mkdir -p "$LOGDIR"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 listening() { lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; }
 
-echo "[1/1] 停止 Web 服务 :$PORT"
+echo "[1/2] 停止 Web 服务 :$PORT"
 if listening; then
   pid=""
   [ -f "$PIDFILE" ] && pid="$(cat "$PIDFILE" 2>/dev/null || true)"
@@ -40,6 +40,35 @@ if listening; then
   echo "      stopped"
 else
   rm -f "$PIDFILE"
+  echo "      already stopped"
+fi
+
+# ── 批跑执行服务（3089） ──
+BATCHPID="$LOGDIR/batch.pid"
+BPORT="${VALUATION_BATCH_PORT:-3089}"
+batch_listening() { lsof -nP -iTCP:"$BPORT" -sTCP:LISTEN >/dev/null 2>&1; }
+
+echo "[2/2] 停止批跑服务 :$BPORT"
+if batch_listening; then
+  listener_pid="$(lsof -nP -iTCP:"$BPORT" -sTCP:LISTEN -t | head -1)"
+  [ -n "$listener_pid" ] || fail "端口 $BPORT 被监听但取不到 pid；请自行确认后处理，避免误杀别的进程"
+  ps -o command= -p "$listener_pid" | grep -q "batch/server.py" || fail "监听进程 $listener_pid 不是批跑服务；请自行确认后处理"
+  kill "$listener_pid" 2>/dev/null || true
+  i=0
+  while [ "$i" -lt "$DOWN_DEADLINE" ]; do
+    batch_listening || break
+    i=$((i + 1)); sleep 1
+  done
+  if batch_listening; then
+    echo "      正常结束超时，强制结束" >&2
+    kill -9 "$listener_pid" 2>/dev/null || true
+    sleep 1
+  fi
+  batch_listening && fail "批跑服务未停止（$BPORT 仍被监听）"
+  rm -f "$BATCHPID"
+  echo "      stopped"
+else
+  rm -f "$BATCHPID"
   echo "      already stopped"
 fi
 

@@ -1,10 +1,55 @@
-/** Step 3 成分券与权重：50 条成分券表 + 权重合成公式。 */
+/** Step 3 成分券与权重：真实上证50 成分券表（批跑服务不可达时回退示例数据）。 */
 
+import type { RealConstituent } from '../api'
 import type { Constituent } from '../data'
 import css from '../ValuationPage.module.css'
 
-export function WeightsStep(props: { list: Constituent[] }) {
-  const { list } = props
+export function WeightsStep(props: {
+  list: Constituent[]
+  real: RealConstituent[] | null
+  asOf: string
+  error: string | null
+}) {
+  const { list, real, asOf, error } = props
+
+  if (real && real.length > 0) {
+    const sum = real.reduce((a, r) => a + (r.weight ?? 0), 0)
+    return (
+      <section>
+        <h2>成分券与权重</h2>
+        <p className={css.sub}>上证50 真实成分券与收盘权重（东财指数成分表 · 数据时点 {asOf}）。</p>
+        <div className={css.fstrip}>
+          <span className={css.chunk}>权重因子（每期更新）</span><span className={css.op}>×</span>
+          <span className={css.chunk}>当日市值（每日变动）</span><span className={css.arr}>→</span>
+          <span className={css.chunk}>当日权重（归一化）</span>
+        </div>
+        <div className={css.tablewrap}>
+          <table className={css.clist}>
+            <thead>
+              <tr><th>#</th><th>代码</th><th>名称</th><th>行业</th><th>收盘价</th><th>当日权重</th></tr>
+            </thead>
+            <tbody>
+              {real.map((r, i) => (
+                <tr key={r.secucode}>
+                  <td className={css.mono}>{i + 1}</td>
+                  <td className={css.mono}>{r.secucode}</td>
+                  <td>{r.name}</td>
+                  <td>{r.industry ?? '—'}</td>
+                  <td className={css.mono}>{r.close?.toFixed(2) ?? '—'}</td>
+                  <td className={css.mono}><b>{r.weight?.toFixed(2)}%</b></td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr><td colSpan={6}>共 {real.length} 条 · 权重合计 <b>{sum.toFixed(2)}%</b> · 数据时点 {asOf}（前一日收盘权重口径）</td></tr>
+            </tfoot>
+          </table>
+        </div>
+        <div className={css.note}>权重因子每期更新、期间不变；当日市值每日变动。当日权重盘中才出，<b>用前一日收盘权重计算</b>（与指数口径一致）。</div>
+      </section>
+    )
+  }
+
   const sum = list.reduce((a, r) => a + r.w, 0)
   return (
     <section>
@@ -36,7 +81,10 @@ export function WeightsStep(props: { list: Constituent[] }) {
           </tfoot>
         </table>
       </div>
-      <div className={css.note}>权重因子每期更新、期间不变；当日市值每日变动。当日权重盘中才出，<b>可先用前一日因子计算</b>。</div>
+      <div className={css.note}>
+        权重因子每期更新、期间不变；当日市值每日变动。当日权重盘中才出，<b>可先用前一日因子计算</b>。
+        {error && <span style={{ color: '#b45309' }}>（批跑服务未连接：{error}，当前为示例数据）</span>}
+      </div>
     </section>
   )
 }

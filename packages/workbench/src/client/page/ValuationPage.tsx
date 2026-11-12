@@ -2,12 +2,14 @@
  * The valuation workbench page: the interactive six-step batch flow
  * mirroring the static prototype valuation-batch-workbench.html
  * (参数确认 → 选择指数 → 成分券权重 → 估值日期 → 并行度 → 运行报告).
- * All data on this page is demo data generated locally.
+ * 真实数据模式：成分与权重来自 Mac 批跑服务（东财指数成分表），运行步提交真实跑批任务；
+ * 批跑服务不可达时回退为本地演示数据。
  */
 
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import { zh } from '../locales'
+import { fetchConstituents, type ConstituentsPayload } from './api'
 import { genConstituents, type BatchParams } from './data'
 import css from './ValuationPage.module.css'
 import { DateStep } from './steps/DateStep'
@@ -29,7 +31,19 @@ export function ValuationPage(props: PropsLocale) {
   const [indexSel, setIndexSel] = useState('上证50')
   const [date, setDate] = useState<Date>(() => new Date())
   const [parallel, setParallel] = useState<3 | 10>(3)
+  const [real, setReal] = useState<ConstituentsPayload | null>(null)
+  const [realErr, setRealErr] = useState<string | null>(null)
   const list = useMemo(() => genConstituents(), [])
+
+  useEffect(() => {
+    let alive = true
+    fetchConstituents()
+      .then(p => { if (alive) setReal(p) })
+      .catch(e => { if (alive) setRealErr(e instanceof Error ? e.message : String(e)) })
+    return () => { alive = false }
+  }, [])
+
+  const realMode = real !== null
 
   const jump = (i: number) => setStep(Math.max(0, Math.min(STEP_KEYS.length - 1, i)))
 
@@ -41,7 +55,11 @@ export function ValuationPage(props: PropsLocale) {
         <p className={css.lead}>
           两套估值技能部署在同一环境、跑同一批指数成分券，<strong>用估值替代价格、按权重合成指数点位</strong>。先以上证50 跑通，不纠结准不准，先出结果。
         </p>
-        <div className={css.badge}>演示原型 · 表单与数据均为示例，不提交真实任务</div>
+        <div className={css.badge}>
+          {realMode
+            ? `真实数据模式 · 批跑服务已连接（成分数据时点 ${real!.as_of}）`
+            : '演示原型 · 表单与数据均为示例，不提交真实任务'}
+        </div>
       </header>
 
       <ol className={css.steps}>
@@ -66,7 +84,14 @@ export function ValuationPage(props: PropsLocale) {
           <div className={css.panel}><IndexStep indexSel={indexSel} onSelect={setIndexSel} /></div>
         )}
         {step === 2 && (
-          <div className={css.panel}><WeightsStep list={list} /></div>
+          <div className={css.panel}>
+            <WeightsStep
+              list={list}
+              real={realMode ? real!.rows : null}
+              asOf={realMode ? real!.as_of : ''}
+              error={realErr}
+            />
+          </div>
         )}
         {step === 3 && (
           <div className={css.panel}><DateStep date={date} onSelect={setDate} /></div>
@@ -76,7 +101,16 @@ export function ValuationPage(props: PropsLocale) {
         )}
         {step === 5 && (
           <div className={css.panel}>
-            <RunStep params={params} indexSel={indexSel} date={date} parallel={parallel} list={list} />
+            <RunStep
+              params={params}
+              indexSel={indexSel}
+              date={date}
+              parallel={parallel}
+              list={list}
+              realMode={realMode}
+              realErr={realErr}
+              realAsOf={realMode ? real!.as_of : ''}
+            />
           </div>
         )}
       </main>
@@ -86,7 +120,9 @@ export function ValuationPage(props: PropsLocale) {
         <button className={css.btn} disabled={step === STEP_KEYS.length - 1} onClick={() => jump(step + 1)}>下一步 →</button>
       </nav>
       <p className={css.footnote}>
-        演示数据由前端本地生成，不请求真实行情与估值服务 · 下一里程碑：接真实参数与跑批执行
+        {realMode
+          ? `真实成分与权重来自东财指数成分表（${real!.as_of}），估值由 Mac 批跑服务逐券执行 · 拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价) · 探索性研究，不构成投资建议`
+          : '演示数据由前端本地生成，不请求真实行情与估值服务 · 下一里程碑：接真实参数与跑批执行'}
       </p>
     </div>
   )
