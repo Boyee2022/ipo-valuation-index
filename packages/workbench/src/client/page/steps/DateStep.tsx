@@ -1,4 +1,4 @@
-/** Step 4 选择估值日期：日历（周一开头），仅今天/昨天可选（需求口径）。 */
+/** Step 4 选择估值日期：日历（周一开头），任意交易日可选（周末与未来日期禁用）。 */
 
 import { useState } from 'react'
 import { WEEK_CN, fmtDate } from '../data'
@@ -23,17 +23,14 @@ export function DateStep(props: { date: Date; onSelect: (d: Date) => void }) {
   const daysInMonth = new Date(viewY, viewM + 1, 0).getDate()
   const offset = (new Date(viewY, viewM, 1).getDay() + 6) % 7
   const today = new Date()
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
   const isWeekend = (d: number) => {
     const w = new Date(viewY, viewM, d).getDay()
     return w === 0 || w === 6
   }
   const isToday = (d: number) =>
     viewY === today.getFullYear() && viewM === today.getMonth() && d === today.getDate()
-  const isYesterday = (d: number) => {
-    const y = new Date()
-    y.setDate(y.getDate() - 1)
-    return viewY === y.getFullYear() && viewM === y.getMonth() && d === y.getDate()
-  }
   const isSel = (d: number) =>
     viewY === date.getFullYear() && viewM === date.getMonth() && d === date.getDate()
 
@@ -45,7 +42,7 @@ export function DateStep(props: { date: Date; onSelect: (d: Date) => void }) {
   return (
     <section>
       <h2>选择估值日期</h2>
-      <p className={css.sub}>一次只估一天，仅「今天 / 昨天」可选（需求口径）；周频运行时不需手选，由定时任务自动带入当天。</p>
+      <p className={css.sub}>一次只估一天，任意交易日可选（周末与未来日期不可选）；周频运行时不需手选，由定时任务自动带入当天。</p>
       <div className={css.calwrap}>
         <div className={css.cal}>
           <div className={css.chead}>
@@ -60,7 +57,7 @@ export function DateStep(props: { date: Date; onSelect: (d: Date) => void }) {
                 <tr key={r}>
                   {cells.slice(r * 7, r * 7 + 7).map((d, c) => {
                     if (d === null) return <td key={c} />
-                    const off = isWeekend(d) || !(isToday(d) || isYesterday(d))
+                    const off = isWeekend(d) || new Date(viewY, viewM, d) > todayStart
                     const cls = [
                       css.calBtn,
                       off ? css.calBtnOff : '',
