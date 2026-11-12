@@ -25,7 +25,7 @@ export function ValuationPage(props: PropsLocale) {
     return zh[key] ?? key
   }
   const [step, setStep] = useState(0)
-  const [params, setParams] = useState<BatchParams>({ sentiment: 10, dcf: 40, comp: 40, sent: 20 })
+  const [params, setParams] = useState<BatchParams>({ sentiment: 10, dcf: 30, comp: 50, sent: 20 })
   const [indexSel, setIndexSel] = useState('上证50')
   const [date, setDate] = useState<Date>(() => new Date())
   const [parallel, setParallel] = useState<3 | 10>(3)
