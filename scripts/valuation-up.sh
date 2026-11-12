@@ -5,9 +5,14 @@ set -uo pipefail
 export PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
 
 # 数据隔离：本实例使用独立 DSH_HOME（会话/工作区/存储/附件与 FactorLab 的 ~/.dsh 互不可见）。
-# profiles 通过符号链接共享（应用配置，非用户数据）；技能 ~/.agents/skills 由 AGENTS_HOME 解析，不受影响。
+# profiles 通过符号链接共享（应用配置，非用户数据）。
 export DSH_HOME="$HOME/.dsh-valuation"
 mkdir -p "$DSH_HOME"
+
+# 技能隔离：用户级技能目录独立（~/.dsh-valuation/agents），不再读取 FactorLab 共享的
+# ~/.agents/skills；内置技能来自仓库/project 目录，不受影响。解析优先级：配置 > DSH_AGENTS_HOME > ~/.agents。
+export DSH_AGENTS_HOME="$HOME/.dsh-valuation/agents"
+mkdir -p "$DSH_AGENTS_HOME"
 
 REPO="$HOME/workspace/csi-dsh"
 PROFILE="valuation"
