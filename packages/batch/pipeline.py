@@ -108,9 +108,13 @@ def list_jobs():
             continue
         try:
             j = json.loads(sf.read_text(encoding='utf-8'))
+            s = j.get('summary') or {}
             out.append({
                 'id': j.get('id'), 'index': j.get('index'), 'created': j.get('created'),
                 'state': j.get('state'), 'done': j.get('done'), 'total': j.get('total'),
+                'components_as_of': j.get('components_as_of'),
+                'fitted_point': s.get('fitted_point'), 'index_close': s.get('index_close'),
+                'ok': s.get('ok'), 'skip': s.get('skip'),
             })
         except Exception:
             continue

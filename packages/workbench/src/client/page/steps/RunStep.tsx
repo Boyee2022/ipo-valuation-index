@@ -1,6 +1,6 @@
 /** Step 6 运行与报告：真实跑批（Mac 批跑服务 3089）+ 服务不可达时回退演示跑批。 */
 
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import {
   BASE_LEVEL,
   SKIP_INDEXES,
@@ -11,7 +11,7 @@ import {
   type Constituent,
   type ValuationResult,
 } from '../data'
-import { pollJob, reportUrl, runBatch, type JobStatus } from '../api'
+import { fetchJobs, pollJob, reportUrl, runBatch, type JobMeta, type JobStatus } from '../api'
 import css from '../ValuationPage.module.css'
 import { ReportModal } from '../ReportModal'
 
@@ -41,6 +41,10 @@ export function RunStep(props: {
   const [results, setResults] = useState<ValuationResult[] | null>(null)
   const [job, setJob] = useState<JobStatus | null>(null)
   const [modalIdx, setModalIdx] = useState<number | null>(null)
+  const [hist, setHist] = useState<JobMeta[] | null>(null)
+  const [histSel, setHistSel] = useState<string | null>(null)
+  const [histJob, setHistJob] = useState<JobStatus | null>(null)
+  const [histModalIdx, setHistModalIdx] = useState<number | null>(null)
   const timerRef = useRef<number | null>(null)
   const pollRef = useRef<number | null>(null)
   const seenRef = useRef<Set<number>>(new Set())
@@ -51,6 +55,18 @@ export function RunStep(props: {
     if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     if (pollRef.current !== null) window.clearInterval(pollRef.current)
   }, [])
+
+  const loadHist = async () => {
+    try {
+      setHist(await fetchJobs())
+    } catch {
+      setHist([])
+    }
+  }
+
+  useEffect(() => {
+    if (realMode) void loadHist()
+  }, [realMode])
 
   const push = (text: string, kind: LogLine['kind'] = 'info') =>
     setLogs(prev => [...prev, { text, kind }])
@@ -81,6 +97,7 @@ export function RunStep(props: {
       if (st.state === 'done') {
         stopPolling()
         setRunning(false)
+        void loadHist()
         const s = st.summary
         push(`[完成] ${st.total} 条处理完毕：估值 ${s?.ok ?? 0} 条 · 跳过 ${s?.skip ?? 0} 条`, 'ok')
         push(`[合成] 拟合点位 ${s?.fitted_point?.toFixed(2) ?? '—'} · 指数收盘 ${s?.index_close?.toFixed(2) ?? '—'}`, 'ok')
@@ -108,6 +125,9 @@ export function RunStep(props: {
     setResults(null)
     setJob(null)
     setLogs([])
+    setHistSel(null)
+    setHistJob(null)
+    setHistModalIdx(null)
     seenRef.current = new Set()
     failRef.current = 0
     push(`[准备] 上证50 成分券 ${total} 条 · 并行度 ${parallel} · 统计抽样 ${STAT_N} · 数据时点 ${realAsOf} · 估值日期 ${fmtDateShort(date)}（参考口径）`, 'dim')
@@ -414,6 +434,112 @@ export function RunStep(props: {
               jobId={job.id}
               onClose={() => setModalIdx(null)}
             />
+          )}
+        </div>
+      )}
+      {realMode && (
+        <div className={css.detailList} style={{ marginTop: 20 }}>
+          <h4>
+            历史跑批（{hist === null ? '加载中…' : hist.length} 次 · 报告存于批跑服务，可随时回看）
+            <span className={css.linkBtn} style={{ marginLeft: 10, fontWeight: 400 }} onClick={() => void loadHist()}>刷新</span>
+          </h4>
+          {hist !== null && hist.length === 0 && <p className={css.hint}>暂无历史任务记录。</p>}
+          {hist !== null && hist.length > 0 && (
+            <div className={css.tablewrap}>
+              <table className={css.clist}>
+                <thead>
+                  <tr><th>#</th><th>任务</th><th>提交时间</th><th>状态</th><th>拟合点位</th><th>指数收盘</th><th>偏离</th><th>出估值/跳过</th><th>操作</th></tr>
+                </thead>
+                <tbody>
+                  {hist.map((h, i) => {
+                    const st = h.state === 'done' ? '完成' : h.state === 'running' ? '进行中' : '异常'
+                    const dev =
+                      h.fitted_point != null && h.index_close
+                        ? `${(((h.fitted_point / h.index_close) - 1) * 100).toFixed(2)}%`
+                        : '—'
+                    const expanded = histSel === h.id && histJob !== null && histJob.id === h.id
+                    return (
+                      <Fragment key={h.id}>
+                        <tr>
+                          <td className={css.mono}>{i + 1}</td>
+                          <td className={css.mono}>{h.id}</td>
+                          <td>{h.created}</td>
+                          <td>{st}</td>
+                          <td className={css.mono}><b>{h.fitted_point != null ? h.fitted_point.toFixed(2) : '—'}</b></td>
+                          <td className={css.mono}>{h.index_close != null ? h.index_close.toFixed(2) : '—'}</td>
+                          <td className={css.mono}>{dev}</td>
+                          <td>{h.ok != null ? `${h.ok} / ${h.skip ?? 0}` : `${h.done}/${h.total}`}</td>
+                          <td>
+                            <span className={css.linkBtn} onClick={() => window.open(reportUrl(h.id, 'summary.html'), '_blank', 'noopener')}>汇总报告 ↗</span>
+                            <span
+                              className={css.linkBtn}
+                              style={{ marginLeft: 10 }}
+                              onClick={async () => {
+                                if (expanded) {
+                                  setHistSel(null)
+                                  setHistJob(null)
+                                  setHistModalIdx(null)
+                                  return
+                                }
+                                setHistSel(h.id)
+                                setHistJob(null)
+                                try {
+                                  setHistJob(await pollJob(h.id))
+                                } catch {
+                                  setHistJob(null)
+                                }
+                              }}
+                            >
+                              {expanded ? '收起' : '逐券'}
+                            </span>
+                          </td>
+                        </tr>
+                        {expanded && (
+                          <tr>
+                            <td colSpan={9} style={{ padding: 0, border: 0 }}>
+                              <div className={css.detailList}>
+                                {histJob!.rows.map(r => {
+                                  const ok = r.status === 'ok'
+                                  const ratio = ok && r.per_share != null && r.close ? (r.per_share / r.close).toFixed(2) : null
+                                  return (
+                                    <button key={r.idx} className={css.drow} onClick={() => setHistModalIdx(r.idx)}>
+                                      <span className={css.drowNm}>
+                                        {r.name}
+                                        {!ok && <span className={`${css.tag} ${css.tagWarn}`} style={{ marginLeft: 8 }}>跳过</span>}
+                                        {ok && r.warnings && r.warnings.length > 0 && <span className={`${css.tag} ${css.tagMut}`} style={{ marginLeft: 8 }}>预警 {r.warnings.length}</span>}
+                                      </span>
+                                      <span className={css.drowVals}>
+                                        <span>价 {r.close != null ? r.close.toFixed(2) : '—'}</span>
+                                        <span>中枢/股 <b>{ok && r.per_share != null ? r.per_share.toFixed(2) : '—'}</b></span>
+                                        <span>估值/价 <b>{ratio ?? '—'}</b></span>
+                                        {ok && r.report && (
+                                          <span className={css.linkBtn} onClick={e => { e.stopPropagation(); window.open(reportUrl(histJob!.id, r.report!), '_blank', 'noopener') }}>报告 ↗</span>
+                                        )}
+                                      </span>
+                                    </button>
+                                  )
+                                })}
+                              </div>
+                              {histModalIdx !== null && (
+                                <ReportModal
+                                  name={histJob!.rows.find(r => r.idx === histModalIdx)?.name ?? '—'}
+                                  i={histModalIdx}
+                                  r={{ price: 0, chen: 0, shi: 0 }}
+                                  w={histJob!.rows.find(r => r.idx === histModalIdx)?.weight ?? 0}
+                                  real={histJob!.rows.find(r => r.idx === histModalIdx) ?? null}
+                                  jobId={histJob!.id}
+                                  onClose={() => setHistModalIdx(null)}
+                                />
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </Fragment>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

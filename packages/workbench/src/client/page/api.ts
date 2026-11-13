@@ -68,6 +68,20 @@ export interface ConstituentsPayload {
   rows: RealConstituent[]
 }
 
+export interface JobMeta {
+  id: string
+  index: string
+  created: string
+  state: 'running' | 'done' | 'error'
+  done: number
+  total: number
+  components_as_of?: string | null
+  fitted_point: number | null
+  index_close: number | null
+  ok: number | null
+  skip: number | null
+}
+
 async function jfetch(url: string, init?: RequestInit, ms = 15000): Promise<Response> {
   const ctl = new AbortController()
   const timer = window.setTimeout(() => ctl.abort(), ms)
@@ -104,6 +118,13 @@ export async function pollJob(id: string): Promise<JobStatus> {
   const res = await jfetch(`${API_BASE}/api/jobs/${id}`, undefined, 12000)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
+}
+
+export async function fetchJobs(): Promise<JobMeta[]> {
+  const res = await jfetch(`${API_BASE}/api/jobs`)
+  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  const data = (await res.json()) as { jobs?: JobMeta[] }
+  return data.jobs ?? []
 }
 
 export function reportUrl(jobId: string, file: string): string {
