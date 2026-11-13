@@ -4,12 +4,13 @@
 口径说明（与技能输入 schema 对齐，单位：金额=亿元、比率=小数、股本=亿股）：
 - 营收/归母净利取最近年报口径（与净利披露档 annual 一致；9M 累计不含在 TTM 内，避免口径混用）；
 - WACC/永续增速不显式给 → 引擎 capm_auto + 行业参数底座自动解析；
-- 舆情调整不显式给（sentiment_adjustment_pct=null）→ 引擎自动生成；
+- 舆情：东财新闻搜索+股吧帖（免费公开接口），词频+规则打分 → company_news_sentiment + sentiment_adjustment_pct 显式传入；
 - 可比公司：同行业、剔除自身、按自由流通市值对数距离取前 4 家，标注「自动选取、未经人工核验」。
 """
 import math
 
 import dsources
+import sentiment
 
 PEER_N = 4
 
@@ -119,6 +120,7 @@ def build_input(stock, universe, params, as_of):
     shares = fin.get('total_shares') or stock.get('total_shares')
     roe_pct = stock.get('roe')
     weights = params.get('weights') or {}
+    snt = sentiment.score_stock(code, stock['name'], rounds=int(params.get('sentiment_rounds') or 10))
     inp = {
         'meta': {
             'company': stock['name'],
@@ -153,9 +155,9 @@ def build_input(stock, universe, params, as_of):
         'comparables': comparables,
         'sentiment': {
             'sector_heat': 'neutral',
-            'company_news_sentiment': 'neutral',
-            'sentiment_adjustment_pct': None,
-            'evidence': '批跑管线自动执行：本轮未接入舆情检索（轮数上限参数保留），舆情调整由引擎按默认口径生成',
+            'company_news_sentiment': snt['label'],
+            'sentiment_adjustment_pct': snt['adjustment_pct'],
+            'evidence': snt['evidence'],
         },
         'preferences': {
             'weights': {
@@ -171,6 +173,9 @@ def build_input(stock, universe, params, as_of):
              'items': ['营收/归母净利（年报口径）', '经营现金流/FCFF/股本', '一致预期净利']},
             {'source': '腾讯行情（公开实时行情）', 'items': ['可比公司行情、市值、PE']},
             {'source': '东财 datacenter 指数成分（收盘权重）', 'items': ['成分券列表与权重（前一日口径）', '行业分类']},
+            {'source': '东财新闻搜索 + 股吧帖（免费公开接口，词频+规则打分）',
+             'items': ['近 30 天新闻 %d 条 / 股吧 %d 条' % (snt.get('news_count') or 0, snt.get('guba_count') or 0),
+                       'company_news_sentiment=%s，adjustment_pct=%+.1f%%' % (snt['label'], snt['adjustment_pct'])]},
         ],
     }
     return inp
