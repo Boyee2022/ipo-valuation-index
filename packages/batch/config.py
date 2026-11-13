@@ -8,6 +8,13 @@ RUNTIME = Path(os.environ.get('VALUATION_RUNTIME', str(REPO / 'runtime')))
 CACHE = RUNTIME / 'cache'
 JOBS = RUNTIME / 'jobs'
 
+# 估值跑批工作台存档目录：每次跑批完成后把 HTML 报告复制到这里，
+# 由 dsh 工作区注册为「估值跑批工作台」文件夹供左侧面板浏览。
+REPORTS_DIR = Path(os.environ.get(
+    'VALUATION_REPORTS_DIR',
+    str(Path.home() / '.dsh-valuation' / 'valuation-reports'),
+))
+
 SKILL_DIR = Path(os.environ.get(
     'VALUATION_SKILL_DIR',
     str(Path.home() / '.dsh-valuation' / 'agents' / 'skills' / 'llm-ipo-valuation'),

@@ -7,6 +7,7 @@
 """
 import html
 import json
+import shutil
 import subprocess
 import sys
 import threading
@@ -18,7 +19,7 @@ from pathlib import Path
 
 import dsources
 import input_builder
-from config import INDEX_NAMES, INDEX_TENCENT, INDEX_TYPES, JOBS, SKILL_DIR
+from config import INDEX_NAMES, INDEX_TENCENT, INDEX_TYPES, JOBS, REPORTS_DIR, SKILL_DIR
 
 PY = sys.executable
 ENGINE = SKILL_DIR / 'scripts' / 'valuation_engine.py'
@@ -281,6 +282,20 @@ def _finalize(job):
         with _state_lock:
             job['summary_warning'] = 'summary.html 生成失败: %s' % str(e)[:200]
             _save(job)
+    try:
+        _archive_reports(job)
+    except Exception as e:
+        with _state_lock:
+            job['archive_warning'] = '报告存档失败: %s' % str(e)[:200]
+            _save(job)
+
+
+def _archive_reports(job):
+    """把本任务的 HTML 报告复制到「估值跑批工作台」存档目录（供 dsh 左侧工作区浏览）。"""
+    archive = REPORTS_DIR / job['id']
+    archive.mkdir(parents=True, exist_ok=True)
+    for f in _job_dir(job['id']).glob('*.html'):
+        shutil.copy2(f, archive / f.name)
 
 
 def run_job(job_id):

@@ -15,6 +15,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import { BrandName } from './BrandName'
 import { en, NS, zh } from './locales'
 import { ValuationPage } from './page/ValuationPage'
+import { scheduleReportsWorkspace } from './workspace_ensure'
 import { WorkbenchIcon } from './WorkbenchIcon'
 
 /** The id shared by the sidebar entry and the main panel it opens. */
@@ -24,7 +25,7 @@ export const PANEL_ID = 'workbench' as MainPanelId
 export const PRODUCT_NAME = 'ValuationSystem'
 
 /** Services required by the page. */
-export const inject = ['slots', 'locale', 'layout']
+export const inject = ['slots', 'locale', 'layout', 'workspaces']
 
 /**
  * Register the workbench dictionaries, page, and sidebar entry.
@@ -95,4 +96,7 @@ export function apply(ctx: ClientContext): void {
     ctx.layout.selectPanel(PANEL_ID)
     return true
   }), 'valuation-workbench: entry activation')
+  // Register the「估值跑批工作台」host-directory workspace folder (idempotent,
+  // retried with backoff until the host directory exists).
+  scheduleReportsWorkspace(ctx)
 }
