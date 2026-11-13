@@ -4,7 +4,7 @@
  * (参数确认 → 选择指数 → 成分券权重 → 估值日期 → 并行度 → 运行报告).
  * 真实数据模式：成分与权重来自 Mac 批跑服务（东财指数成分表），运行步提交真实跑批任务；
  * 批跑服务不可达时回退为本地演示数据。
- * 左侧常驻「估值跑批工作台」报告文件树，六个步骤均可见。
+ * 历史报告通过侧边栏工作区「估值跑批工作台」文件夹浏览（见 SidebarReports.ts）。
  */
 
 import { Fragment, useEffect, useMemo, useState } from 'react'
@@ -17,7 +17,6 @@ import { DateStep } from './steps/DateStep'
 import { IndexStep } from './steps/IndexStep'
 import { ParallelStep } from './steps/ParallelStep'
 import { ParamsStep } from './steps/ParamsStep'
-import { ReportsTree } from './ReportsTree'
 import { RunStep } from './steps/RunStep'
 import { WeightsStep } from './steps/WeightsStep'
 
@@ -50,9 +49,7 @@ export function ValuationPage(props: PropsLocale) {
   const jump = (i: number) => setStep(Math.max(0, Math.min(STEP_KEYS.length - 1, i)))
 
   return (
-    <div className={css.pageWrap}>
-      <ReportsTree active />
-      <div className={css.page}>
+    <div className={css.page}>
         <header>
           <div className={css.kick}>指数估值跑批 · 方案对比与落地安排</div>
           <h1 className={css.h1}>{t('page.title')}</h1>
@@ -129,6 +126,5 @@ export function ValuationPage(props: PropsLocale) {
             : '演示数据由前端本地生成，不请求真实行情与估值服务 · 下一里程碑：接真实参数与跑批执行'}
         </p>
       </div>
-    </div>
   )
 }

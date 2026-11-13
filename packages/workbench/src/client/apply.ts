@@ -15,6 +15,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import { BrandName } from './BrandName'
 import { en, NS, zh } from './locales'
 import { ValuationPage } from './page/ValuationPage'
+import { installSidebarReports } from './SidebarReports'
 import { scheduleReportsWorkspace } from './workspace_ensure'
 import { WorkbenchIcon } from './WorkbenchIcon'
 
@@ -99,4 +100,7 @@ export function apply(ctx: ClientContext): void {
   // Register the「估值跑批工作台」host-directory workspace folder (idempotent,
   // retried with backoff until the host directory exists).
   scheduleReportsWorkspace(ctx)
+  // Historical batch reports render inside that sidebar folder (DOM layer: the
+  // stock workspace browser shows sessions only).
+  ctx.effect(() => installSidebarReports(), 'valuation-workbench: sidebar reports')
 }
