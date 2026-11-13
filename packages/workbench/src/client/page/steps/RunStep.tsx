@@ -22,6 +22,47 @@ interface LogLine {
 
 const STAT_N = 1000
 
+/** 近 N 次跑批走势：拟合点位（金，实线）vs 指数收盘（青，虚线）。 */
+function HistoryChart({ hist }: { hist: JobMeta[] }) {
+  const pts = hist
+    .filter(h => h.state === 'done' && h.fitted_point != null && h.index_close != null && h.index_close > 0)
+    .reverse()
+  if (pts.length < 2) return null
+  const W = 720
+  const H = 180
+  const PAD = 34
+  const fit = pts.map(h => h.fitted_point!)
+  const idx = pts.map(h => h.index_close!)
+  const min = Math.floor(Math.min(...fit, ...idx) - 4)
+  const max = Math.ceil(Math.max(...fit, ...idx) + 4)
+  const X = (i: number) => PAD + (i * (W - PAD * 2)) / (fit.length - 1)
+  const Y = (v: number) => H - PAD - ((v - min) / (max - min)) * (H - PAD * 2)
+  const path = (arr: number[]) =>
+    arr.map((v, i) => `${i === 0 ? 'M' : 'L'}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(' ')
+  const grid = Array.from({ length: 5 }, (_, i) => min + ((max - min) * i) / 4)
+  return (
+    <div className={css.chart}>
+      <div className={css.chartTitle}>
+        近 {pts.length} 次跑批 · 拟合点位 vs 指数收盘
+        <span className={css.clegend}>
+          <i style={{ background: '#F5C24B' }} />拟合点位<i style={{ background: '#38BDF8' }} />指数收盘
+        </span>
+      </div>
+      <svg className={css.chartSvg} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-label="历史跑批走势图">
+        {grid.map(gv => (
+          <g key={gv}>
+            <line x1={PAD} y1={Y(gv)} x2={W - PAD} y2={Y(gv)} stroke="#1F2E4A" strokeWidth="1" />
+            <text x="6" y={Y(gv) + 4} fill="#5A6B8C" fontSize="10" fontFamily="Consolas,monospace">{Math.round(gv)}</text>
+          </g>
+        ))}
+        <path d={path(idx)} fill="none" stroke="#38BDF8" strokeWidth="2" strokeDasharray="4 3" />
+        <path d={path(fit)} fill="none" stroke="#F5C24B" strokeWidth="2" />
+        {fit.map((v, i) => <circle key={i} cx={X(i)} cy={Y(v)} r="2.6" fill="#F5C24B" />)}
+      </svg>
+    </div>
+  )
+}
+
 export function RunStep(props: {
   params: BatchParams
   indexSel: string
@@ -230,6 +271,9 @@ export function RunStep(props: {
     summ && summ.fitted_point != null && summ.index_close
       ? `${(((summ.fitted_point / summ.index_close) - 1) * 100).toFixed(2)}%`
       : '—'
+  const histChart =
+    hist !== null &&
+    hist.filter(h => h.state === 'done' && h.fitted_point != null && h.index_close != null).length >= 2
 
   return (
     <section>
@@ -239,29 +283,29 @@ export function RunStep(props: {
           ? '真实跑批：批跑服务逐券执行「输入组装 → 估值引擎 → 统计校验 → HTML 报告 → 八项机检」，按权重合成拟合点位。'
           : '并行跑批，逐家生成报告，最后输出总结报告；两版拟合点位并排对比。'}
       </p>
-      <div className={css.review}>
-        <div className={css.chip}>指数 <b>{indexSel}</b></div>
-        <div className={css.chip}>估值日期 <b>{fmtDateShort(date)}</b></div>
-        <div className={css.chip}>方法加权 <b>DCF {params.dcf}% · 可比 {params.comp}% · 舆情 {params.sent}%</b></div>
-        <div className={css.chip}>舆情轮数 <b>≤ {params.sentiment} 轮</b></div>
-        <div className={css.chip}>并行度 <b>每批 {parallel} 条</b></div>
-        {realMode && <div className={css.chip}>数据时点 <b>{realAsOf}</b></div>}
+      <div className={css.sumgrid}>
+        <div className={css.sumbox}><div className={css.sk}>指数</div><div className={css.sv}>{indexSel}</div></div>
+        <div className={css.sumbox}><div className={css.sk}>估值日期</div><div className={css.sv}>{fmtDateShort(date)}</div></div>
+        <div className={css.sumbox}><div className={css.sk}>方法加权</div><div className={css.sv}>DCF {params.dcf}% · 可比 {params.comp}% · 舆情 {params.sent}%</div></div>
+        <div className={css.sumbox}><div className={css.sk}>舆情轮数</div><div className={css.sv}>≤ {params.sentiment} 轮</div></div>
+        <div className={css.sumbox}><div className={css.sk}>并行度</div><div className={css.sv}>每批 {parallel} 条</div></div>
+        <div className={css.sumbox}><div className={css.sk}>数据时点</div><div className={css.sv}>{realMode ? realAsOf : '演示（本地生成）'}</div></div>
       </div>
       <div className={css.runbox}>
         {realMode ? (
           <>
-            <button className={css.btn} disabled={running} onClick={startReal}>
+            <button className={`${css.btn} ${css.btnPrimary} ${css.btnBlock}`} disabled={running} onClick={startReal}>
               {realDone ? '重新跑批' : '开始跑批（真实执行）'}
             </button>
-            {running && <button className={`${css.btn} ${css.btnGhost}`} style={{ marginLeft: 10 }} onClick={stop}>停止</button>}
-            {!running && realPartial && <button className={`${css.btn} ${css.btnGhost}`} style={{ marginLeft: 10 }} onClick={resume}>恢复跟踪</button>}
+            {running && <button className={css.btn} style={{ marginLeft: 10 }} onClick={stop}>停止</button>}
+            {!running && realPartial && <button className={css.btn} style={{ marginLeft: 10 }} onClick={resume}>恢复跟踪</button>}
           </>
         ) : (
           <>
-            <button className={css.btn} disabled={running} onClick={startDemo}>
+            <button className={`${css.btn} ${css.btnPrimary} ${css.btnBlock}`} disabled={running} onClick={startDemo}>
               {finished ? '重新演示跑批' : '开始演示跑批'}
             </button>
-            {running && <button className={`${css.btn} ${css.btnGhost}`} style={{ marginLeft: 10 }} onClick={stop}>停止</button>}
+            {running && <button className={css.btn} style={{ marginLeft: 10 }} onClick={stop}>停止</button>}
           </>
         )}
         {!realMode && (
@@ -286,14 +330,14 @@ export function RunStep(props: {
               <p className={css.level}>{idxA.toFixed(2)} <small>（加权合成 · 示例）</small></p>
               <p className={css.delta}>石总 {idxB.toFixed(2)} · 参考点位 {BASE_LEVEL.toFixed(2)}</p>
               <svg className={css.spark} viewBox="0 0 320 84" aria-hidden>
-                <polyline fill="none" stroke="#c6cfd8" strokeWidth="1.5" points={noise.map((v, i) => `${sx(i)},${sy(v)}`).join(' ')} />
-                <circle cx={sx(10)} cy={sy(idxB)} r="3.5" fill="#f59e0b" />
-                <circle cx={sx(11)} cy={sy(idxA)} r="3.5" fill="#0e7490" />
+                <polyline fill="none" stroke="#2A3D60" strokeWidth="1.5" points={noise.map((v, i) => `${sx(i)},${sy(v)}`).join(' ')} />
+                <circle cx={sx(10)} cy={sy(idxB)} r="3.5" fill="#F5C24B" />
+                <circle cx={sx(11)} cy={sy(idxA)} r="3.5" fill="#38BDF8" />
               </svg>
               <div className={css.legend}>
-                <span><i style={{ background: '#0e7490' }} />陈老师</span>
-                <span><i style={{ background: '#f59e0b' }} />石总</span>
-                <span><i style={{ background: '#c6cfd8' }} />参考走势（示例）</span>
+                <span><i style={{ background: '#38BDF8' }} />陈老师</span>
+                <span><i style={{ background: '#F5C24B' }} />石总</span>
+                <span><i style={{ background: '#2A3D60' }} />参考走势（示例）</span>
               </div>
             </div>
             <div className={css.cmp2}>
@@ -330,7 +374,7 @@ export function RunStep(props: {
             })}
           </div>
           <div className={css.note}>
-            <b>⚠ 不能直接等权平均：</b>等权结果与指数点位对不上；拟合点位 = Σ(估值×权重) / Σ(价格×权重) × 参考点位。当日权重盘中才出，可先用前一日因子计算；跳过券不计入分子分母。
+            <b>不能直接等权平均：</b>等权结果与指数点位对不上；拟合点位 = Σ(估值×权重) / Σ(价格×权重) × 参考点位。当日权重盘中才出，可先用前一日因子计算；跳过券不计入分子分母。
           </div>
           {modalIdx !== null && (
             <ReportModal
@@ -438,21 +482,22 @@ export function RunStep(props: {
         </div>
       )}
       {realMode && (
-        <div className={css.detailList} style={{ marginTop: 20 }}>
-          <h4>
+        <div style={{ marginTop: 22 }}>
+          <h3>
             历史跑批（{hist === null ? '加载中…' : hist.length} 次 · 报告存于批跑服务，可随时回看）
-            <span className={css.linkBtn} style={{ marginLeft: 10, fontWeight: 400 }} onClick={() => void loadHist()}>刷新</span>
-          </h4>
+            <span className={css.op} style={{ marginLeft: 'auto' }} onClick={() => void loadHist()}>刷新</span>
+          </h3>
           {hist !== null && hist.length === 0 && <p className={css.hint}>暂无历史任务记录。</p>}
           {hist !== null && hist.length > 0 && (
-            <div className={css.tablewrap}>
+            <div className={css.tblWrap}>
               <table className={css.clist}>
                 <thead>
-                  <tr><th>#</th><th>任务</th><th>提交时间</th><th>状态</th><th>拟合点位</th><th>指数收盘</th><th>偏离</th><th>出估值/跳过</th><th>操作</th></tr>
+                  <tr><th>#</th><th>任务</th><th>提交时间</th><th>状态</th><th className={css.numTd}>拟合点位</th><th className={css.numTd}>指数收盘</th><th className={css.numTd}>偏离</th><th className={css.numTd}>出估值/跳过</th><th>操作</th></tr>
                 </thead>
                 <tbody>
                   {hist.map((h, i) => {
                     const st = h.state === 'done' ? '完成' : h.state === 'running' ? '进行中' : '异常'
+                    const stCls = h.state === 'done' ? css.tagOk : h.state === 'running' ? css.tagWarn : css.tagErr
                     const dev =
                       h.fitted_point != null && h.index_close
                         ? `${(((h.fitted_point / h.index_close) - 1) * 100).toFixed(2)}%`
@@ -464,15 +509,15 @@ export function RunStep(props: {
                           <td className={css.mono}>{i + 1}</td>
                           <td className={css.mono}>{h.id}</td>
                           <td>{h.created}</td>
-                          <td>{st}</td>
-                          <td className={css.mono}><b>{h.fitted_point != null ? h.fitted_point.toFixed(2) : '—'}</b></td>
-                          <td className={css.mono}>{h.index_close != null ? h.index_close.toFixed(2) : '—'}</td>
-                          <td className={css.mono}>{dev}</td>
-                          <td>{h.ok != null ? `${h.ok} / ${h.skip ?? 0}` : `${h.done}/${h.total}`}</td>
+                          <td><span className={`${css.tag} ${stCls}`}>{st}</span></td>
+                          <td className={`${css.mono} ${css.numTd}`}><b>{h.fitted_point != null ? h.fitted_point.toFixed(2) : '—'}</b></td>
+                          <td className={`${css.mono} ${css.numTd}`}>{h.index_close != null ? h.index_close.toFixed(2) : '—'}</td>
+                          <td className={`${css.mono} ${css.numTd}`}>{dev}</td>
+                          <td className={`${css.mono} ${css.numTd}`}>{h.ok != null ? `${h.ok} / ${h.skip ?? 0}` : `${h.done}/${h.total}`}</td>
                           <td>
-                            <span className={css.linkBtn} onClick={() => window.open(reportUrl(h.id, 'summary.html'), '_blank', 'noopener')}>汇总报告 ↗</span>
+                            <span className={css.op} onClick={() => window.open(reportUrl(h.id, 'summary.html'), '_blank', 'noopener')}>汇总报告 ↗</span>
                             <span
-                              className={css.linkBtn}
+                              className={css.op}
                               style={{ marginLeft: 10 }}
                               onClick={async () => {
                                 if (expanded) {
@@ -541,6 +586,7 @@ export function RunStep(props: {
               </table>
             </div>
           )}
+          {histChart && <HistoryChart hist={hist} />}
         </div>
       )}
     </section>

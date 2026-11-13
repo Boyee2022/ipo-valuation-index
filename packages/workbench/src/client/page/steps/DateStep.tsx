@@ -1,13 +1,14 @@
-/** Step 4 选择估值日期：日历（周一开头），任意交易日可选（周末与未来日期禁用）。 */
+/** Step 4 选择估值日期：日期盒（今天/昨天快捷）+ 日历（周一开头，周末与未来禁用）。 */
 
 import { useState } from 'react'
 import { WEEK_CN, fmtDate } from '../data'
 import css from '../ValuationPage.module.css'
 
 const WEEK_HEAD = ['一', '二', '三', '四', '五', '六', '日']
+const MON_EN = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
-export function DateStep(props: { date: Date; onSelect: (d: Date) => void }) {
-  const { date, onSelect } = props
+export function DateStep(props: { date: Date; onSelect: (d: Date) => void; asOf: string }) {
+  const { date, onSelect, asOf } = props
   const [viewY, setViewY] = useState(() => date.getFullYear())
   const [viewM, setViewM] = useState(() => date.getMonth())
 
@@ -25,6 +26,12 @@ export function DateStep(props: { date: Date; onSelect: (d: Date) => void }) {
   const today = new Date()
   const todayStart = new Date()
   todayStart.setHours(0, 0, 0, 0)
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+  const isTodaySel = sameDay(date, today)
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const isYestSel = sameDay(date, yesterday)
   const isWeekend = (d: number) => {
     const w = new Date(viewY, viewM, d).getDay()
     return w === 0 || w === 6
@@ -41,8 +48,22 @@ export function DateStep(props: { date: Date; onSelect: (d: Date) => void }) {
 
   return (
     <section>
-      <h2>选择估值日期</h2>
-      <p className={css.sub}>一次只估一天，任意交易日可选（周末与未来日期不可选）；周频运行时不需手选，由定时任务自动带入当天。</p>
+      <h2>估值日期</h2>
+      <p className={css.sub}>选某一天跑批（今天或昨天）；任意历史交易日可在下方日历点选（周末与未来日期不可选）。周频运行时不需手选，由定时任务自动带入当天。</p>
+      <div className={css.datebox}>
+        <div className={css.calTile}>
+          <span className={css.mo}>{MON_EN[date.getMonth()]}</span>
+          <span className={css.dd}>{date.getDate()}</span>
+        </div>
+        <div>
+          <div className={css.dtext}>{fmtDate(date)}（周{WEEK_CN[date.getDay()]}）</div>
+          <div className={css.dsub}>成分与权重取前一交易日收盘口径{asOf ? `（数据时点 ${asOf}）` : ''}</div>
+        </div>
+        <div className={css.dq}>
+          <button className={`${css.qbtn} ${isTodaySel ? css.qbtnOn : ''}`} onClick={() => onSelect(new Date())}>今天</button>
+          <button className={`${css.qbtn} ${isYestSel ? css.qbtnOn : ''}`} onClick={() => onSelect(yesterday)}>昨天</button>
+        </div>
+      </div>
       <div className={css.calwrap}>
         <div className={css.cal}>
           <div className={css.chead}>
@@ -78,18 +99,8 @@ export function DateStep(props: { date: Date; onSelect: (d: Date) => void }) {
             </tbody>
           </table>
         </div>
-        <div className={css.pickinfo}>
-          <p className={css.hint} style={{ marginTop: 0 }}>已选估值日期</p>
-          <p className={css.chosen}>{fmtDate(date)}（周{WEEK_CN[date.getDay()]}）</p>
-          <div className={css.quick}>
-            <button onClick={() => onSelect(new Date())}>今天</button>
-            <button onClick={() => { const y = new Date(); y.setDate(y.getDate() - 1); onSelect(y) }}>昨天</button>
-          </div>
-          <div className={css.note} style={{ marginTop: 18 }}>
-            初期每周五 17:00 后自动跑；周频起步 → 逐周累积 → 5–10 周后形成点位序列，与上证走势对照。
-          </div>
-        </div>
       </div>
+      <div className={css.note}>初期每周五 17:00 后自动跑；<b>周频起步 → 逐周累积 → 5–10 周后形成点位序列</b>，与上证走势对照。</div>
     </section>
   )
 }

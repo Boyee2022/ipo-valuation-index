@@ -1,13 +1,13 @@
 /**
  * The valuation workbench page: the interactive six-step batch flow
- * mirroring the static prototype valuation-batch-workbench.html
- * (参数确认 → 选择指数 → 成分券权重 → 估值日期 → 并行度 → 运行报告).
+ * (参数确认 → 选择指数 → 成分券权重 → 估值日期 → 并行度 → 运行报告),
+ * restyled to the dark "客户需求版" design (navy tokens, gold/cyan accents).
  * 真实数据模式：成分与权重来自 Mac 批跑服务（东财指数成分表），运行步提交真实跑批任务；
  * 批跑服务不可达时回退为本地演示数据。
  * 历史报告通过侧边栏工作区「估值跑批工作台」文件夹浏览（见 SidebarReports.ts）。
  */
 
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import { zh } from '../locales'
 import { fetchConstituents, type ConstituentsPayload } from './api'
@@ -50,81 +50,82 @@ export function ValuationPage(props: PropsLocale) {
 
   return (
     <div className={css.page}>
-        <header>
-          <div className={css.kick}>指数估值跑批 · 方案对比与落地安排</div>
-          <h1 className={css.h1}>{t('page.title')}</h1>
-          <p className={css.lead}>
-            两套估值技能部署在同一环境、跑同一批指数成分券，<strong>用估值替代价格、按权重合成指数点位</strong>。先以上证50 跑通，不纠结准不准，先出结果。
-          </p>
-          <div className={css.badge}>
+      <header className={css.pageHead}>
+        <h1 className={css.h1}>{t('page.title')}</h1>
+        <p className={css.lead}>
+          两套估值技能部署在同一环境、跑同一批指数成分券，<strong>用估值替代价格、按权重合成指数点位</strong>。先以上证50 跑通，不纠结准不准，先出结果。
+        </p>
+        <div className={css.badges}>
+          <span className={`${css.badge} ${realMode ? css.badgeOn : ''}`}>
+            {realMode && <i />}
             {realMode
-              ? `真实数据模式 · 批跑服务已连接（成分数据时点 ${real!.as_of}）`
+              ? `真实数据模式 · 成分数据时点 ${real!.as_of}`
               : '演示原型 · 表单与数据均为示例，不提交真实任务'}
-          </div>
-        </header>
+          </span>
+          <span className={css.badge}>拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)</span>
+        </div>
+      </header>
 
-        <ol className={css.steps}>
-          {STEP_KEYS.map((key, i) => (
-            <Fragment key={key}>
-              {i > 0 && <li className={css.stepArrow}>→</li>}
-              <li
-                className={`${css.stepLi} ${i < step ? css.stepLiDone : ''} ${i === step ? css.stepLiCur : ''}`}
-                onClick={() => jump(i)}
-              >
-                <span className={css.stepNo}>{i + 1}</span>{t(key)}
-              </li>
-            </Fragment>
-          ))}
-        </ol>
+      <div className={css.stepper}>
+        {STEP_KEYS.map((key, i) => (
+          <button
+            key={key}
+            type="button"
+            className={`${css.stepBtn} ${i < step ? css.stepDone : ''} ${i === step ? css.stepActive : ''}`}
+            onClick={() => jump(i)}
+          >
+            <span className={css.ic}>{i + 1}</span>
+            <span className={css.stName}>{t(key)}</span>
+          </button>
+        ))}
+      </div>
 
-        <main>
-          {step === 0 && (
-            <div className={css.panel}><ParamsStep params={params} onChange={setParams} /></div>
-          )}
-          {step === 1 && (
-            <div className={css.panel}><IndexStep indexSel={indexSel} onSelect={setIndexSel} /></div>
-          )}
+      <div className={css.panel}>
+        <div className={css.stepBody} key={step}>
+          {step === 0 && <ParamsStep params={params} onChange={setParams} />}
+          {step === 1 && <IndexStep indexSel={indexSel} onSelect={setIndexSel} />}
           {step === 2 && (
-            <div className={css.panel}>
-              <WeightsStep
-                list={list}
-                real={realMode ? real!.rows : null}
-                asOf={realMode ? real!.as_of : ''}
-                error={realErr}
-              />
-            </div>
+            <WeightsStep
+              list={list}
+              real={realMode ? real!.rows : null}
+              asOf={realMode ? real!.as_of : ''}
+              error={realErr}
+            />
           )}
-          {step === 3 && (
-            <div className={css.panel}><DateStep date={date} onSelect={setDate} /></div>
-          )}
-          {step === 4 && (
-            <div className={css.panel}><ParallelStep parallel={parallel} onSelect={setParallel} /></div>
-          )}
+          {step === 3 && <DateStep date={date} onSelect={setDate} asOf={realMode ? real!.as_of : ''} />}
+          {step === 4 && <ParallelStep parallel={parallel} onSelect={setParallel} />}
           {step === 5 && (
-            <div className={css.panel}>
-              <RunStep
-                params={params}
-                indexSel={indexSel}
-                date={date}
-                parallel={parallel}
-                list={list}
-                realMode={realMode}
-                realErr={realErr}
-                realAsOf={realMode ? real!.as_of : ''}
-              />
-            </div>
+            <RunStep
+              params={params}
+              indexSel={indexSel}
+              date={date}
+              parallel={parallel}
+              list={list}
+              realMode={realMode}
+              realErr={realErr}
+              realAsOf={realMode ? real!.as_of : ''}
+            />
           )}
-        </main>
+        </div>
 
         <nav className={css.nav}>
-          <button className={`${css.btn} ${css.btnGhost}`} disabled={step === 0} onClick={() => jump(step - 1)}>← 上一步</button>
-          <button className={css.btn} disabled={step === STEP_KEYS.length - 1} onClick={() => jump(step + 1)}>下一步 →</button>
+          <button className={css.btn} disabled={step === 0} onClick={() => jump(step - 1)}>← 上一步</button>
+          <button
+            className={`${css.btn} ${css.btnPrimary}`}
+            disabled={step === STEP_KEYS.length - 1}
+            onClick={() => jump(step + 1)}
+          >
+            下一步 →
+          </button>
         </nav>
         <p className={css.footnote}>
-          {realMode
-            ? `真实成分与权重来自东财指数成分表（${real!.as_of}），估值由 Mac 批跑服务逐券执行 · 拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价) · 探索性研究，不构成投资建议`
-            : '演示数据由前端本地生成，不请求真实行情与估值服务 · 下一里程碑：接真实参数与跑批执行'}
+          {realMode ? (
+            <>真实成分与权重来自<b>东财指数成分表（{real!.as_of}）</b>，估值由 Mac 批跑服务逐券执行 · <b>拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)</b> · 探索性研究，不构成投资建议</>
+          ) : (
+            <>演示数据由前端本地生成，不请求真实行情与估值服务 · 下一里程碑：接真实参数与跑批执行</>
+          )}
         </p>
       </div>
+    </div>
   )
 }
