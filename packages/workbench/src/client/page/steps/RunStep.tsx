@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import {
   fmtDateShort,
   indexMeta,
+  pctDiff,
   skipIndexes,
   synthLevel,
   valuationPair,
@@ -60,6 +61,85 @@ function HistoryChart({ hist, indexSel }: { hist: JobMeta[]; indexSel: string })
         <path className={css.chartFit} d={path(fit)} fill="none" strokeWidth="2" />
         {fit.map((v, i) => <circle key={i} className={css.chartFit} cx={X(i)} cy={Y(v)} r="2.6" />)}
       </svg>
+    </div>
+  )
+}
+
+function medianOf(xs: number[]): number | null {
+  if (xs.length === 0) return null
+  const s = [...xs].sort((a, b) => a - b)
+  const m = Math.floor(s.length / 2)
+  return s.length % 2 === 1 ? s[m] : (s[m - 1] + s[m]) / 2
+}
+
+const diffOf = (per?: number | null, close?: number | null) =>
+  per != null && close != null && close > 0 ? per / close - 1 : null
+
+const tickText = (x: number) => (x === 0 ? '0' : `${x > 0 ? '+' : '−'}${Math.abs(Math.round(x * 100))}%`)
+
+/** 逐券差异分布（海报图）：横轴 = 中枢/股相对现价的差异，点大小 = 当日权重。 */
+function DiffStrip({ items }: { items: { name: string; diff: number; w: number }[] }) {
+  if (items.length === 0) return <p className={css.hint}>无可用于差异展示的逐券结果。</p>
+  const LANES = 6
+  const ROW = 15
+  const STEPS = [0.05, 0.1, 0.2, 0.25, 0.5, 1, 2]
+  const absSorted = items.map(x => Math.abs(x.diff)).sort((a, b) => a - b)
+  const p90 = absSorted[Math.min(absSorted.length - 1, Math.floor((absSorted.length - 1) * 0.9))]
+  const step = STEPS.find(s => s * 2 >= p90) ?? 2
+  const CLAMP = step * 2
+  const pos = (d: number) => ((Math.min(Math.max(d, -CLAMP), CLAMP) + CLAMP) / (2 * CLAMP)) * 100
+  const laneLast: number[] = Array(LANES).fill(-1e9)
+  let over = 0
+  const dots = [...items]
+    .sort((a, b) => a.diff - b.diff)
+    .map((it, i) => {
+      let lane = 0
+      for (let l = 1; l < LANES; l++) if (laneLast[l] < laneLast[lane]) lane = l
+      const px = pos(it.diff)
+      laneLast[lane] = px
+      const dir = it.diff > CLAMP ? 1 : it.diff < -CLAMP ? -1 : 0
+      if (dir !== 0) over += 1
+      return { ...it, key: `${i}-${it.name}`, px, lane, dir }
+    })
+  const med = medianOf(items.map(x => x.diff))
+  const up = items.filter(x => x.diff >= 0).length
+  const ticks = [-CLAMP, -CLAMP / 2, 0, CLAMP / 2, CLAMP]
+  return (
+    <div className={css.strip}>
+      <div className={css.stripPlot} style={{ height: LANES * ROW + 8 }}>
+        {ticks.map(t => (
+          <i key={t} className={`${css.stripGrid} ${t === 0 ? css.stripZero : ''}`} style={{ left: `${pos(t)}%` }} />
+        ))}
+        {med != null && <i className={css.stripMed} style={{ left: `${pos(med)}%` }} />}
+        {dots.map(d => {
+          const size = 6 + Math.min(Math.max(d.w, 0), 8) * 0.8
+          return (
+            <span
+              key={d.key}
+              className={`${css.sdot} ${d.diff >= 0 ? css.sdotUp : css.sdotDown} ${d.dir > 0 ? css.sdotR : d.dir < 0 ? css.sdotL : ''}`}
+              style={{ left: `${d.px}%`, top: d.lane * ROW + 6, width: size, height: size }}
+              title={`${d.name} ${pctDiff(d.diff)}`}
+            />
+          )
+        })}
+      </div>
+      <div className={css.stripAxis}>
+        {ticks.map(t => (
+          <span
+            key={t}
+            style={{ left: `${pos(t)}%`, transform: t === -CLAMP ? 'none' : t === CLAMP ? 'translateX(-100%)' : 'translateX(-50%)' }}
+          >
+            {tickText(t)}
+          </span>
+        ))}
+      </div>
+      <div className={css.stripLegend}>
+        <span><i className={`${css.lgDot} ${css.lgUp}`} />高于现价 {up} 只</span>
+        <span><i className={`${css.lgDot} ${css.lgDown}`} />低于现价 {items.length - up} 只</span>
+        <span>点大小 = 当日权重</span>
+        {med != null && <span>虚线 = 中位差异 {pctDiff(med)}</span>}
+        {over > 0 && <span>超出 ±{Math.round(CLAMP * 100)}% 的 {over} 只贴边显示</span>}
+      </div>
     </div>
   )
 }
@@ -261,21 +341,28 @@ export function RunStep(props: {
   const idxA = finished ? (vA / pA) * meta.baseLevel : 0
   const idxB = finished ? (vB / pA) * meta.baseLevel : 0
 
-  const noise = Array.from({ length: 10 }, (_, i) =>
-    meta.baseLevel + (Math.sin(i * 1.9) * 0.004 + Math.cos(i * 0.8) * 0.003) * meta.baseLevel)
-  const pts = finished ? noise.concat([idxB, idxA]) : noise
-  const lo = Math.min(...pts) - 8
-  const hi = Math.max(...pts) + 8
-  const sx = (i: number) => 4 + (i / (pts.length - 1)) * 312
-  const sy = (v: number) => 80 - ((v - lo) / (hi - lo)) * 74
-
   const progTotal = mode === 'real' && job ? job.total : total
   const prog = progTotal > 0 ? (done / progTotal) * 100 : 0
   const summ = realDone && job && job.summary ? job.summary : null
-  const diffPct =
-    summ && summ.fitted_point != null && summ.index_close
-      ? `${(((summ.fitted_point / summ.index_close) - 1) * 100).toFixed(2)}%`
-      : '—'
+  const overallDiff =
+    summ && summ.fitted_point != null && summ.index_close ? summ.fitted_point / summ.index_close - 1 : null
+
+  const demoRows = finished && results ? list.map((c, i) => ({ i, c, r: results[i], skipped: skip.has(i) })) : []
+  const demoDiffItems = demoRows
+    .filter(x => !x.skipped && x.r.price > 0)
+    .map(x => ({ name: x.c.name, diff: x.r.chen / x.r.price - 1, w: x.c.w }))
+  const demoUp = demoDiffItems.filter(x => x.diff >= 0).length
+  const demoOverallDiff = finished ? idxA / meta.baseLevel - 1 : null
+
+  const realDiffItems =
+    realDone && job
+      ? job.rows.flatMap(r => {
+          const d = diffOf(r.per_share, r.close)
+          return r.status === 'ok' && d != null ? [{ name: r.name, diff: d, w: r.weight ?? 0 }] : []
+        })
+      : []
+  const realMed = medianOf(realDiffItems.map(x => x.diff))
+  const realUp = realDiffItems.filter(x => x.diff >= 0).length
   const histChart =
     hist !== null &&
     hist.filter(h => h.index === indexSel && h.state === 'done' && h.fitted_point != null && h.index_close != null).length >= 2
@@ -329,57 +416,76 @@ export function RunStep(props: {
       </div>
       {finished && (
         <div className={css.result}>
-          <div className={css.repGrid}>
-            <div className={css.sumcard}>
-              <h4>拟合点位 · 陈老师</h4>
-              <p className={css.level}>{idxA.toFixed(2)} <small>（加权合成 · 示例）</small></p>
-              <p className={css.delta}>石总 {idxB.toFixed(2)} · 参考点位 {meta.baseLevel.toFixed(2)}</p>
-              <svg className={css.spark} viewBox="0 0 320 84" aria-hidden>
-                <polyline className={css.sparkDim} fill="none" strokeWidth="1.5" points={noise.map((v, i) => `${sx(i)},${sy(v)}`).join(' ')} />
-                <circle className={css.fillGold} cx={sx(10)} cy={sy(idxB)} r="3.5" />
-                <circle className={css.fillCyan} cx={sx(11)} cy={sy(idxA)} r="3.5" />
-              </svg>
-              <div className={css.legend}>
-                <span><i className={css.swCyan} />陈老师</span>
-                <span><i className={css.swGold} />石总</span>
-                <span><i className={css.swDim} />参考走势（示例）</span>
+          <div className={css.poster}>
+            <div className={css.posterKicker}>
+              <i className={css.posterMark} />
+              {meta.name} {meta.code} · 演示跑批（本地生成） · 估值日期 {fmtDateShort(date)} · 并行 每批 {parallel} 条 · 舆情 ≤ {params.sentiment} 轮
+            </div>
+            <div className={css.posterHead}>
+              <div className={css.posterMain}>
+                <div className={css.posterLbl}>拟合点位 · 陈老师口径（示例）</div>
+                <div className={css.posterNum}>{idxA.toFixed(2)}</div>
+                <div className={css.posterSub}>
+                  参考点位 {meta.baseLevel.toFixed(2)}
+                  <span className={css.posterSep}>·</span>
+                  整体差异
+                  <b className={demoOverallDiff != null && demoOverallDiff >= 0 ? css.up : css.down}>
+                    {demoOverallDiff == null ? '—' : pctDiff(demoOverallDiff)}
+                  </b>
+                </div>
+              </div>
+              <div className={css.posterSide}>
+                <div className={css.pcell}><span>石总拟合点位</span><b>{idxB.toFixed(2)}</b></div>
+                <div className={css.pcell}><span>陈较石总</span><b>{idxB > 0 ? pctDiff(idxA / idxB - 1) : '—'}</b></div>
+                <div className={css.pcell}><span>高于现价</span><b className={css.up}>{demoUp}<small>只</small></b></div>
+                <div className={css.pcell}><span>低于现价</span><b className={css.down}>{demoDiffItems.length - demoUp}<small>只</small></b></div>
               </div>
             </div>
-            <div className={css.cmp2}>
-              <h4>两版对比</h4>
-              <table>
-                <tbody>
-                  <tr><th>陈老师拟合点位</th><td>{idxA.toFixed(2)}</td></tr>
-                  <tr><th>石总拟合点位</th><td>{idxB.toFixed(2)}</td></tr>
-                  <tr><th>参考点位（示例）</th><td>{meta.baseLevel.toFixed(2)}</td></tr>
-                  <tr><th>样本</th><td>{total} 条</td></tr>
-                  <tr><th>出估值 / 跳过</th><td>{total - skip.size} / {skip.size}</td></tr>
-                </tbody>
-              </table>
+            <DiffStrip items={demoDiffItems} />
+            <div className={css.posterNote}>
+              <b>差异口径：</b>差异 = 估值中枢/股 ÷ 现价 − 1，只展示估值与现价的偏离，<b>不做反向校正</b>（不把估值改写成现价，也不把现价改写成估值）。演示数字为本地生成，仅示意展示结构。
             </div>
           </div>
-          <div className={css.detailList} style={{ marginTop: 16 }}>
-            <h4>逐券结果（点击查看明细）</h4>
-            {list.map((c, i) => {
-              const skipped = skip.has(i)
-              const r = results![i]
-              return (
-                <button key={c.name} className={css.drow} onClick={() => setModalIdx(i)}>
-                  <span className={css.drowNm}>
-                    {c.name}
-                    {skipped && <span className={`${css.tag} ${css.tagWarn}`} style={{ marginLeft: 8 }}>跳过</span>}
-                  </span>
-                  <span className={css.drowVals}>
-                    <span>价 {r.price.toFixed(2)}</span>
-                    <span>陈 <b>{skipped ? '跳过' : r.chen.toFixed(2)}</b></span>
-                    <span>石 <b>{skipped ? '—' : r.shi.toFixed(2)}</b></span>
-                  </span>
-                </button>
-              )
-            })}
+          <h3>
+            逐券重点结果
+            <span className={css.h3sub}>共 {total} 条 · 出估值 {total - skip.size} 条 · 跳过 {skip.size} 条 · 点击看明细</span>
+          </h3>
+          <div className={css.resPanel}>
+            <div className={css.resGrid}>
+              {demoRows.map(({ i, c, r, skipped }) => {
+                const d = skipped ? null : r.chen / r.price - 1
+                const dShi = skipped ? null : r.shi / r.price - 1
+                return (
+                  <button key={i} className={`${css.resCard} ${skipped ? css.resCardSkip : ''}`} onClick={() => setModalIdx(i)}>
+                    <div className={css.resTop}>
+                      <span className={css.resNm}>{c.name}</span>
+                      <span className={css.resCode}>№{String(i + 1).padStart(2, '0')}</span>
+                      {skipped && <span className={`${css.tag} ${css.tagWarn}`} style={{ marginLeft: 'auto' }}>跳过</span>}
+                    </div>
+                    {skipped ? (
+                      <div className={css.resSkipTxt}>跳过：β 无法计算，未产出估值</div>
+                    ) : (
+                      <div className={css.resMetrics}>
+                        <div className={css.resM}><span>陈中枢</span><b>{r.chen.toFixed(2)}</b></div>
+                        <div className={css.resM}><span>石中枢</span><b>{r.shi.toFixed(2)}</b></div>
+                        <div className={`${css.resM} ${css.resMdiff}`}>
+                          <span>差异（陈）</span>
+                          <b className={d != null && d >= 0 ? css.up : css.down}>{d == null ? '—' : pctDiff(d)}</b>
+                        </div>
+                      </div>
+                    )}
+                    <div className={css.resMeta}>
+                      <span>现价 {r.price.toFixed(2)}</span>
+                      <span>权重 {c.w.toFixed(2)}%</span>
+                      {dShi != null && <span>石差异 {pctDiff(dShi)}</span>}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <div className={css.note}>
-            <b>不能直接等权平均：</b>等权结果与指数点位对不上；拟合点位 = Σ(估值×权重) / Σ(价格×权重) × 参考点位。当日权重盘中才出，可先用前一日因子计算；跳过券不计入分子分母。
+            <b>不能直接等权平均：</b>拟合点位 = Σ(估值×权重) / Σ(价格×权重) × 参考点位。当日权重盘中才出，可先用前一日因子计算；跳过券不计入分子分母。演示数据仅用于流程演示，不代表真实估值结论。
           </div>
           {modalIdx !== null && (
             <ReportModal
@@ -395,53 +501,93 @@ export function RunStep(props: {
       )}
       {realDone && summ && job && (
         <div className={css.result}>
-          <div className={css.repGrid}>
-            <div className={css.sumcard}>
-              <h4>拟合点位 · 陈老师口径</h4>
-              <p className={css.level}>{summ.fitted_point != null ? summ.fitted_point.toFixed(2) : '—'} <small>（加权合成 · 真实执行）</small></p>
-              <p className={css.delta}>指数收盘 {summ.index_close != null ? summ.index_close.toFixed(2) : '—'} · 偏离 {diffPct}</p>
+          <div className={css.poster}>
+            <div className={css.posterKicker}>
+              <i className={css.posterMark} />
+              {meta.name} {meta.code} · 估值日期 {fmtDateShort(date)} · 数据时点（权重） {realAsOf} ·{' '}
+              {params.sentimentMode === 'llm' ? 'LLM 语义舆情' : '规则舆情'} ≤ {params.sentiment} 轮 · 并行 每批 {parallel} 条 · 任务{' '}
+              <span className={css.posterJob}>{job.id}</span>
             </div>
-            <div className={css.cmp2}>
-              <h4>本次跑批</h4>
-              <table>
-                <tbody>
-                  <tr><th>拟合点位</th><td>{summ.fitted_point != null ? summ.fitted_point.toFixed(2) : '—'}</td></tr>
-                  <tr><th>指数收盘</th><td>{summ.index_close != null ? summ.index_close.toFixed(2) : '—'}</td></tr>
-                  <tr><th>样本</th><td>{summ.total} 条</td></tr>
-                  <tr><th>出估值 / 跳过</th><td>{summ.ok} / {summ.skip}</td></tr>
-                  <tr><th>舆情口径</th><td>{params.sentimentMode === 'llm' ? 'LLM 语义（DeepSeek）' : '规则打分（词频）'} · ≤ {params.sentiment} 轮</td></tr>
-                  <tr><th>数据时点（权重）</th><td>{realAsOf}</td></tr>
-                  <tr><th>任务</th><td className={css.mono}>{job.id}</td></tr>
-                </tbody>
-              </table>
+            <div className={css.posterHead}>
+              <div className={css.posterMain}>
+                <div className={css.posterLbl}>拟合点位 · 加权合成 · 真实执行</div>
+                <div className={css.posterNum}>{summ.fitted_point != null ? summ.fitted_point.toFixed(2) : '—'}</div>
+                <div className={css.posterSub}>
+                  指数收盘 {summ.index_close != null ? summ.index_close.toFixed(2) : '—'}
+                  <span className={css.posterSep}>·</span>
+                  整体差异
+                  <b className={overallDiff == null ? '' : overallDiff >= 0 ? css.up : css.down}>
+                    {overallDiff == null ? '—' : pctDiff(overallDiff)}
+                  </b>
+                </div>
+              </div>
+              <div className={css.posterSide}>
+                <div className={css.pcell}><span>高于现价</span><b className={css.up}>{realUp}<small>只</small></b></div>
+                <div className={css.pcell}><span>低于现价</span><b className={css.down}>{realDiffItems.length - realUp}<small>只</small></b></div>
+                <div className={css.pcell}><span>中位差异</span><b>{realMed == null ? '—' : pctDiff(realMed)}</b></div>
+                <div className={css.pcell}><span>出估值 / 跳过</span><b>{summ.ok}<small>/ {summ.skip}</small></b></div>
+              </div>
+            </div>
+            <DiffStrip items={realDiffItems} />
+            <div className={css.posterNote}>
+              <b>差异口径：</b>差异 = 中枢/股 ÷ 现价 − 1，只展示估值与现价的偏离，<b>不做反向校正</b>（不把估值改写成现价，也不把现价改写成估值）。拟合点位 = 指数收盘 × Σ(权重×中枢/股) / Σ(权重×收盘价)。
             </div>
           </div>
-          <div className={css.detailList} style={{ marginTop: 16 }}>
-            <h4>逐券结果（点击查看明细 · 报告新窗口打开）</h4>
-            {job.rows.map(r => {
-              const ok = r.status === 'ok'
-              const ratio = ok && r.per_share != null && r.close ? (r.per_share / r.close).toFixed(2) : null
-              return (
-                <button key={r.idx} className={css.drow} onClick={() => setModalIdx(r.idx)}>
-                  <span className={css.drowNm}>
-                    {r.name}
-                    {!ok && <span className={`${css.tag} ${css.tagWarn}`} style={{ marginLeft: 8 }}>跳过</span>}
-                    {ok && r.warnings && r.warnings.length > 0 && <span className={`${css.tag} ${css.tagMut}`} style={{ marginLeft: 8 }}>预警 {r.warnings.length}</span>}
-                  </span>
-                  <span className={css.drowVals}>
-                    <span>价 {r.close != null ? r.close.toFixed(2) : '—'}</span>
-                    <span>中枢/股 <b>{ok && r.per_share != null ? r.per_share.toFixed(2) : '—'}</b></span>
-                    <span>估值/价 <b>{ratio ?? '—'}</b></span>
-                    {ok && r.report && (
-                      <span className={css.linkBtn} onClick={e => { e.stopPropagation(); window.open(reportUrl(job.id, r.report!), '_blank', 'noopener') }}>报告 ↗</span>
+          <h3>
+            逐券重点结果
+            <span className={css.h3sub}>共 {job.rows.length} 条 · 出估值 {summ.ok} 条 · 跳过 {summ.skip} 条 · 点击看明细 · 报告新窗口打开</span>
+          </h3>
+          <div className={css.resPanel}>
+            <div className={css.resGrid}>
+              {job.rows.map(r => {
+                const ok = r.status === 'ok'
+                const d = ok ? diffOf(r.per_share, r.close) : null
+                return (
+                  <button key={r.idx} className={`${css.resCard} ${ok ? '' : css.resCardSkip}`} onClick={() => setModalIdx(r.idx)}>
+                    <div className={css.resTop}>
+                      <span className={css.resNm}>{r.name}</span>
+                      <span className={css.resCode}>{r.secucode}</span>
+                      {!ok && <span className={`${css.tag} ${css.tagWarn}`}>跳过</span>}
+                      {ok && r.warnings && r.warnings.length > 0 && <span className={`${css.tag} ${css.tagMut}`}>预警 {r.warnings.length}</span>}
+                    </div>
+                    {ok ? (
+                      <div className={css.resMetrics}>
+                        <div className={css.resM}><span>中枢/股</span><b>{r.per_share != null ? r.per_share.toFixed(2) : '—'}</b></div>
+                        <div className={css.resM}><span>现价</span><b>{r.close != null ? r.close.toFixed(2) : '—'}</b></div>
+                        <div className={`${css.resM} ${css.resMdiff}`}>
+                          <span>差异</span>
+                          <b className={d == null ? '' : d >= 0 ? css.up : css.down}>{d == null ? '—' : pctDiff(d)}</b>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={css.resSkipTxt}>跳过：{r.error ?? '未产出结果'}</div>
                     )}
-                  </span>
-                </button>
-              )
-            })}
+                    <div className={css.resMeta}>
+                      <span>{r.industry ?? '—'}</span>
+                      <span>权重 {r.weight != null ? r.weight.toFixed(2) : '—'}%</span>
+                      {ok && <span>置信度 {r.confidence_level ?? '—'}</span>}
+                      {ok && r.interval && <span>区间 {Math.round(r.interval[0])} ~ {Math.round(r.interval[1])}</span>}
+                    </div>
+                    {ok && r.report && (
+                      <div className={css.resFoot}>
+                        <span
+                          className={css.linkBtn}
+                          onClick={e => {
+                            e.stopPropagation()
+                            window.open(reportUrl(job.id, r.report!), '_blank', 'noopener')
+                          }}
+                        >
+                          打开完整报告 ↗
+                        </span>
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <div className={css.note}>
-            拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)；跳过券不计入分子分母。估值中枢为引擎综合中枢（DCF/可比/舆情按 {params.dcf}/{params.comp}/{params.sent} 加权），逐券口径见各券报告。本结果为探索性研究参考，不构成投资建议。
+            拟合点位 = 指数收盘 × Σ(权重×中枢/股) / Σ(权重×收盘价)，等价于按权重汇总逐券「中枢/现价−1」差异；跳过券不计入分子分母。估值中枢为引擎综合中枢（DCF/可比/舆情按 {params.dcf}/{params.comp}/{params.sent} 加权），逐券口径见各券报告。本结果为探索性研究参考，不构成投资建议。
           </div>
           {modalIdx !== null && (
             <ReportModal
@@ -461,6 +607,7 @@ export function RunStep(props: {
           <h4>逐券进度（已完成 {job.done}/{job.total}）</h4>
           {job.rows.map(r => {
             const ok = r.status === 'ok'
+            const d = ok ? diffOf(r.per_share, r.close) : null
             return (
               <button key={r.idx} className={css.drow} onClick={() => setModalIdx(r.idx)}>
                 <span className={css.drowNm}>
@@ -471,6 +618,7 @@ export function RunStep(props: {
                 <span className={css.drowVals}>
                   <span>价 {r.close != null ? r.close.toFixed(2) : '—'}</span>
                   <span>中枢/股 <b>{ok && r.per_share != null ? r.per_share.toFixed(2) : '—'}</b></span>
+                  {d != null && <span>差异 <b className={d >= 0 ? css.up : css.down}>{pctDiff(d)}</b></span>}
                 </span>
               </button>
             )
@@ -554,7 +702,7 @@ export function RunStep(props: {
                               <div className={css.detailList}>
                                 {histJob!.rows.map(r => {
                                   const ok = r.status === 'ok'
-                                  const ratio = ok && r.per_share != null && r.close ? (r.per_share / r.close).toFixed(2) : null
+                                  const d = ok ? diffOf(r.per_share, r.close) : null
                                   return (
                                     <button key={r.idx} className={css.drow} onClick={() => setHistModalIdx(r.idx)}>
                                       <span className={css.drowNm}>
@@ -565,7 +713,7 @@ export function RunStep(props: {
                                       <span className={css.drowVals}>
                                         <span>价 {r.close != null ? r.close.toFixed(2) : '—'}</span>
                                         <span>中枢/股 <b>{ok && r.per_share != null ? r.per_share.toFixed(2) : '—'}</b></span>
-                                        <span>估值/价 <b>{ratio ?? '—'}</b></span>
+                                        <span>差异 <b className={d == null ? '' : d >= 0 ? css.up : css.down}>{d == null ? '—' : pctDiff(d)}</b></span>
                                         {ok && r.report && (
                                           <span className={css.linkBtn} onClick={e => { e.stopPropagation(); window.open(reportUrl(histJob!.id, r.report!), '_blank', 'noopener') }}>报告 ↗</span>
                                         )}

@@ -90,6 +90,11 @@ export function synthLevel(list: Constituent[], vals: number[], skip: Set<number
   return wSum > 0 ? num / wSum : 0
 }
 
+/** 差异展示：只表达偏离，不表达校正系数。 */
+export function pctDiff(x: number): string {
+  return `${x >= 0 ? '+' : '−'}${Math.abs(x * 100).toFixed(1)}%`
+}
+
 export function fmtDate(d: Date): string {
   return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`
 }

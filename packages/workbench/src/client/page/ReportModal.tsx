@@ -1,6 +1,6 @@
 /** Per-stock report modal (demo data or real batch result). */
 
-import type { ValuationResult } from './data'
+import { pctDiff, type ValuationResult } from './data'
 import { reportUrl, type JobRow } from './api'
 import css from './ValuationPage.module.css'
 
@@ -19,15 +19,15 @@ export function ReportModal(props: {
   let rows: [string, string][] = []
   if (real) {
     const ok = real.status === 'ok'
-    const ratio = ok && real.per_share != null && real.close ? (real.per_share / real.close).toFixed(2) : null
+    const diff = ok && real.per_share != null && real.close ? real.per_share / real.close - 1 : null
     rows = [
       ['证券代码', real.secucode],
       ['行业', real.industry ?? '—'],
       ['收盘价', real.close != null ? real.close.toFixed(2) : '—'],
       ['当日权重', real.weight != null ? `${real.weight.toFixed(2)}%` : '—'],
       ['估值中枢/股', ok ? real.per_share != null ? real.per_share.toFixed(2) : '—' : `跳过：${real.error ?? '未产出结果'}`],
+      ['差异（中枢/现价−1）', diff != null ? pctDiff(diff) : '—'],
       ['估值中枢（亿元）', ok && real.weighted_mid != null ? real.weighted_mid.toFixed(2) : '—'],
-      ['估值/价', ratio ?? '—'],
       ['情景区间', ok && real.interval ? `${real.interval[0]?.toFixed(0)} ~ ${real.interval[1]?.toFixed(0)}` : '—'],
       ['置信度', real.confidence_level ?? '—'],
       ['生命周期', real.stage_label ?? '—'],
@@ -38,11 +38,11 @@ export function ReportModal(props: {
   } else {
     rows = [
       ['收盘价（示例）', r.price.toFixed(2)],
-      ['陈老师估值', skipped ? '跳过（β 无法计算）' : r.chen.toFixed(2)],
-      ['石总估值', skipped ? '—' : r.shi.toFixed(2)],
+      ['陈老师中枢', skipped ? '跳过（β 无法计算）' : r.chen.toFixed(2)],
+      ['石总中枢', skipped ? '—' : r.shi.toFixed(2)],
       ['当日权重', `${w.toFixed(2)}%`],
-      ['陈 / 价', skipped ? '—' : (r.chen / r.price).toFixed(2)],
-      ['石 / 价', skipped ? '—' : (r.shi / r.price).toFixed(2)],
+      ['陈差异（中枢/价−1）', skipped ? '—' : pctDiff(r.chen / r.price - 1)],
+      ['石差异（中枢/价−1）', skipped ? '—' : pctDiff(r.shi / r.price - 1)],
       ['计入合成', skipped ? '否（跳过券不计入分子分母）' : '是'],
     ]
   }
@@ -63,6 +63,7 @@ export function ReportModal(props: {
             ))}
           </tbody>
         </table>
+        <p className={css.modalNote}>差异只反映估值与现价的偏离，<b>不做反向校正</b>：不把估值改写成现价，也不把现价改写成估值。</p>
         {real && real.status === 'ok' && real.report && jobId && (
           <p style={{ marginTop: 14 }}>
             <a className={css.linkBtn} href={reportUrl(jobId, real.report)} target="_blank" rel="noreferrer">打开完整估值报告 ↗</a>
