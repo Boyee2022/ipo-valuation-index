@@ -4,6 +4,61 @@ import type { RealConstituent } from '../api'
 import type { Constituent } from '../data'
 import css from '../ValuationPage.module.css'
 
+function WeightBars({ items }: { items: { name: string; weight: number }[] }) {
+  const top = [...items].sort((a, b) => b.weight - a.weight).slice(0, 10)
+  const max = Math.max(...top.map(x => x.weight), 0.0001)
+  const topSum = top.reduce((a, x) => a + x.weight, 0)
+  return (
+    <div className={css.insightCard}>
+      <div className={css.insightHead}>前 10 大权重<small>合计 {topSum.toFixed(1)}%</small></div>
+      <div className={css.wrowList}>
+        {top.map(x => (
+          <div className={css.wrow} key={x.name}>
+            <span className={css.wrowNm}>{x.name}</span>
+            <div className={css.wrowTrack}><i className={css.wrowFill} style={{ width: `${(x.weight / max) * 100}%` }} /></div>
+            <span className={css.wrowVal}>{x.weight.toFixed(2)}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function IndustryTiles({ rows }: { rows: RealConstituent[] }) {
+  const map = new Map<string, number>()
+  rows.forEach(r => {
+    const k = r.industry ?? '未分类'
+    map.set(k, (map.get(k) ?? 0) + (r.weight ?? 0))
+  })
+  const all = [...map.entries()].sort((a, b) => b[1] - a[1])
+  const top = all.slice(0, 5)
+  const rest = all.slice(5).reduce((a, [, w]) => a + w, 0)
+  const max = top[0]?.[1] ?? 1
+  return (
+    <div className={css.insightCard}>
+      <div className={css.insightHead}>行业权重分布<small>申万Ⅱ · {all.length} 个行业</small></div>
+      <div className={css.secTiles}>
+        {top.map(([name, w]) => (
+          <div
+            key={name}
+            className={css.secTile}
+            style={{ background: `color-mix(in srgb, var(--accent) ${Math.round(5 + (w / max) * 18)}%, var(--card))` }}
+          >
+            <span className={css.secTileNm}>{name}</span>
+            <b className={css.secTileVal}>{w.toFixed(1)}%</b>
+          </div>
+        ))}
+        {rest > 0 && (
+          <div className={css.secTile}>
+            <span className={css.secTileNm}>其他 {all.length - top.length} 个行业</span>
+            <b className={`${css.secTileVal} ${css.secTileMore}`}>{rest.toFixed(1)}%</b>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function WeightsStep(props: {
   list: Constituent[]
   real: RealConstituent[] | null
@@ -22,6 +77,10 @@ export function WeightsStep(props: {
         <p className={css.sub}>{indexName} 真实成分券与收盘权重（东财指数成分表 · 数据时点 {asOf}）。</p>
         <div className={css.pipe}>
           <b>权重因子</b><span className={css.arr}>×</span><b>当日市值</b><span className={css.arr}>→</span><b>当日权重</b><span style={{ marginLeft: 8 }}>（归一化）</span>
+        </div>
+        <div className={css.chartDuo}>
+          <WeightBars items={real.map(r => ({ name: r.name, weight: r.weight ?? 0 }))} />
+          <IndustryTiles rows={real} />
         </div>
         <div className={`${css.tblWrap} ${css.tblTall}`}>
           <table className={css.clist}>
@@ -66,6 +125,9 @@ export function WeightsStep(props: {
       <p className={css.sub}>{indexName} · 自动列出所选日期的 {list.length} 条成分券及权重，由指数成分券表自动生成。</p>
       <div className={css.pipe}>
         <b>权重因子</b><span className={css.arr}>×</span><b>当日市值</b><span className={css.arr}>→</span><b>当日权重</b><span style={{ marginLeft: 8 }}>（归一化）</span>
+      </div>
+      <div className={`${css.chartDuo} ${css.chartSolo}`}>
+        <WeightBars items={list.map(r => ({ name: r.name, weight: r.w }))} />
       </div>
       <div className={`${css.tblWrap} ${css.tblTall}`}>
         <table className={css.clist}>

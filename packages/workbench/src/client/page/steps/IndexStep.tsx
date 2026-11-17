@@ -19,7 +19,9 @@ export function IndexStep(props: { indexSel: string; onSelect: (v: string) => vo
             {indexSel === x.id && <span className={css.check}>✓</span>}
             <div className={css.iname}>{x.name}</div>
             <div className={css.icode}>{x.code}</div>
-            <div className={css.idsc}>{x.count} 条成分券 · 真实数据跑批</div>
+            <div className={css.icardBig}><b>{x.count}</b><span>条成分券</span></div>
+            <div className={css.ibar}><i style={{ width: `${(x.count / 300) * 100}%` }} /></div>
+            <div className={css.idsc}>真实数据跑批 · 权重归一化合成</div>
             <div className={css.istate}><span className={`${css.tag} ${css.tagOk}`}>真实数据</span></div>
           </div>
         ))}

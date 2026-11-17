@@ -23,7 +23,7 @@ interface LogLine {
 
 const STAT_N = 1000
 
-/** 近 N 次跑批走势（同指数）：拟合点位（金，实线）vs 指数收盘（青，虚线）。 */
+/** 近 N 次跑批走势（同指数）：拟合点位（绿，实线）vs 指数收盘（灰，虚线）。 */
 function HistoryChart({ hist, indexSel }: { hist: JobMeta[]; indexSel: string }) {
   const meta = indexMeta(indexSel)
   const pts = hist
@@ -47,7 +47,7 @@ function HistoryChart({ hist, indexSel }: { hist: JobMeta[]; indexSel: string })
       <div className={css.chartTitle}>
         近 {pts.length} 次跑批 · {meta.name} 拟合点位 vs 指数收盘
         <span className={css.clegend}>
-          <i className={css.swGold} />拟合点位<i className={css.swCyan} />指数收盘
+          <i className={css.swFit} />拟合点位<i className={css.swIdx} />指数收盘
         </span>
       </div>
       <svg className={css.chartSvg} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-label="历史跑批走势图">
@@ -59,7 +59,7 @@ function HistoryChart({ hist, indexSel }: { hist: JobMeta[]; indexSel: string })
         ))}
         <path className={css.chartIdx} d={path(idx)} fill="none" strokeWidth="2" strokeDasharray="4 3" />
         <path className={css.chartFit} d={path(fit)} fill="none" strokeWidth="2" />
-        {fit.map((v, i) => <circle key={i} className={css.chartFit} cx={X(i)} cy={Y(v)} r="2.6" />)}
+        {fit.map((v, i) => <circle key={i} className={css.chartDot} cx={X(i)} cy={Y(v)} r="2.6" />)}
       </svg>
     </div>
   )
@@ -139,6 +139,75 @@ function DiffStrip({ items }: { items: { name: string; diff: number; w: number }
         <span>点大小 = 当日权重</span>
         {med != null && <span>虚线 = 中位差异 {pctDiff(med)}</span>}
         {over > 0 && <span>超出 ±{Math.round(CLAMP * 100)}% 的 {over} 只贴边显示</span>}
+      </div>
+    </div>
+  )
+}
+
+/** 方向占比环图：高于/低于现价的券数。 */
+function ShareDonut({ up, down }: { up: number; down: number }) {
+  const total = up + down
+  const R = 54
+  const CIRC = 2 * Math.PI * R
+  const upLen = total > 0 ? (up / total) * CIRC : 0
+  const downLen = total > 0 ? (down / total) * CIRC : 0
+  return (
+    <div className={css.donutWrap}>
+      <svg className={css.donutSvg} viewBox="0 0 132 132" aria-label="估值方向占比环图">
+        <circle className={css.donutTrack} cx="66" cy="66" r={R} fill="none" strokeWidth="12" />
+        <circle
+          className={css.donutUp}
+          cx="66" cy="66" r={R} fill="none" strokeWidth="12"
+          strokeDasharray={`${upLen} ${CIRC - upLen}`}
+        />
+        <circle
+          className={css.donutDown}
+          cx="66" cy="66" r={R} fill="none" strokeWidth="12"
+          strokeDasharray={`${downLen} ${CIRC - downLen}`}
+          strokeDashoffset={-upLen}
+        />
+      </svg>
+      <div className={css.donutCenter}>
+        <b>{total > 0 ? `${Math.round((up / total) * 100)}%` : '—'}</b>
+        <span>高于现价占比</span>
+      </div>
+    </div>
+  )
+}
+
+const HIST_BINS: { label: string; test: (d: number) => boolean; neg: boolean }[] = [
+  { label: '≤−100%', test: d => d < -1, neg: true },
+  { label: '−100~−50', test: d => d >= -1 && d < -0.5, neg: true },
+  { label: '−50~−20', test: d => d >= -0.5 && d < -0.2, neg: true },
+  { label: '−20~0', test: d => d >= -0.2 && d < 0, neg: true },
+  { label: '0~+20', test: d => d >= 0 && d < 0.2, neg: false },
+  { label: '+20~+50', test: d => d >= 0.2 && d < 0.5, neg: false },
+  { label: '+50~+100', test: d => d >= 0.5 && d < 1, neg: false },
+  { label: '≥+100%', test: d => d >= 1, neg: false },
+]
+
+/** 逐券差异直方图：分箱统计券数，绿 = 高于现价，红 = 低于现价。 */
+function DiffHistogram({ items }: { items: { name: string; diff: number; w: number }[] }) {
+  if (items.length === 0) return <p className={css.hint}>无可用于差异分布的逐券结果。</p>
+  const counts = HIST_BINS.map(b => items.filter(x => b.test(x.diff)).length)
+  const max = Math.max(1, ...counts)
+  return (
+    <div>
+      <div className={css.hist}>
+        {counts.map((n, i) => (
+          <div className={css.histCol} key={HIST_BINS[i].label}>
+            <span className={css.histN}>{n}</span>
+            <i
+              className={`${css.histBar} ${HIST_BINS[i].neg ? css.histBarNeg : ''}`}
+              style={{ height: `${n > 0 ? Math.max(2, (n / max) * 88) : 0}%` }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className={css.histX}>
+        {HIST_BINS.map(b => (
+          <span key={b.label}>{b.label}</span>
+        ))}
       </div>
     </div>
   )
@@ -441,9 +510,33 @@ export function RunStep(props: {
                 <div className={css.pcell}><span>低于现价</span><b className={css.down}>{demoDiffItems.length - demoUp}<small>只</small></b></div>
               </div>
             </div>
-            <DiffStrip items={demoDiffItems} />
             <div className={css.posterNote}>
               <b>差异口径：</b>差异 = 估值中枢/股 ÷ 现价 − 1，只展示估值与现价的偏离，<b>不做反向校正</b>（不把估值改写成现价，也不把现价改写成估值）。演示数字为本地生成，仅示意展示结构。
+            </div>
+          </div>
+          <div className={css.insightGrid}>
+            <div className={css.insightCard}>
+              <div className={css.insightHead}>
+                逐券差异分布
+                <small>横轴 = 陈中枢/股相对现价 − 1 · 柱高 = 券数</small>
+              </div>
+              <DiffHistogram items={demoDiffItems} />
+              <DiffStrip items={demoDiffItems} />
+            </div>
+            <div className={css.insightCard}>
+              <div className={css.insightHead}>
+                估值方向占比
+                <small>共 {demoDiffItems.length} 只有效估值</small>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <ShareDonut up={demoUp} down={demoDiffItems.length - demoUp} />
+                <div className={css.donutLegend} style={{ flex: '1 1 120px' }}>
+                  <div><i style={{ background: 'var(--pos)' }} />高于现价<b>{demoUp} 只</b></div>
+                  <div><i style={{ background: 'var(--neg)' }} />低于现价<b>{demoDiffItems.length - demoUp} 只</b></div>
+                  <div>整体差异<b>{demoOverallDiff == null ? '—' : pctDiff(demoOverallDiff)}</b></div>
+                  <div>出估值 / 跳过<b>{total - skip.size} / {skip.size}</b></div>
+                </div>
+              </div>
             </div>
           </div>
           <h3>
@@ -528,11 +621,36 @@ export function RunStep(props: {
                 <div className={css.pcell}><span>出估值 / 跳过</span><b>{summ.ok}<small>/ {summ.skip}</small></b></div>
               </div>
             </div>
-            <DiffStrip items={realDiffItems} />
             <div className={css.posterNote}>
               <b>差异口径：</b>差异 = 中枢/股 ÷ 现价 − 1，只展示估值与现价的偏离，<b>不做反向校正</b>（不把估值改写成现价，也不把现价改写成估值）。拟合点位 = 指数收盘 × Σ(权重×中枢/股) / Σ(权重×收盘价)。
             </div>
           </div>
+          <div className={css.insightGrid}>
+            <div className={css.insightCard}>
+              <div className={css.insightHead}>
+                逐券差异分布
+                <small>横轴 = 中枢/股相对现价 − 1 · 柱高 = 券数</small>
+              </div>
+              <DiffHistogram items={realDiffItems} />
+              <DiffStrip items={realDiffItems} />
+            </div>
+            <div className={css.insightCard}>
+              <div className={css.insightHead}>
+                估值方向占比
+                <small>共 {realDiffItems.length} 只有效估值</small>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                <ShareDonut up={realUp} down={realDiffItems.length - realUp} />
+                <div className={css.donutLegend} style={{ flex: '1 1 120px' }}>
+                  <div><i style={{ background: 'var(--pos)' }} />高于现价<b>{realUp} 只</b></div>
+                  <div><i style={{ background: 'var(--neg)' }} />低于现价<b>{realDiffItems.length - realUp} 只</b></div>
+                  <div>中位差异<b>{realMed == null ? '—' : pctDiff(realMed)}</b></div>
+                  <div>出估值 / 跳过<b>{summ.ok} / {summ.skip}</b></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {histChart && <HistoryChart hist={hist!} indexSel={indexSel} />}
           <h3>
             逐券重点结果
             <span className={css.h3sub}>共 {job.rows.length} 条 · 出估值 {summ.ok} 条 · 跳过 {summ.skip} 条 · 点击看明细 · 报告新窗口打开</span>
@@ -663,7 +781,7 @@ export function RunStep(props: {
                         <tr>
                           <td className={css.mono}>{i + 1}</td>
                           <td className={`${css.mono} ${css.jobId}`}>{h.id}</td>
-                          <td>{indexMeta(h.index).name}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{indexMeta(h.index).name}</td>
                           <td><span className={`${css.tag} ${h.sentiment_mode === 'llm' ? css.tagOk : css.tagMut}`}>{h.sentiment_mode === 'llm' ? 'LLM' : '规则'}</span></td>
                           <td className={css.timeCell}>{h.created}</td>
                           <td><span className={`${css.tag} ${stCls}`}>{st}</span></td>
@@ -743,7 +861,6 @@ export function RunStep(props: {
               </table>
             </div>
           )}
-          {histChart && <HistoryChart hist={hist} indexSel={indexSel} />}
         </div>
       )}
     </section>

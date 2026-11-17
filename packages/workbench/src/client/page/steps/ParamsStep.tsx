@@ -35,6 +35,19 @@ export function ParamsStep(props: { params: BatchParams; onChange: (p: BatchPara
     onChange({ ...params, [key]: Number.isFinite(n) ? n : 0 })
   }
   const pct = (v: number) => `${sum === 0 ? 0 : (v / sum) * 100}%`
+  const R = 54
+  const CIRC = 2 * Math.PI * R
+  let segAcc = 0
+  const segs = ([
+    ['dcf', 'DCF', params.dcf, 'var(--c1)'],
+    ['comp', '可比公司', params.comp, 'var(--c2)'],
+    ['sent', '市场舆情', params.sent, 'var(--c3)'],
+  ] as const).map(([key, label, v, color]) => {
+    const len = sum > 0 ? (v / sum) * CIRC : 0
+    const off = -segAcc
+    segAcc += len
+    return { key, label, v, color, len, off, cls: key === 'dcf' ? css.dg1 : key === 'comp' ? css.dg2 : css.dg3 }
+  })
   return (
     <section>
       <h2>参数确认</h2>
@@ -75,28 +88,50 @@ export function ParamsStep(props: { params: BatchParams; onChange: (p: BatchPara
       </p>
 
       <h3>方法加权比例（合计 100%）</h3>
-      <p className={css.hint}>默认比例沿用技能内置，跑前可调。</p>
-      <div className={css.wbar}>
-        <i className={css.wb1} style={{ width: pct(params.dcf) }} />
-        <i className={css.wb2} style={{ width: pct(params.comp) }} />
-        <i className={css.wb3} style={{ width: pct(params.sent) }} />
-      </div>
-      <div className={css.wlegend}>
-        <span className={css.wGroup}>
-          <i className={css.wb1} />DCF（%）：
-          <input className={css.numInput} type="number" min={0} max={100} value={params.dcf} onChange={e => setNum('dcf', e.target.value)} />
-        </span>
-        <span className={css.wGroup}>
-          <i className={css.wb2} />可比公司（%）：
-          <input className={css.numInput} type="number" min={0} max={100} value={params.comp} onChange={e => setNum('comp', e.target.value)} />
-        </span>
-        <span className={css.wGroup}>
-          <i className={css.wb3} />市场舆情（%）：
-          <input className={css.numInput} type="number" min={0} max={100} value={params.sent} onChange={e => setNum('sent', e.target.value)} />
-        </span>
-      </div>
-      <div className={`${css.wsum} ${sum === 100 ? '' : css.wsumBad}`}>
-        {sum === 100 ? '合计 100%' : `合计 ${sum}%（需等于 100%）`}
+      <p className={css.hint}>默认比例沿用技能内置，跑前可调；圆环随权重实时更新。</p>
+      <div className={css.methodCard}>
+        <div className={css.donutWrap}>
+          <svg className={css.donutSvg} viewBox="0 0 140 140" role="img" aria-label="DCF、可比公司、市场舆情加权比例">
+            <circle className={css.donutTrack} cx="70" cy="70" r={R} strokeWidth="15" fill="none" />
+            {segs.map(s => (
+              <circle
+                key={s.key}
+                className={s.cls}
+                cx="70"
+                cy="70"
+                r={R}
+                strokeWidth="15"
+                fill="none"
+                strokeDasharray={`${s.len} ${CIRC - s.len}`}
+                strokeDashoffset={s.off}
+              />
+            ))}
+          </svg>
+          <div className={css.donutCenter}><b>{sum}%</b><span>方法合计</span></div>
+        </div>
+        <div className={css.methodLegend}>
+          {segs.map(s => (
+            <div className={css.mRow} key={s.key}>
+              <i className={css.mDot} style={{ background: s.color }} />
+              <span className={css.mName}>{s.label}</span>
+              <input
+                className={css.numInput}
+                type="number"
+                min={0}
+                max={100}
+                value={s.v}
+                onChange={e => setNum(s.key, e.target.value)}
+              />
+              <span className={css.mPct}>{sum > 0 ? `${((s.v / sum) * 100).toFixed(0)}%` : '0%'}</span>
+            </div>
+          ))}
+          <div className={css.wbar}>
+            {segs.map(s => <i key={s.key} style={{ width: pct(s.v), background: s.color }} />)}
+          </div>
+          <div className={`${css.wsum} ${sum === 100 ? '' : css.wsumBad}`}>
+            {sum === 100 ? '合计 100%' : `合计 ${sum}%（需等于 100%）`}
+          </div>
+        </div>
       </div>
 
       <h3>内置参数清单</h3>

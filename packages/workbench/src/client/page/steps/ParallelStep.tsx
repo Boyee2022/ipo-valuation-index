@@ -29,6 +29,30 @@ export function ParallelStep(props: {
           <div className={css.phrs}>≈ {hours(10)} <small>小时</small></div>
         </div>
       </div>
+      <div className={css.insightCard} style={{ marginTop: 12 }}>
+        <div className={css.insightHead}>
+          预计耗时对比
+          <small>按单股约 {MINS_PER_STOCK} 分钟、{count} 条成分估算</small>
+        </div>
+        <div className={css.hbarChart}>
+          {([
+            ['本机串行', serial, serial],
+            ['每批 3 条', hours(3), serial],
+            ['每批 10 条', hours(10), serial],
+          ] as [string, number, number][]).map(([label, h, max]) => {
+            const on = (label === '每批 3 条' && parallel === 3) || (label === '每批 10 条' && parallel === 10)
+            return (
+              <div className={css.hbarRow} key={label}>
+                <span className={css.hbarLab}>{label}</span>
+                <div className={css.hbarTrack}>
+                  <i className={on ? css.hbarFillOn : css.hbarFill} style={{ width: `${(h / max) * 100}%` }} />
+                </div>
+                <b>≈ {h} 小时</b>
+              </div>
+            )
+          })}
+        </div>
+      </div>
       <div className={css.note}>最终目标 {count} 条并行跑完；<b>初期用 3 或 10 试跑定档，再上全量</b>。</div>
     </section>
   )

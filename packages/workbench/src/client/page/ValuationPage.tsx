@@ -56,25 +56,24 @@ export function ValuationPage(props: PropsLocale) {
   return (
     <div className={css.page}>
       <header className={css.pageHead}>
-        <div className={css.sysline}>
-          <span className={css.sysTag}>VALUATION WORKBENCH</span>
-          <span className={css.sysMeta}>CN INDEX VALUATION · SIX-STEP BATCH · REAL DATA</span>
+        <div className={css.headTop}>
+          <h1 className={css.h1}>{t('page.title')}</h1>
+          <div className={css.headActs}>
+            <span className={`${css.badge} ${realMode ? css.badgeOn : ''}`}>
+              {realMode && <i />}
+              {realLoading
+                ? '真实数据加载中…'
+                : realMode
+                  ? `真实数据 · ${real!.index_name} · ${real!.as_of}`
+                  : '演示原型 · 示例数据'}
+            </span>
+            <button className={`${css.btn} ${css.btnPrimary}`} onClick={() => jump(5)}>运行报告 →</button>
+          </div>
         </div>
-        <h1 className={css.h1}>{t('page.title')}</h1>
         <p className={css.lead}>
           上证50、上证180、科创50、沪深300 四指数逐券真实跑批：<strong>估值与现价的差异只做展示、不做反向校正</strong>，按当日权重合成拟合点位，与指数收盘对照。
         </p>
-        <div className={css.badges}>
-          <span className={`${css.badge} ${realMode ? css.badgeOn : ''}`}>
-            {realMode && <i />}
-            {realLoading
-              ? '真实数据加载中…'
-              : realMode
-                ? `真实数据模式 · ${real!.index_name} 成分数据时点 ${real!.as_of}`
-                : '演示原型 · 表单与数据均为示例，不提交真实任务'}
-          </span>
-          <span className={css.badge}>拟合点位 = 指数收盘 × Σ(权重×中枢/股) / Σ(权重×收盘价)</span>
-        </div>
+        <p className={css.metaLine}>拟合点位 = 指数收盘 × Σ(权重×中枢/股) / Σ(权重×收盘价)</p>
       </header>
 
       <div className={css.stepper}>
@@ -85,7 +84,7 @@ export function ValuationPage(props: PropsLocale) {
             className={`${css.stepBtn} ${i < step ? css.stepDone : ''} ${i === step ? css.stepActive : ''}`}
             onClick={() => jump(i)}
           >
-            <span className={css.ic}>{i + 1}</span>
+            <span className={css.ic}>{i < step ? '✓' : i + 1}</span>
             <span className={css.stName}>{t(key)}</span>
           </button>
         ))}
