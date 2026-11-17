@@ -181,13 +181,15 @@ def score_stock(code, name, rounds=sentiment.DEFAULT_ROUNDS, force=False):
         result['engine'] = 'rule-fallback'
         result['evidence'] = 'LLM 语义分析失败（%s），回退规则打分：%s' % (
             str(exc)[:120], base.get('evidence', ''))
-    try:
-        CACHE.mkdir(parents=True, exist_ok=True)
-        tmp = CACHE / ('%s.tmp.%d' % (key, threading.get_ident()))
-        tmp.write_text(json.dumps(result, ensure_ascii=False), encoding='utf-8')
-        tmp.replace(path)
-    except Exception:
-        pass
+    if result.get('engine') == 'llm':
+        # 只缓存真正的 LLM 结果：密钥失灵/接口故障时的回退不落缓存，修复后可立即重跑
+        try:
+            CACHE.mkdir(parents=True, exist_ok=True)
+            tmp = CACHE / ('%s.tmp.%d' % (key, threading.get_ident()))
+            tmp.write_text(json.dumps(result, ensure_ascii=False), encoding='utf-8')
+            tmp.replace(path)
+        except Exception:
+            pass
     return result
 
 
