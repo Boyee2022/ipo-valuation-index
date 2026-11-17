@@ -56,13 +56,13 @@ function ensureStyle(): void {
     `[${MARKER}] .vr-file:hover { background: rgba(14, 116, 144, 0.08); }`,
     `[${MARKER}] .vr-hint { color: #9ca3af; font-size: 12px; padding: 4px 8px; }`,
     `[${MARKER}] .vr-skip { color: #b45309; font-size: 11px; padding: 2px 8px; }`,
-    // 深色外壳（ui-theme preference=dark，body[data-ds-dark-theme]）：与工作台深色设计令牌对齐。
-    `body[data-ds-dark-theme] [${MARKER}] .vr-row { color: #C7D3E6; }`,
+    // 深色外壳（body[data-ds-dark-theme]，preference=dark 或 system 命中深色）：中性灰系与工作台新令牌一致。
+    `body[data-ds-dark-theme] [${MARKER}] .vr-row { color: #cfd3d6; }`,
     `body[data-ds-dark-theme] [${MARKER}] .vr-row:hover { background: rgba(255, 255, 255, 0.06); }`,
-    `body[data-ds-dark-theme] [${MARKER}] .vr-caret { color: #5A6B8C; }`,
+    `body[data-ds-dark-theme] [${MARKER}] .vr-caret { color: #545557; }`,
     `body[data-ds-dark-theme] [${MARKER}] .vr-file { color: #38BDF8; }`,
     `body[data-ds-dark-theme] [${MARKER}] .vr-file:hover { background: rgba(56, 189, 248, 0.10); }`,
-    `body[data-ds-dark-theme] [${MARKER}] .vr-hint { color: #7E8FAE; }`,
+    `body[data-ds-dark-theme] [${MARKER}] .vr-hint { color: #9ca3af; }`,
     `body[data-ds-dark-theme] [${MARKER}] .vr-skip { color: #F5C24B; }`,
   ].join('\n')
   document.head.appendChild(style)

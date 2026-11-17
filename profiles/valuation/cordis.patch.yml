@@ -412,10 +412,11 @@
       - id: tool-plugin-market
         name: '@deepseek-ai/dsh-plugin-market/tools'
         disabled: true
-# 深色主题（2026-11-13，用户要求与工作台页面深色设计统一）：外壳（顶栏+左侧边栏）与
-# 估值跑批页同走深色——页面按「估值工作台-客户需求版」设计稿实现（深海军蓝令牌，
-# 青色/金色强调）；侧栏注入的历史报告行同步做了 data-ds-dark-theme 深色配色。
+# 主题跟随系统（2026-11-17，用户要求适配系统浅/深切换）：外壳（顶栏+左侧边栏）由
+# ui-theme preference=system 随 OS 深浅实时翻转（body[data-ds-dark-theme]）；估值跑批页
+# 中性面令牌直接引用外壳 --dsw-*（与工作栏同色系），强调色浅色用深一档、图表 SVG
+# 颜色走类随主题翻转；侧栏注入的历史报告行有浅/深两套配色。
 - id: ui-theme
   name: "@deepseek-ai/dsh-client-ui-theme"
   config:
-    preference: dark
+    preference: system

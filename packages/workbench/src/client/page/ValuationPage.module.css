@@ -1,20 +1,44 @@
-/* 深色设计（2026-11-13，对照「估值工作台-客户需求版」设计稿）：
-   深海军蓝令牌 + 青色/金色强调，与实例深色外壳（ui-theme preference=dark）统一。 */
+/* 双主题设计（2026-11-17）：
+   中性面令牌直接引用外壳 --dsw-*（body[data-ds-dark-theme] 翻转，ui-theme
+   preference=system 时随系统浅/深实时切换），页面与左侧工作栏同色系；
+   强调色（青/金/紫）浅色用深一档，深色用亮一档，SVG 图表颜色走类随主题翻转。 */
 
 .page {
-  --bg: #0A111F; --bg2: #0D1628; --card: #111B30; --card2: #14213A;
-  --line: #1F2E4A; --line2: #2A3D60; --ink: #E6EDF7; --muted: #7E8FAE;
-  --cyan: #38BDF8; --gold: #F5C24B; --violet: #A78BFA;
-  --ok: #34D399; --warn: #F5C24B; --err: #F87171; --wait: #5A6B8C;
+  /* 中性令牌：接外壳主题变量，深浅两套由外壳切换 */
+  --bg: var(--dsw-alias-bg-base, #151517);
+  --bg2: var(--dsw-specific-sidebar-fill, #1b1b1c);
+  --card: var(--dsw-alias-bg-layer-1, #232324);
+  --card2: var(--dsw-alias-bg-layer-2, #2c2c2e);
+  --line: var(--dsw-alias-border-l1, rgba(255, 255, 255, .06));
+  --line2: var(--dsw-alias-border-l2, rgba(255, 255, 255, .12));
+  --ink: var(--dsw-alias-label-primary, #f9fafb);
+  --muted: var(--dsw-alias-label-secondary, #cfd3d6);
+  --wait: var(--dsw-alias-state-idle-primary, #545557);
+  --ok: var(--dsw-alias-state-success-primary, #22c55e);
+  --warn: var(--dsw-alias-state-warn-primary, #f59e0b);
+  --err: var(--dsw-alias-state-error-primary, #f25a5a);
+  /* 强调色：浅色模式用深一档（白底可读），深色模式用亮一档 */
+  --cyan: #0284C7;
+  --cyanInk: #fff;
+  --gold: #B45309;
+  --violet: #7C3AED;
+  --tint: color-mix(in srgb, var(--cyan) 8%, transparent);
+  --tintStrong: color-mix(in srgb, var(--cyan) 16%, transparent);
   max-width: 1060px;
   margin: 0 auto;
   padding: 24px 28px 40px;
   height: 100%;
   overflow-y: auto;
-  background: radial-gradient(1200px 500px at 70% -10%, #12203A 0%, rgba(10, 17, 31, .55) 55%), var(--bg);
+  background: radial-gradient(1100px 480px at 70% -10%, var(--card), transparent 62%), var(--bg);
   color: var(--ink);
   font-size: 14px;
   line-height: 1.65;
+}
+body[data-ds-dark-theme] .page {
+  --cyan: #38BDF8;
+  --cyanInk: #101014;
+  --gold: #F5C24B;
+  --violet: #A78BFA;
 }
 
 /* ===== 页头 ===== */
@@ -33,7 +57,7 @@
   height: 8px;
   border-radius: 2px;
   background: linear-gradient(135deg, var(--cyan), #6366F1);
-  box-shadow: 0 0 12px rgba(56, 189, 248, .8);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--cyan) 80%, transparent);
   margin-right: 12px;
   flex: none;
 }
@@ -49,9 +73,9 @@
   color: var(--muted);
   margin-right: 8px;
   margin-bottom: 4px;
-  background: rgba(17, 27, 48, .6);
+  background: var(--bg2);
 }
-.badgeOn { border-color: rgba(52, 211, 153, .45); color: var(--ok); background: rgba(52, 211, 153, .08); }
+.badgeOn { border-color: color-mix(in srgb, var(--ok) 45%, transparent); color: var(--ok); background: color-mix(in srgb, var(--ok) 8%, transparent); }
 .badgeOn i {
   width: 6px;
   height: 6px;
@@ -62,8 +86,8 @@
   animation: vwbPl 1.6s infinite;
 }
 @keyframes vwbPl {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, .55); }
-  55% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); }
+  55% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--ok) 0%, transparent); }
 }
 
 /* ===== 步骤条 ===== */
@@ -101,7 +125,7 @@
   border-radius: 1px;
   z-index: 0;
 }
-.stepDone:not(:last-child)::after { background: linear-gradient(90deg, #0E7490, var(--cyan)); }
+.stepDone:not(:last-child)::after { background: linear-gradient(90deg, color-mix(in srgb, var(--cyan) 55%, transparent), var(--cyan)); }
 .ic {
   width: 30px;
   height: 30px;
@@ -120,7 +144,7 @@
   font-family: Consolas, monospace;
 }
 .stepDone .ic {
-  background: linear-gradient(135deg, rgba(56, 189, 248, .22), rgba(14, 116, 144, .22));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cyan) 22%, transparent), color-mix(in srgb, var(--cyan) 10%, transparent));
   border-color: var(--cyan);
   color: var(--cyan);
 }
@@ -130,8 +154,8 @@
   animation: vwbStepPulse 1.8s infinite;
 }
 @keyframes vwbStepPulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(245, 194, 75, .10); }
-  50% { box-shadow: 0 0 0 7px rgba(245, 194, 75, .04); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--gold) 10%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--gold) 4%, transparent); }
 }
 .stName { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; }
 .stepBtn:not(.stepDone):not(.stepActive) .stName { color: var(--wait); }
@@ -159,7 +183,7 @@
   height: 13px;
   border-radius: 2px;
   background: linear-gradient(180deg, var(--cyan), #6366F1);
-  box-shadow: 0 0 8px rgba(56, 189, 248, .6);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cyan) 60%, transparent);
   margin-right: 9px;
   flex: none;
 }
@@ -185,7 +209,7 @@
   text-align: right;
   font-family: Consolas, monospace;
 }
-.numInput:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px rgba(56, 189, 248, .15); }
+.numInput:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 0 3px var(--tintStrong); }
 .numInput::-webkit-inner-spin-button,
 .numInput::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
 .numInput { -moz-appearance: textfield; appearance: textfield; }
@@ -201,9 +225,9 @@
   border: 1px solid var(--line);
 }
 .wbar i { height: 100%; display: block; transition: width .25s; }
-.wb1 { background: linear-gradient(90deg, #0E7490, var(--cyan)); }
-.wb2 { background: linear-gradient(90deg, #6366F1, var(--violet)); }
-.wb3 { background: linear-gradient(90deg, #D97706, var(--gold)); }
+.wb1 { background: linear-gradient(90deg, color-mix(in srgb, var(--cyan) 55%, transparent), var(--cyan)); }
+.wb2 { background: linear-gradient(90deg, color-mix(in srgb, var(--violet) 55%, transparent), var(--violet)); }
+.wb3 { background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 55%, transparent), var(--gold)); }
 .wlegend { display: flex; flex-wrap: wrap; align-items: center; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
 .wGroup { display: flex; align-items: center; margin-right: 18px; white-space: nowrap; }
 .wGroup i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 6px; }
@@ -213,7 +237,7 @@
 
 /* ===== 参数清单 / 对比表 ===== */
 .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 22px; margin-top: 10px; }
-.pitem { border: 1px solid var(--line); background: rgba(13, 22, 40, .55); border-radius: 8px; padding: 9px 12px; }
+.pitem { border: 1px solid var(--line); background: var(--bg2); border-radius: 8px; padding: 9px 12px; }
 .pk { font-size: 12px; color: var(--muted); }
 .pv { font-size: 13px; color: var(--ink); font-family: Consolas, monospace; margin-top: 2px; }
 .pv small { font-family: inherit; color: var(--muted); font-size: 11.5px; }
@@ -221,7 +245,7 @@
 .tblTall { max-height: 430px; overflow-y: auto; }
 .pt, .clist { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
 .pt th, .clist th {
-  background: rgba(13, 22, 40, .85);
+  background: var(--bg2);
   color: var(--muted);
   font-weight: 600;
   text-align: left;
@@ -229,23 +253,23 @@
   border-bottom: 1px solid var(--line2);
   white-space: nowrap;
 }
-.pt td, .clist td { padding: 8px 12px; border-bottom: 1px solid var(--line); color: #C7D3E6; white-space: nowrap; }
+.pt td, .clist td { padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--ink); white-space: nowrap; }
 .pt tr:last-child td, .clist tr:last-child td { border-bottom: none; }
-.pt tbody tr:hover td, .clist tbody tr:hover td { background: rgba(56, 189, 248, .05); }
+.pt tbody tr:hover td, .clist tbody tr:hover td { background: var(--tint); }
 .numTd { text-align: right; font-family: Consolas, monospace; }
-.clist th { position: sticky; top: 0; background: #0D1628; z-index: 1; }
-.clist tfoot td { background: #0D1628; font-weight: 600; color: var(--muted); font-size: 12px; }
+.clist th { position: sticky; top: 0; background: var(--bg2); z-index: 1; }
+.clist tfoot td { background: var(--bg2); font-weight: 600; color: var(--muted); font-size: 12px; }
 .mono { font-variant-numeric: tabular-nums; }
 .tblFoot { display: flex; justify-content: space-between; flex-wrap: wrap; font-size: 12px; color: var(--muted); padding: 8px 4px 0; }
 .tblFoot b { color: var(--ink); font-weight: 600; }
 .tag { display: inline-block; font-size: 11px; padding: 1px 9px; border-radius: 6px; border: 1px solid; }
-.tagOk { background: rgba(52, 211, 153, .12); color: var(--ok); border-color: rgba(52, 211, 153, .4); }
-.tagWarn { background: rgba(245, 194, 75, .12); color: var(--warn); border-color: rgba(245, 194, 75, .4); }
-.tagErr { background: rgba(248, 113, 113, .12); color: var(--err); border-color: rgba(248, 113, 113, .4); }
-.tagMut { background: rgba(90, 107, 140, .15); color: var(--muted); border-color: var(--line2); }
+.tagOk { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.tagWarn { background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+.tagErr { background: color-mix(in srgb, var(--err) 12%, transparent); color: var(--err); border-color: color-mix(in srgb, var(--err) 40%, transparent); }
+.tagMut { background: color-mix(in srgb, var(--wait) 15%, transparent); color: var(--muted); border-color: var(--line2); }
 .note {
   border: 1px dashed var(--line2);
-  background: rgba(20, 33, 58, .5);
+  background: var(--bg2);
   border-radius: 8px;
   padding: 10px 14px;
   font-size: 12.5px;
@@ -260,7 +284,7 @@
   flex: 1;
   min-width: 210px;
   border: 1.5px solid var(--line);
-  background: rgba(13, 22, 40, .55);
+  background: var(--bg2);
   border-radius: 10px;
   padding: 16px 18px;
   margin-right: 14px;
@@ -275,8 +299,8 @@
 .istate { margin-top: 12px; }
 .icardSel {
   border-color: var(--cyan);
-  background: linear-gradient(165deg, rgba(56, 189, 248, .12), rgba(13, 22, 40, .6));
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, .12);
+  background: linear-gradient(165deg, var(--tintStrong), var(--bg2));
+  box-shadow: 0 0 0 3px var(--tintStrong);
 }
 .check {
   position: absolute;
@@ -351,7 +375,7 @@
   font-family: inherit;
 }
 .qbtn:hover { border-color: var(--cyan); color: var(--cyan); }
-.qbtnOn { border-color: var(--cyan); background: rgba(56, 189, 248, .15); color: var(--cyan); font-weight: 600; }
+.qbtnOn { border-color: var(--cyan); background: var(--tintStrong); color: var(--cyan); font-weight: 600; }
 .calwrap { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 14px; }
 .cal { border: 1px solid var(--line2); border-radius: 12px; overflow: hidden; flex: none; background: var(--bg2); }
 .chead {
@@ -359,7 +383,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 10px 14px;
-  background: rgba(13, 22, 40, .85);
+  background: var(--bg2);
   font-weight: 700;
   font-size: 14px;
   color: var(--ink);
@@ -389,11 +413,11 @@
   color: var(--ink);
   position: relative;
 }
-.calBtn:hover { background: rgba(56, 189, 248, .10); color: var(--cyan); }
+.calBtn:hover { background: var(--tint); color: var(--cyan); }
 .calBtnOff { color: var(--wait); cursor: not-allowed; opacity: .45; }
 .calBtnOff:hover { background: none; color: var(--wait); }
-.calBtnSel { background: var(--cyan); color: #08131F; font-weight: 700; }
-.calBtnSel:hover { background: var(--cyan); color: #08131F; }
+.calBtnSel { background: var(--cyan); color: var(--cyanInk); font-weight: 700; }
+.calBtnSel:hover { background: var(--cyan); color: var(--cyanInk); }
 .calBtnToday { box-shadow: inset 0 0 0 1.5px var(--cyan); }
 .calBtnToday.calBtnSel { box-shadow: none; }
 .calDot {
@@ -406,7 +430,7 @@
   border-radius: 50%;
   background: var(--cyan);
 }
-.calBtnSel .calDot { background: #08131F; }
+.calBtnSel .calDot { background: var(--cyanInk); }
 
 /* ===== 并行度卡片 ===== */
 .pcards { display: flex; flex-wrap: wrap; }
@@ -414,7 +438,7 @@
   flex: 1;
   min-width: 250px;
   border: 1.5px solid var(--line);
-  background: rgba(13, 22, 40, .55);
+  background: var(--bg2);
   border-radius: 10px;
   padding: 18px;
   margin-right: 14px;
@@ -429,14 +453,14 @@
 .phrs small { font-size: 12px; color: var(--muted); font-weight: 400; }
 .pcardSel {
   border-color: var(--cyan);
-  background: linear-gradient(165deg, rgba(56, 189, 248, .12), rgba(13, 22, 40, .6));
-  box-shadow: 0 0 0 3px rgba(56, 189, 248, .12);
+  background: linear-gradient(165deg, var(--tintStrong), var(--bg2));
+  box-shadow: 0 0 0 3px var(--tintStrong);
 }
 .pcardSel .phrs { color: var(--gold); }
 
 /* ===== 运行报告 ===== */
 .sumgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 14px; }
-.sumbox { border: 1px solid var(--line); background: rgba(13, 22, 40, .55); border-radius: 9px; padding: 11px 14px; }
+.sumbox { border: 1px solid var(--line); background: var(--bg2); border-radius: 9px; padding: 11px 14px; }
 .sk { font-size: 11.5px; color: var(--muted); }
 .sv { font-size: 14px; color: var(--ink); margin-top: 2px; font-family: Consolas, monospace; }
 .btn {
@@ -472,14 +496,14 @@
   display: block;
   height: 100%;
   width: 0;
-  background: linear-gradient(90deg, #0E7490, var(--cyan));
+  background: linear-gradient(90deg, color-mix(in srgb, var(--cyan) 55%, transparent), var(--cyan));
   transition: width .3s;
 }
 .log {
   font-family: Consolas, monospace;
   font-size: 12.5px;
   background: var(--bg2);
-  color: #9FD3E0;
+  color: var(--ink);
   border: 1px solid var(--line);
   border-radius: 11px;
   padding: 14px;
@@ -487,7 +511,7 @@
   overflow-y: auto;
   margin: 10px 0 0;
 }
-.logLineOk { color: #7FD8A4; }
+.logLineOk { color: var(--ok); }
 .logLineDim { color: var(--wait); }
 .result { margin-top: 20px; animation: vwbFadeIn .3s; }
 .repGrid { display: grid; grid-template-columns: 1.25fr .75fr; gap: 16px; margin-top: 14px; align-items: start; }
@@ -504,7 +528,7 @@
 .spark { width: 100%; height: 84px; display: block; }
 .legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-top: 8px; }
 .legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
-.cmp2 { border: 1px solid var(--line); border-radius: 13px; padding: 18px; background: rgba(13, 22, 40, .55); }
+.cmp2 { border: 1px solid var(--line); border-radius: 13px; padding: 18px; background: var(--bg2); }
 .cmp2 h4 { font-size: 14px; font-weight: 700; margin: 0 0 10px; }
 .cmp2 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .cmp2 th, .cmp2 td {
@@ -512,7 +536,7 @@
   border-bottom: 1px solid var(--line);
   text-align: left;
   font-variant-numeric: tabular-nums;
-  color: #C7D3E6;
+  color: var(--ink);
 }
 .cmp2 th { color: var(--muted); font-size: 12px; font-weight: 600; }
 .cmp2 tr:last-child td { border-bottom: none; }
@@ -522,7 +546,7 @@
   overflow: hidden;
   max-height: 300px;
   overflow-y: auto;
-  background: rgba(13, 22, 40, .35);
+  background: var(--bg2);
 }
 .detailList h4 {
   padding: 12px 14px;
@@ -553,7 +577,7 @@
   color: inherit;
 }
 .drow:last-child { border-bottom: none; }
-.drow:hover { background: rgba(56, 189, 248, .06); }
+.drow:hover { background: var(--tint); }
 .drowNm { font-weight: 600; }
 .drowVals { display: flex; gap: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .drowVals b { color: var(--ink); }
@@ -565,18 +589,30 @@
   display: block;
   width: 100%;
   height: 180px;
-  background: rgba(13, 22, 40, .55);
+  background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: 9px;
 }
 .op { font-size: 12px; color: var(--cyan); cursor: pointer; font-weight: 400; }
 .op:hover { text-decoration: underline; }
 
+/* ===== 图表 SVG 主题化笔触（随 --cyan/--gold/--line 翻转） ===== */
+.chartGrid { stroke: var(--line); }
+.chartLabel { fill: var(--muted); }
+.chartIdx { stroke: var(--cyan); }
+.chartFit { stroke: var(--gold); fill: var(--gold); }
+.sparkDim { stroke: var(--line2); }
+.fillCyan { fill: var(--cyan); }
+.fillGold { fill: var(--gold); }
+.swCyan { background: var(--cyan); }
+.swGold { background: var(--gold); }
+.swDim { background: var(--line2); }
+
 /* ===== 弹窗 ===== */
 .mask {
   position: fixed;
   inset: 0;
-  background: rgba(10, 17, 31, .66);
+  background: color-mix(in srgb, var(--bg) 66%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -603,7 +639,7 @@
   border-bottom: 1px solid var(--line);
   text-align: left;
   font-variant-numeric: tabular-nums;
-  color: #C7D3E6;
+  color: var(--ink);
 }
 .modal th { color: var(--muted); font-size: 12px; font-weight: 600; }
 .close {
@@ -644,7 +680,7 @@
   padding: 0;
   font-size: inherit;
 }
-.linkBtn:hover { color: #7DD3FC; }
+.linkBtn:hover { color: color-mix(in srgb, var(--cyan) 80%, #fff); }
 
 @media (max-width: 820px) {
   .pgrid, .sumgrid, .repGrid { grid-template-columns: 1fr; }

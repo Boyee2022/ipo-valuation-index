@@ -45,19 +45,19 @@ function HistoryChart({ hist }: { hist: JobMeta[] }) {
       <div className={css.chartTitle}>
         近 {pts.length} 次跑批 · 拟合点位 vs 指数收盘
         <span className={css.clegend}>
-          <i style={{ background: '#F5C24B' }} />拟合点位<i style={{ background: '#38BDF8' }} />指数收盘
+          <i className={css.swGold} />拟合点位<i className={css.swCyan} />指数收盘
         </span>
       </div>
       <svg className={css.chartSvg} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-label="历史跑批走势图">
         {grid.map(gv => (
           <g key={gv}>
-            <line x1={PAD} y1={Y(gv)} x2={W - PAD} y2={Y(gv)} stroke="#1F2E4A" strokeWidth="1" />
-            <text x="6" y={Y(gv) + 4} fill="#5A6B8C" fontSize="10" fontFamily="Consolas,monospace">{Math.round(gv)}</text>
+            <line className={css.chartGrid} x1={PAD} y1={Y(gv)} x2={W - PAD} y2={Y(gv)} strokeWidth="1" />
+            <text className={css.chartLabel} x="6" y={Y(gv) + 4} fontSize="10" fontFamily="Consolas,monospace">{Math.round(gv)}</text>
           </g>
         ))}
-        <path d={path(idx)} fill="none" stroke="#38BDF8" strokeWidth="2" strokeDasharray="4 3" />
-        <path d={path(fit)} fill="none" stroke="#F5C24B" strokeWidth="2" />
-        {fit.map((v, i) => <circle key={i} cx={X(i)} cy={Y(v)} r="2.6" fill="#F5C24B" />)}
+        <path className={css.chartIdx} d={path(idx)} fill="none" strokeWidth="2" strokeDasharray="4 3" />
+        <path className={css.chartFit} d={path(fit)} fill="none" strokeWidth="2" />
+        {fit.map((v, i) => <circle key={i} className={css.chartFit} cx={X(i)} cy={Y(v)} r="2.6" />)}
       </svg>
     </div>
   )
@@ -330,14 +330,14 @@ export function RunStep(props: {
               <p className={css.level}>{idxA.toFixed(2)} <small>（加权合成 · 示例）</small></p>
               <p className={css.delta}>石总 {idxB.toFixed(2)} · 参考点位 {BASE_LEVEL.toFixed(2)}</p>
               <svg className={css.spark} viewBox="0 0 320 84" aria-hidden>
-                <polyline fill="none" stroke="#2A3D60" strokeWidth="1.5" points={noise.map((v, i) => `${sx(i)},${sy(v)}`).join(' ')} />
-                <circle cx={sx(10)} cy={sy(idxB)} r="3.5" fill="#F5C24B" />
-                <circle cx={sx(11)} cy={sy(idxA)} r="3.5" fill="#38BDF8" />
+                <polyline className={css.sparkDim} fill="none" strokeWidth="1.5" points={noise.map((v, i) => `${sx(i)},${sy(v)}`).join(' ')} />
+                <circle className={css.fillGold} cx={sx(10)} cy={sy(idxB)} r="3.5" />
+                <circle className={css.fillCyan} cx={sx(11)} cy={sy(idxA)} r="3.5" />
               </svg>
               <div className={css.legend}>
-                <span><i style={{ background: '#38BDF8' }} />陈老师</span>
-                <span><i style={{ background: '#F5C24B' }} />石总</span>
-                <span><i style={{ background: '#2A3D60' }} />参考走势（示例）</span>
+                <span><i className={css.swCyan} />陈老师</span>
+                <span><i className={css.swGold} />石总</span>
+                <span><i className={css.swDim} />参考走势（示例）</span>
               </div>
             </div>
             <div className={css.cmp2}>
