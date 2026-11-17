@@ -20,9 +20,9 @@ SKILL_DIR = Path(os.environ.get(
     str(Path.home() / '.dsh-valuation' / 'agents' / 'skills' / 'llm-ipo-valuation'),
 ))
 
-# 东财 datacenter 指数成分 TYPE 映射（上证180/科创50 待核实后追加）
-INDEX_TYPES = {'sh50': '2'}
-INDEX_NAMES = {'sh50': '上证50'}
-INDEX_TENCENT = {'sh50': 'sh000016'}
+# 东财 datacenter 指数成分 TYPE 映射（已探测核实：1=沪深300，2=上证50，4=科创50，11=上证180）
+INDEX_TYPES = {'sh50': '2', 'hs300': '1', 'kc50': '4', 'sh180': '11'}
+INDEX_NAMES = {'sh50': '上证50', 'hs300': '沪深300', 'kc50': '科创50', 'sh180': '上证180'}
+INDEX_TENCENT = {'sh50': 'sh000016', 'hs300': 'sh000300', 'kc50': 'sh000688', 'sh180': 'sh000010'}
 
 PORT = int(os.environ.get('VALUATION_BATCH_PORT', '3089'))

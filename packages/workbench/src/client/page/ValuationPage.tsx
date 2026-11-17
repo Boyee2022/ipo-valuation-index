@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import { zh } from '../locales'
 import { fetchConstituents, type ConstituentsPayload } from './api'
-import { genConstituents, type BatchParams } from './data'
+import { genConstituents, indexMeta, type BatchParams } from './data'
 import css from './ValuationPage.module.css'
 import { DateStep } from './steps/DateStep'
 import { IndexStep } from './steps/IndexStep'
@@ -29,20 +29,25 @@ export function ValuationPage(props: PropsLocale) {
   }
   const [step, setStep] = useState(0)
   const [params, setParams] = useState<BatchParams>({ sentiment: 10, dcf: 30, comp: 50, sent: 20 })
-  const [indexSel, setIndexSel] = useState('上证50')
+  const [indexSel, setIndexSel] = useState('sh50')
   const [date, setDate] = useState<Date>(() => new Date())
   const [parallel, setParallel] = useState<3 | 10>(3)
   const [real, setReal] = useState<ConstituentsPayload | null>(null)
   const [realErr, setRealErr] = useState<string | null>(null)
-  const list = useMemo(() => genConstituents(), [])
+  const [realLoading, setRealLoading] = useState(true)
+  const list = useMemo(() => genConstituents(indexMeta(indexSel).count), [indexSel])
 
   useEffect(() => {
     let alive = true
-    fetchConstituents()
+    setReal(null)
+    setRealErr(null)
+    setRealLoading(true)
+    fetchConstituents(indexSel)
       .then(p => { if (alive) setReal(p) })
       .catch(e => { if (alive) setRealErr(e instanceof Error ? e.message : String(e)) })
+      .finally(() => { if (alive) setRealLoading(false) })
     return () => { alive = false }
-  }, [])
+  }, [indexSel])
 
   const realMode = real !== null
 
@@ -53,14 +58,16 @@ export function ValuationPage(props: PropsLocale) {
       <header className={css.pageHead}>
         <h1 className={css.h1}>{t('page.title')}</h1>
         <p className={css.lead}>
-          两套估值技能部署在同一环境、跑同一批指数成分券，<strong>用估值替代价格、按权重合成指数点位</strong>。先以上证50 跑通，不纠结准不准，先出结果。
+          两套估值技能部署在同一环境、跑同一批指数成分券，<strong>用估值替代价格、按权重合成指数点位</strong>。上证50、上证180、科创50、沪深300 四指数全部真实数据跑批，不纠结准不准，先出结果。
         </p>
         <div className={css.badges}>
           <span className={`${css.badge} ${realMode ? css.badgeOn : ''}`}>
             {realMode && <i />}
-            {realMode
-              ? `真实数据模式 · 成分数据时点 ${real!.as_of}`
-              : '演示原型 · 表单与数据均为示例，不提交真实任务'}
+            {realLoading
+              ? '真实数据加载中…'
+              : realMode
+                ? `真实数据模式 · ${real!.index_name} 成分数据时点 ${real!.as_of}`
+                : '演示原型 · 表单与数据均为示例，不提交真实任务'}
           </span>
           <span className={css.badge}>拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)</span>
         </div>
@@ -90,10 +97,12 @@ export function ValuationPage(props: PropsLocale) {
               real={realMode ? real!.rows : null}
               asOf={realMode ? real!.as_of : ''}
               error={realErr}
+              indexName={indexMeta(indexSel).name}
+              weightComputed={realMode && real!.weight_computed === true}
             />
           )}
           {step === 3 && <DateStep date={date} onSelect={setDate} asOf={realMode ? real!.as_of : ''} />}
-          {step === 4 && <ParallelStep parallel={parallel} onSelect={setParallel} />}
+          {step === 4 && <ParallelStep parallel={parallel} count={list.length} onSelect={setParallel} />}
           {step === 5 && (
             <RunStep
               params={params}

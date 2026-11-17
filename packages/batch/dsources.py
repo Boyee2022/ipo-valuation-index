@@ -49,7 +49,7 @@ def components(itype, force=False):
     """指数成分 + 收盘权重（东财 RPT_INDEX_TS_COMPONENT，MAXTRADEDATE=前一日口径）。"""
     def load():
         q = {'reportName': 'RPT_INDEX_TS_COMPONENT', 'columns': 'ALL',
-             'pageSize': '300', 'filter': '(TYPE="%s")' % itype}
+             'pageSize': '400', 'filter': '(TYPE="%s")' % itype}
         d = _get_json(EM + '?' + urllib.parse.urlencode(q))
         rows = ((d.get('result') or {}).get('data') or [])
         as_of = max((str(r.get('MAXTRADEDATE') or '')[:10] for r in rows), default='')
@@ -69,7 +69,15 @@ def components(itype, force=False):
                 'total_shares': r.get('TOTAL_SHARES'),
                 'free_cap': r.get('FREE_CAP'),
             })
-        return {'as_of': as_of, 'rows': out}
+        weight_computed = bool(out) and all(r.get('weight') is None for r in out)
+        if weight_computed:
+            # 上证180 等东财不提供 WEIGHT：用自由流通市值归一化近似（口径说明由前端展示）
+            cap_sum = sum(r.get('free_cap') or 0 for r in out)
+            if cap_sum > 0:
+                for r in out:
+                    cap = r.get('free_cap') or 0
+                    r['weight'] = round(cap / cap_sum * 100, 4) if cap else None
+        return {'as_of': as_of, 'rows': out, 'weight_computed': weight_computed}
     return _cache_get('components_%s' % itype, 0 if force else TTL_COMPONENTS, load)
 
 
@@ -77,7 +85,7 @@ def peer_universe(force=False):
     """可比公司全集：全部指数成分并集（按 SECUCODE 去重、保留自由流通市值最大行）。"""
     def load():
         uni = {}
-        for t in ('1', '2', '3', '4', '5', '6', '7', '8', '9', '10'):
+        for t in ('1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'):
             try:
                 c = components(t)
             except Exception:

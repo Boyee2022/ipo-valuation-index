@@ -1,4 +1,4 @@
-/** Step 3 成分券与权重：真实上证50 成分券表（批跑服务不可达时回退示例数据）。 */
+/** Step 3 成分券与权重：真实成分券表（批跑服务不可达时回退示例数据）。 */
 
 import type { RealConstituent } from '../api'
 import type { Constituent } from '../data'
@@ -9,15 +9,17 @@ export function WeightsStep(props: {
   real: RealConstituent[] | null
   asOf: string
   error: string | null
+  indexName: string
+  weightComputed: boolean
 }) {
-  const { list, real, asOf, error } = props
+  const { list, real, asOf, error, indexName, weightComputed } = props
 
   if (real && real.length > 0) {
     const sum = real.reduce((a, r) => a + (r.weight ?? 0), 0)
     return (
       <section>
         <h2>成分券与权重</h2>
-        <p className={css.sub}>上证50 真实成分券与收盘权重（东财指数成分表 · 数据时点 {asOf}）。</p>
+        <p className={css.sub}>{indexName} 真实成分券与收盘权重（东财指数成分表 · 数据时点 {asOf}）。</p>
         <div className={css.pipe}>
           <b>权重因子</b><span className={css.arr}>×</span><b>当日市值</b><span className={css.arr}>→</span><b>当日权重</b><span style={{ marginLeft: 8 }}>（归一化）</span>
         </div>
@@ -46,7 +48,13 @@ export function WeightsStep(props: {
         <div className={css.tblFoot}>
           <span>共 {real.length} 条 · 权重合计 <b>{sum.toFixed(2)}%</b> · 数据时点 {asOf}（前一日收盘权重口径）</span>
         </div>
-        <div className={css.note}>权重因子每期更新、期间不变；当日市值每日变动。当日权重盘中才出，<b>用前一日收盘权重计算（与指数口径一致）</b>。</div>
+        <div className={css.note}>
+          {weightComputed ? (
+            <><b>{indexName} 东财不直接披露成分权重，此处由自由流通市值归一化计算</b>（口径近似，正式合成前建议对照指数公司披露复核）。权重因子每期更新、期间不变；当日市值每日变动，<b>用前一日收盘权重计算（与指数口径一致）</b>。</>
+          ) : (
+            <>权重因子每期更新、期间不变；当日市值每日变动。当日权重盘中才出，<b>用前一日收盘权重计算（与指数口径一致）</b>。</>
+          )}
+        </div>
       </section>
     )
   }
@@ -55,7 +63,7 @@ export function WeightsStep(props: {
   return (
     <section>
       <h2>成分券与权重</h2>
-      <p className={css.sub}>自动列出所选日期的 50 条成分券及权重，由指数成分券表自动生成。</p>
+      <p className={css.sub}>{indexName} · 自动列出所选日期的 {list.length} 条成分券及权重，由指数成分券表自动生成。</p>
       <div className={css.pipe}>
         <b>权重因子</b><span className={css.arr}>×</span><b>当日市值</b><span className={css.arr}>→</span><b>当日权重</b><span style={{ marginLeft: 8 }}>（归一化）</span>
       </div>

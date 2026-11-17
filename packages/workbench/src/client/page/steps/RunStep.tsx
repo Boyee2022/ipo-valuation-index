@@ -1,10 +1,10 @@
 /** Step 6 运行与报告：真实跑批（Mac 批跑服务 3089）+ 服务不可达时回退演示跑批。 */
 
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  BASE_LEVEL,
-  SKIP_INDEXES,
   fmtDateShort,
+  indexMeta,
+  skipIndexes,
   synthLevel,
   valuationPair,
   type BatchParams,
@@ -22,10 +22,11 @@ interface LogLine {
 
 const STAT_N = 1000
 
-/** 近 N 次跑批走势：拟合点位（金，实线）vs 指数收盘（青，虚线）。 */
-function HistoryChart({ hist }: { hist: JobMeta[] }) {
+/** 近 N 次跑批走势（同指数）：拟合点位（金，实线）vs 指数收盘（青，虚线）。 */
+function HistoryChart({ hist, indexSel }: { hist: JobMeta[]; indexSel: string }) {
+  const meta = indexMeta(indexSel)
   const pts = hist
-    .filter(h => h.state === 'done' && h.fitted_point != null && h.index_close != null && h.index_close > 0)
+    .filter(h => h.index === indexSel && h.state === 'done' && h.fitted_point != null && h.index_close != null && h.index_close > 0)
     .reverse()
   if (pts.length < 2) return null
   const W = 720
@@ -43,7 +44,7 @@ function HistoryChart({ hist }: { hist: JobMeta[] }) {
   return (
     <div className={css.chart}>
       <div className={css.chartTitle}>
-        近 {pts.length} 次跑批 · 拟合点位 vs 指数收盘
+        近 {pts.length} 次跑批 · {meta.name} 拟合点位 vs 指数收盘
         <span className={css.clegend}>
           <i className={css.swGold} />拟合点位<i className={css.swCyan} />指数收盘
         </span>
@@ -74,7 +75,9 @@ export function RunStep(props: {
   realAsOf: string
 }) {
   const { params, indexSel, date, parallel, list, realMode, realErr, realAsOf } = props
+  const meta = indexMeta(indexSel)
   const total = list.length
+  const skip = useMemo(() => skipIndexes(total), [total])
   const [running, setRunning] = useState(false)
   const [mode, setMode] = useState<'demo' | 'real' | null>(null)
   const [done, setDone] = useState(0)
@@ -171,10 +174,10 @@ export function RunStep(props: {
     setHistModalIdx(null)
     seenRef.current = new Set()
     failRef.current = 0
-    push(`[准备] 上证50 成分券 ${total} 条 · 并行度 ${parallel} · 统计抽样 ${STAT_N} · 数据时点 ${realAsOf} · 估值日期 ${fmtDateShort(date)}（参考口径）`, 'dim')
+    push(`[准备] ${meta.name} 成分券 ${total} 条 · 并行度 ${parallel} · 统计抽样 ${STAT_N} · 数据时点 ${realAsOf} · 估值日期 ${fmtDateShort(date)}（参考口径）`, 'dim')
     try {
       const { job_id } = await runBatch({
-        index: 'sh50',
+        index: indexSel,
         parallel,
         stat_n: STAT_N,
         weights: { dcf: params.dcf / 100, comp: params.comp / 100, sent: params.sent / 100 },
@@ -219,7 +222,7 @@ export function RunStep(props: {
     setResults(all)
     const batches = Math.ceil(total / parallel)
     push(
-      `[准备] 成分券 ${total} 条 · 并行度 每批 ${parallel} 条 · 舆情轮数上限 ${params.sentiment} · 估值日期 ${fmtDateShort(date)}`,
+      `[准备] ${meta.name} 成分券 ${total} 条 · 并行度 每批 ${parallel} 条 · 舆情轮数上限 ${params.sentiment} · 估值日期 ${fmtDateShort(date)}`,
       'dim',
     )
     let b = 0
@@ -229,18 +232,18 @@ export function RunStep(props: {
       const to = Math.min(b * parallel, total)
       setDone(to)
       push(`[批次 ${b}/${batches}] 估值完成 ${from}–${to}（用时示例 ${(18 + Math.random() * 14).toFixed(0)}s）`, 'ok')
-      for (const i of SKIP_INDEXES) {
+      for (const i of skip) {
         if (i >= from - 1 && i < to) push(`[跳过] ${list[i].name} · β 无法计算 → 陈老师技能自动跳过`, 'dim')
       }
       if (to >= total) {
         setRunning(false)
-        const vA = synthLevel(list, all.map(r => r.chen))
-        const vB = synthLevel(list, all.map(r => r.shi))
-        const pA = synthLevel(list, all.map(r => r.price))
-        const idxA = (vA / pA) * BASE_LEVEL
-        const idxB = (vB / pA) * BASE_LEVEL
-        push(`[完成] ${total} 条处理完毕：估值 ${total - SKIP_INDEXES.size} 条 · 跳过 ${SKIP_INDEXES.size} 条`, 'ok')
-        push(`[合成] 陈老师拟合点位 ${idxA.toFixed(2)} · 石总 ${idxB.toFixed(2)} · 参考 ${BASE_LEVEL.toFixed(2)}`, 'ok')
+        const vA = synthLevel(list, all.map(r => r.chen), skip)
+        const vB = synthLevel(list, all.map(r => r.shi), skip)
+        const pA = synthLevel(list, all.map(r => r.price), skip)
+        const idxA = (vA / pA) * meta.baseLevel
+        const idxB = (vB / pA) * meta.baseLevel
+        push(`[完成] ${total} 条处理完毕：估值 ${total - skip.size} 条 · 跳过 ${skip.size} 条`, 'ok')
+        push(`[合成] 陈老师拟合点位 ${idxA.toFixed(2)} · 石总 ${idxB.toFixed(2)} · 参考 ${meta.baseLevel.toFixed(2)}`, 'ok')
       } else {
         timerRef.current = window.setTimeout(tick, 320)
       }
@@ -251,13 +254,14 @@ export function RunStep(props: {
   const finished = mode === 'demo' && results !== null && !running && done >= total
   const realDone = mode === 'real' && job !== null && job.state === 'done'
   const realPartial = mode === 'real' && job !== null && job.state !== 'done'
-  const vA = finished ? synthLevel(list, results!.map(r => r.chen)) : 0
-  const vB = finished ? synthLevel(list, results!.map(r => r.shi)) : 0
-  const pA = finished ? synthLevel(list, results!.map(r => r.price)) : 1
-  const idxA = finished ? (vA / pA) * BASE_LEVEL : 0
-  const idxB = finished ? (vB / pA) * BASE_LEVEL : 0
+  const vA = finished ? synthLevel(list, results!.map(r => r.chen), skip) : 0
+  const vB = finished ? synthLevel(list, results!.map(r => r.shi), skip) : 0
+  const pA = finished ? synthLevel(list, results!.map(r => r.price), skip) : 1
+  const idxA = finished ? (vA / pA) * meta.baseLevel : 0
+  const idxB = finished ? (vB / pA) * meta.baseLevel : 0
 
-  const noise = Array.from({ length: 10 }, (_, i) => 3445 + Math.sin(i * 1.9) * 12 + Math.cos(i * 0.8) * 9)
+  const noise = Array.from({ length: 10 }, (_, i) =>
+    meta.baseLevel + (Math.sin(i * 1.9) * 0.004 + Math.cos(i * 0.8) * 0.003) * meta.baseLevel)
   const pts = finished ? noise.concat([idxB, idxA]) : noise
   const lo = Math.min(...pts) - 8
   const hi = Math.max(...pts) + 8
@@ -273,7 +277,7 @@ export function RunStep(props: {
       : '—'
   const histChart =
     hist !== null &&
-    hist.filter(h => h.state === 'done' && h.fitted_point != null && h.index_close != null).length >= 2
+    hist.filter(h => h.index === indexSel && h.state === 'done' && h.fitted_point != null && h.index_close != null).length >= 2
 
   return (
     <section>
@@ -284,7 +288,7 @@ export function RunStep(props: {
           : '并行跑批，逐家生成报告，最后输出总结报告；两版拟合点位并排对比。'}
       </p>
       <div className={css.sumgrid}>
-        <div className={css.sumbox}><div className={css.sk}>指数</div><div className={css.sv}>{indexSel}</div></div>
+        <div className={css.sumbox}><div className={css.sk}>指数</div><div className={css.sv}>{meta.name}</div></div>
         <div className={css.sumbox}><div className={css.sk}>估值日期</div><div className={css.sv}>{fmtDateShort(date)}</div></div>
         <div className={css.sumbox}><div className={css.sk}>方法加权</div><div className={css.sv}>DCF {params.dcf}% · 可比 {params.comp}% · 舆情 {params.sent}%</div></div>
         <div className={css.sumbox}><div className={css.sk}>舆情轮数</div><div className={css.sv}>≤ {params.sentiment} 轮</div></div>
@@ -328,7 +332,7 @@ export function RunStep(props: {
             <div className={css.sumcard}>
               <h4>拟合点位 · 陈老师</h4>
               <p className={css.level}>{idxA.toFixed(2)} <small>（加权合成 · 示例）</small></p>
-              <p className={css.delta}>石总 {idxB.toFixed(2)} · 参考点位 {BASE_LEVEL.toFixed(2)}</p>
+              <p className={css.delta}>石总 {idxB.toFixed(2)} · 参考点位 {meta.baseLevel.toFixed(2)}</p>
               <svg className={css.spark} viewBox="0 0 320 84" aria-hidden>
                 <polyline className={css.sparkDim} fill="none" strokeWidth="1.5" points={noise.map((v, i) => `${sx(i)},${sy(v)}`).join(' ')} />
                 <circle className={css.fillGold} cx={sx(10)} cy={sy(idxB)} r="3.5" />
@@ -346,9 +350,9 @@ export function RunStep(props: {
                 <tbody>
                   <tr><th>陈老师拟合点位</th><td>{idxA.toFixed(2)}</td></tr>
                   <tr><th>石总拟合点位</th><td>{idxB.toFixed(2)}</td></tr>
-                  <tr><th>参考点位（示例）</th><td>{BASE_LEVEL.toFixed(2)}</td></tr>
+                  <tr><th>参考点位（示例）</th><td>{meta.baseLevel.toFixed(2)}</td></tr>
                   <tr><th>样本</th><td>{total} 条</td></tr>
-                  <tr><th>出估值 / 跳过</th><td>{total - SKIP_INDEXES.size} / {SKIP_INDEXES.size}</td></tr>
+                  <tr><th>出估值 / 跳过</th><td>{total - skip.size} / {skip.size}</td></tr>
                 </tbody>
               </table>
             </div>
@@ -356,7 +360,7 @@ export function RunStep(props: {
           <div className={css.detailList} style={{ marginTop: 16 }}>
             <h4>逐券结果（点击查看明细）</h4>
             {list.map((c, i) => {
-              const skipped = SKIP_INDEXES.has(i)
+              const skipped = skip.has(i)
               const r = results![i]
               return (
                 <button key={c.name} className={css.drow} onClick={() => setModalIdx(i)}>
@@ -382,6 +386,7 @@ export function RunStep(props: {
               i={modalIdx}
               r={results![modalIdx]}
               w={list[modalIdx].w}
+              skip={skip.has(modalIdx)}
               onClose={() => setModalIdx(null)}
             />
           )}
@@ -492,7 +497,7 @@ export function RunStep(props: {
             <div className={css.tblWrap}>
               <table className={css.clist}>
                 <thead>
-                  <tr><th>#</th><th>任务</th><th>提交时间</th><th>状态</th><th className={css.numTd}>拟合点位</th><th className={css.numTd}>指数收盘</th><th className={css.numTd}>偏离</th><th className={css.numTd}>出估值/跳过</th><th>操作</th></tr>
+                  <tr><th>#</th><th>任务</th><th>指数</th><th>提交时间</th><th>状态</th><th className={css.numTd}>拟合点位</th><th className={css.numTd}>指数收盘</th><th className={css.numTd}>偏离</th><th className={css.numTd}>出估值/跳过</th><th>操作</th></tr>
                 </thead>
                 <tbody>
                   {hist.map((h, i) => {
@@ -508,6 +513,7 @@ export function RunStep(props: {
                         <tr>
                           <td className={css.mono}>{i + 1}</td>
                           <td className={css.mono}>{h.id}</td>
+                          <td>{indexMeta(h.index).name}</td>
                           <td>{h.created}</td>
                           <td><span className={`${css.tag} ${stCls}`}>{st}</span></td>
                           <td className={`${css.mono} ${css.numTd}`}><b>{h.fitted_point != null ? h.fitted_point.toFixed(2) : '—'}</b></td>
@@ -541,7 +547,7 @@ export function RunStep(props: {
                         </tr>
                         {expanded && (
                           <tr>
-                            <td colSpan={9} style={{ padding: 0, border: 0 }}>
+                            <td colSpan={10} style={{ padding: 0, border: 0 }}>
                               <div className={css.detailList}>
                                 {histJob!.rows.map(r => {
                                   const ok = r.status === 'ok'
@@ -586,7 +592,7 @@ export function RunStep(props: {
               </table>
             </div>
           )}
-          {histChart && <HistoryChart hist={hist} />}
+          {histChart && <HistoryChart hist={hist} indexSel={indexSel} />}
         </div>
       )}
     </section>

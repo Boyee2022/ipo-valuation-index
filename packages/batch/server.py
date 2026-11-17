@@ -105,7 +105,7 @@ class Handler(BaseHTTPRequestHandler):
                     close = None
                 self._json({
                     'index': idx, 'index_name': INDEX_NAMES[idx], 'as_of': c['as_of'],
-                    'index_close': close,
+                    'index_close': close, 'weight_computed': bool(c.get('weight_computed')),
                     'rows': [{k: r.get(k) for k in
                               ('code', 'secucode', 'name', 'industry', 'weight', 'close', 'pe',
                                'eps', 'roe', 'total_shares', 'free_cap')} for r in c['rows']],

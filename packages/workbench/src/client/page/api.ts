@@ -65,6 +65,7 @@ export interface ConstituentsPayload {
   index_name: string
   as_of: string
   index_close: number | null
+  weight_computed?: boolean
   rows: RealConstituent[]
 }
 
@@ -92,8 +93,8 @@ async function jfetch(url: string, init?: RequestInit, ms = 15000): Promise<Resp
   }
 }
 
-export async function fetchConstituents(): Promise<ConstituentsPayload> {
-  const res = await jfetch(`${API_BASE}/api/constituents?index=sh50`)
+export async function fetchConstituents(index = 'sh50'): Promise<ConstituentsPayload> {
+  const res = await jfetch(`${API_BASE}/api/constituents?index=${encodeURIComponent(index)}`)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

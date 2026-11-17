@@ -7,7 +7,7 @@ export const NS = 'valuation-workbench'
 export const zh = {
   'panel': '估值跑批',
   'page.title': '估值跑批工作台',
-  'page.lede': '用估值替代价格、按权重合成指数点位。先以上证50 跑通，先出结果。',
+  'page.lede': '用估值替代价格、按权重合成指数点位。上证50、上证180、科创50、沪深300 全部真实数据跑批。',
   'step.1': '参数确认',
   'step.2': '选择指数',
   'step.3': '成分券权重',
@@ -20,7 +20,7 @@ export const zh = {
 export const en = {
   'panel': 'Valuation',
   'page.title': 'Valuation Batch Workbench',
-  'page.lede': 'Estimate constituents, replace price with valuation, and synthesize the index level by weight.',
+  'page.lede': 'Estimate constituents, replace price with valuation, and synthesize the index level by weight. SSE50, SSE180, STAR50 and CSI300 all run on real data.',
   'step.1': 'Parameters',
   'step.2': 'Index',
   'step.3': 'Constituents & Weights',

@@ -1,6 +1,6 @@
 /** Per-stock report modal (demo data or real batch result). */
 
-import { SKIP_INDEXES, type ValuationResult } from './data'
+import type { ValuationResult } from './data'
 import { reportUrl, type JobRow } from './api'
 import css from './ValuationPage.module.css'
 
@@ -12,9 +12,10 @@ export function ReportModal(props: {
   onClose: () => void
   real?: JobRow | null
   jobId?: string
+  skip?: boolean
 }) {
-  const { name, i, r, w, onClose, real, jobId } = props
-  const skipped = SKIP_INDEXES.has(i)
+  const { name, i, r, w, onClose, real, jobId, skip } = props
+  const skipped = !!skip
   let rows: [string, string][] = []
   if (real) {
     const ok = real.status === 'ok'
