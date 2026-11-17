@@ -182,7 +182,7 @@ body[data-ds-dark-theme] .page {
 .brand { display: flex; align-items: center; flex: 0 0 auto; }
 
 .logoStd,
-.logoRev { display: block; height: 26px; width: auto; }
+.logoRev { display: block; height: 26px; width: 104px; object-fit: contain; object-position: left center; }
 
 .logoRev { display: none; }
 

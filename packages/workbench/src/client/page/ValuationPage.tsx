@@ -4,8 +4,8 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import logoStd from '../assets/logo-cibond.png'
-import logoRev from '../assets/logo-cibond-white.png'
+import logoStd from '../assets/logo-csindex.png'
+import logoRev from '../assets/logo-csindex-white.png'
 import { fmtDateShort, fmtNum, indexMeta, type BatchParams } from './data'
 import {
   fetchConstituents,
@@ -334,8 +334,8 @@ export function ValuationPage() {
       <header className={css.topbar}>
         <div className={css.topbarInner}>
           <span className={css.brand}>
-            <img className={css.logoStd} src={logoStd} alt="中证估值 CSI BOND VALUATION" />
-            <img className={css.logoRev} src={logoRev} alt="中证估值 CSI BOND VALUATION" />
+            <img className={css.logoStd} src={logoStd} alt="中证指数 CHINA SECURITIES INDEX" />
+            <img className={css.logoRev} src={logoRev} alt="中证指数 CHINA SECURITIES INDEX" />
           </span>
           <div className={css.ttl}>估值工作台<small>INDEX VALUATION WORKBENCH</small></div>
           <div className={css.topRight}>
@@ -405,7 +405,7 @@ export function ValuationPage() {
         <div className={css.statusInner}>
           <span><b>数据源：</b>东财指数成分表 / 东财财报 / 腾讯行情（{asOf || '—'}）</span>
           <span><b>估值：</b>Mac 批跑服务逐券执行（输入组装 → 估值引擎 → 统计校验 → HTML 报告 → 八项机检）</span>
-          <span className={css.statusR}>中证估值 · CSI BOND VALUATION · 探索性研究，不构成投资建议</span>
+          <span className={css.statusR}>中证指数 · CHINA SECURITIES INDEX · 探索性研究，不构成投资建议</span>
         </div>
       </div>
     </div>
