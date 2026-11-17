@@ -58,7 +58,7 @@ export function ValuationPage(props: PropsLocale) {
       <header className={css.pageHead}>
         <h1 className={css.h1}>{t('page.title')}</h1>
         <p className={css.lead}>
-          两套估值技能部署在同一环境、跑同一批指数成分券，<strong>用估值替代价格、按权重合成指数点位</strong>。上证50、上证180、科创50、沪深300 四指数全部真实数据跑批，不纠结准不准，先出结果。
+          上证50、上证180、科创50、沪深300 四指数逐券真实跑批：<strong>估值与现价的差异只做展示、不做反向校正</strong>，按当日权重合成拟合点位，与指数收盘对照。
         </p>
         <div className={css.badges}>
           <span className={`${css.badge} ${realMode ? css.badgeOn : ''}`}>
@@ -69,7 +69,7 @@ export function ValuationPage(props: PropsLocale) {
                 ? `真实数据模式 · ${real!.index_name} 成分数据时点 ${real!.as_of}`
                 : '演示原型 · 表单与数据均为示例，不提交真实任务'}
           </span>
-          <span className={css.badge}>拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)</span>
+          <span className={css.badge}>拟合点位 = 指数收盘 × Σ(权重×中枢/股) / Σ(权重×收盘价)</span>
         </div>
       </header>
 
@@ -129,7 +129,7 @@ export function ValuationPage(props: PropsLocale) {
         </nav>
         <p className={css.footnote}>
           {realMode ? (
-            <>真实成分与权重来自<b>东财指数成分表（{real!.as_of}）</b>，估值由 Mac 批跑服务逐券执行 · <b>拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)</b> · 探索性研究，不构成投资建议</>
+            <>真实成分与权重来自<b>东财指数成分表（{real!.as_of}）</b>，估值由 Mac 批跑服务逐券执行 · <b>拟合点位 = 指数收盘 × Σ(权重×中枢/股) / Σ(权重×收盘价)</b> · 探索性研究，不构成投资建议</>
           ) : (
             <>演示数据由前端本地生成，不请求真实行情与估值服务 · 下一里程碑：接真实参数与跑批执行</>
           )}
