@@ -244,6 +244,11 @@ body[data-ds-dark-theme] .page {
 .tblWrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; margin-top: 10px; }
 .tblTall { max-height: 430px; overflow-y: auto; }
 .pt, .clist { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 640px; }
+/* 历史跑批表 11 列（含舆情列），紧凑化并允许长字段换行，窄窗口下不撑破页面 */
+.clist { font-size: 12px; }
+.clist th, .clist td { padding-left: 8px; padding-right: 8px; }
+.clist .jobId { white-space: normal; word-break: break-all; }
+.clist .timeCell { white-space: normal; }
 .pt th, .clist th {
   background: var(--bg2);
   color: var(--muted);
@@ -561,6 +566,7 @@ body[data-ds-dark-theme] .page {
 }
 .drow {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 10px;
@@ -579,7 +585,7 @@ body[data-ds-dark-theme] .page {
 .drow:last-child { border-bottom: none; }
 .drow:hover { background: var(--tint); }
 .drowNm { font-weight: 600; }
-.drowVals { display: flex; gap: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.drowVals { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .drowVals b { color: var(--ink); }
 .chart { margin-top: 18px; }
 .chartTitle { font-size: 13px; color: var(--muted); margin-bottom: 8px; display: flex; align-items: center; }

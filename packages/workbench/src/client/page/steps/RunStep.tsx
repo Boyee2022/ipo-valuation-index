@@ -514,10 +514,10 @@ export function RunStep(props: {
                       <Fragment key={h.id}>
                         <tr>
                           <td className={css.mono}>{i + 1}</td>
-                          <td className={css.mono}>{h.id}</td>
+                          <td className={`${css.mono} ${css.jobId}`}>{h.id}</td>
                           <td>{indexMeta(h.index).name}</td>
                           <td><span className={`${css.tag} ${h.sentiment_mode === 'llm' ? css.tagOk : css.tagMut}`}>{h.sentiment_mode === 'llm' ? 'LLM' : '规则'}</span></td>
-                          <td>{h.created}</td>
+                          <td className={css.timeCell}>{h.created}</td>
                           <td><span className={`${css.tag} ${stCls}`}>{st}</span></td>
                           <td className={`${css.mono} ${css.numTd}`}><b>{h.fitted_point != null ? h.fitted_point.toFixed(2) : '—'}</b></td>
                           <td className={`${css.mono} ${css.numTd}`}>{h.index_close != null ? h.index_close.toFixed(2) : '—'}</td>
