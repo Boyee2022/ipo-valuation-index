@@ -84,6 +84,7 @@ await build({
   target: 'es2022',
   sourcemap: true,
   jsx: 'automatic',
+  loader: { '.png': 'dataurl' },
   external: BASELINE,
   define: { 'process.env.NODE_ENV': '"production"' },
   logLevel: 'info',

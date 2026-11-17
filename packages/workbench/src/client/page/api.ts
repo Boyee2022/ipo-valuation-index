@@ -25,6 +25,7 @@ export interface JobRow {
   weight: number | null
   close: number | null
   pe: number | null
+  total_shares?: number | null
   status: 'pending' | 'running' | 'ok' | 'skip'
   error?: string
   weighted_mid?: number
@@ -55,6 +56,11 @@ export interface JobStatus {
   total: number
   components_as_of?: string
   index_close?: number | null
+  parallel?: number
+  stat_n?: number
+  weights?: { dcf: number; comp: number; sent: number }
+  sentiment_rounds?: number
+  sentiment_mode?: 'rule' | 'llm'
   rows: JobRow[]
   summary?: JobSummary
   error?: string | null
