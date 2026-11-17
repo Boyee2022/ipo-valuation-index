@@ -99,6 +99,18 @@ export function DateStep(props: { date: Date; onSelect: (d: Date) => void; asOf:
             </tbody>
           </table>
         </div>
+        <div className={css.datePanel}>
+          <div className={css.datePanelTitle}>RUN DATE · 数据口径</div>
+          {([
+            ['估值日期', fmtDate(date)],
+            ['数据时点', asOf ? `${asOf}（前一交易日）` : '前一交易日收盘'],
+            ['权重口径', '前一日收盘权重'],
+            ['执行计划', '每周五 17:00 自动'],
+          ] as [string, string][]).map(([k, v]) => (
+            <div className={css.dateRow} key={k}><span>{k}</span><b>{v}</b></div>
+          ))}
+          <div className={css.dateHint}>周末与未来日期不可选；定时任务自动带入当天，形成逐周点位序列。</div>
+        </div>
       </div>
       <div className={css.note}>初期每周五 17:00 后自动跑；<b>周频起步 → 逐周累积 → 5–10 周后形成点位序列</b>，与上证走势对照。</div>
     </section>

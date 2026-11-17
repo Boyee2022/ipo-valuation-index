@@ -56,6 +56,10 @@ export function ValuationPage(props: PropsLocale) {
   return (
     <div className={css.page}>
       <header className={css.pageHead}>
+        <div className={css.sysline}>
+          <span className={css.sysTag}>VALUATION WORKBENCH</span>
+          <span className={css.sysMeta}>CN INDEX VALUATION · SIX-STEP BATCH · REAL DATA</span>
+        </div>
         <h1 className={css.h1}>{t('page.title')}</h1>
         <p className={css.lead}>
           上证50、上证180、科创50、沪深300 四指数逐券真实跑批：<strong>估值与现价的差异只做展示、不做反向校正</strong>，按当日权重合成拟合点位，与指数收盘对照。

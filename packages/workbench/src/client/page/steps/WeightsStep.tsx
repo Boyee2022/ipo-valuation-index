@@ -93,7 +93,7 @@ export function WeightsStep(props: {
       </div>
       <div className={css.note}>
         权重因子每期更新、期间不变；当日市值每日变动。当日权重盘中才出，<b>可先用前一日因子计算</b>。
-        {error && <span style={{ color: '#F5C24B' }}>（批跑服务未连接：{error}，当前为示例数据）</span>}
+        {error && <span style={{ color: 'var(--gold)' }}>（批跑服务未连接：{error}，当前为示例数据）</span>}
       </div>
     </section>
   )
