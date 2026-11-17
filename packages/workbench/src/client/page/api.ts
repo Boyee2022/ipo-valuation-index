@@ -81,6 +81,7 @@ export interface JobMeta {
   index_close: number | null
   ok: number | null
   skip: number | null
+  sentiment_mode?: 'rule' | 'llm'
 }
 
 async function jfetch(url: string, init?: RequestInit, ms = 15000): Promise<Response> {
@@ -105,13 +106,21 @@ export async function runBatch(payload: {
   stat_n: number
   weights: { dcf: number; comp: number; sent: number }
   sentiment_rounds: number
+  sentiment_mode: 'rule' | 'llm'
 }): Promise<{ job_id: string }> {
   const res = await jfetch(`${API_BASE}/api/run`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   }, 20000)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
+  if (!res.ok) {
+    let detail = ''
+    try {
+      const body = (await res.json()) as { error?: string }
+      if (body.error) detail = ` · ${body.error}`
+    } catch { /* 非 JSON 错误响应 */ }
+    throw new Error(`HTTP ${res.status}${detail}`)
+  }
   return res.json()
 }
 

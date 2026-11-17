@@ -54,6 +54,26 @@ export function ParamsStep(props: { params: BatchParams; onChange: (p: BatchPara
         <span className={css.suffix}>轮（成本约束：上限拟定为每轮最多搜 10 轮，作为固定参数进表单，跑前可调）</span>
       </div>
 
+      <h3>舆情口径（打分方式）</h3>
+      <div className={css.frow}>
+        <div className={css.lab}>舆情口径<small>同一语料 · 两种打分</small></div>
+        <span style={{ display: 'inline-flex', gap: 8 }}>
+          <button
+            type="button"
+            className={`${css.btn} ${params.sentimentMode === 'rule' ? css.btnPrimary : ''}`}
+            onClick={() => onChange({ ...params, sentimentMode: 'rule' })}
+          >规则打分（词频）</button>
+          <button
+            type="button"
+            className={`${css.btn} ${params.sentimentMode === 'llm' ? css.btnPrimary : ''}`}
+            onClick={() => onChange({ ...params, sentimentMode: 'llm' })}
+          >LLM 语义（DeepSeek）</button>
+        </span>
+      </div>
+      <p className={css.hint}>
+        两种口径共用同一新闻/股吧语料（东财公开接口，近 30 天），只有打分方式不同，跑同一批样本即可对比。LLM 口径的密钥只存仓库外 <code>~/.dsh-valuation/sentiment-llm.env</code>；未配置时提交会被服务端拒绝，调用失败自动回退规则打分并在报告注明。
+      </p>
+
       <h3>方法加权比例（合计 100%）</h3>
       <p className={css.hint}>默认比例沿用技能内置，跑前可调。</p>
       <div className={css.wbar}>

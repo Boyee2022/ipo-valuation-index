@@ -21,6 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 import dsources
 import pipeline
+import sentiment_llm
 from config import INDEX_NAMES, INDEX_TENCENT, INDEX_TYPES, JOBS, PORT, SKILL_DIR
 
 SAFE = re.compile(r'^[\w.\-]+$')
@@ -149,6 +150,10 @@ class Handler(BaseHTTPRequestHandler):
                 if parallel not in (3, 10):
                     parallel = 3
                 weights = body.get('weights') or {}
+                sentiment_mode = 'llm' if body.get('sentiment_mode') == 'llm' else 'rule'
+                if sentiment_mode == 'llm' and not sentiment_llm.available():
+                    self._json({'error': 'LLM 舆情未配置：请在 ~/.dsh-valuation/sentiment-llm.env 写入 DEEPSEEK_API_KEY（仓库外）'}, 400)
+                    return
                 params = {
                     'index': idx,
                     'parallel': parallel,
@@ -159,6 +164,7 @@ class Handler(BaseHTTPRequestHandler):
                         'sent': float(weights.get('sent', 0.2)),
                     },
                     'sentiment_rounds': int(body.get('sentiment_rounds') or 10),
+                    'sentiment_mode': sentiment_mode,
                 }
                 job_id = pipeline.start(params)
                 self._json({'job_id': job_id})

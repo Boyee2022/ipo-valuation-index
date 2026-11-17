@@ -12,6 +12,7 @@ export interface BatchParams {
   dcf: number
   comp: number
   sent: number
+  sentimentMode: 'rule' | 'llm'
 }
 
 export interface IndexMeta {

@@ -76,6 +76,7 @@ def start(params):
         'stat_n': int(params.get('stat_n') or 1000),
         'weights': params.get('weights') or {'dcf': 0.3, 'comp': 0.5, 'sent': 0.2},
         'sentiment_rounds': int(params.get('sentiment_rounds') or 10),
+        'sentiment_mode': 'llm' if params.get('sentiment_mode') == 'llm' else 'rule',
         'created': _now(),
         'state': 'running',
         'done': 0,
@@ -116,6 +117,7 @@ def list_jobs():
                 'components_as_of': j.get('components_as_of'),
                 'fitted_point': s.get('fitted_point'), 'index_close': s.get('index_close'),
                 'ok': s.get('ok'), 'skip': s.get('skip'),
+                'sentiment_mode': j.get('sentiment_mode') or 'rule',
             })
         except Exception:
             continue

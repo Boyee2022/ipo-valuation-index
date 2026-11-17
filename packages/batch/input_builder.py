@@ -11,6 +11,7 @@ import math
 
 import dsources
 import sentiment
+import sentiment_llm
 
 PEER_N = 4
 
@@ -120,7 +121,11 @@ def build_input(stock, universe, params, as_of):
     shares = fin.get('total_shares') or stock.get('total_shares')
     roe_pct = stock.get('roe')
     weights = params.get('weights') or {}
-    snt = sentiment.score_stock(code, stock['name'], rounds=int(params.get('sentiment_rounds') or 10))
+    mode = str(params.get('sentiment_mode') or 'rule')
+    if mode == 'llm':
+        snt = sentiment_llm.score_stock(code, stock['name'], rounds=int(params.get('sentiment_rounds') or 10))
+    else:
+        snt = sentiment.score_stock(code, stock['name'], rounds=int(params.get('sentiment_rounds') or 10))
     inp = {
         'meta': {
             'company': stock['name'],
@@ -173,7 +178,7 @@ def build_input(stock, universe, params, as_of):
              'items': ['营收/归母净利（年报口径）', '经营现金流/FCFF/股本', '一致预期净利']},
             {'source': '腾讯行情（公开实时行情）', 'items': ['可比公司行情、市值、PE']},
             {'source': '东财 datacenter 指数成分（收盘权重）', 'items': ['成分券列表与权重（前一日口径）', '行业分类']},
-            {'source': '东财新闻搜索 + 股吧帖（免费公开接口，词频+规则打分）',
+            {'source': '东财新闻搜索 + 股吧帖（免费公开接口，%s）' % ('DeepSeek 语义打分' if mode == 'llm' else '词频+规则打分'),
              'items': ['近 30 天新闻 %d 条 / 股吧 %d 条' % (snt.get('news_count') or 0, snt.get('guba_count') or 0),
                        'company_news_sentiment=%s，adjustment_pct=%+.1f%%' % (snt['label'], snt['adjustment_pct'])]},
         ],

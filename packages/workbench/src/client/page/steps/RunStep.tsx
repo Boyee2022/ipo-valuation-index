@@ -174,7 +174,7 @@ export function RunStep(props: {
     setHistModalIdx(null)
     seenRef.current = new Set()
     failRef.current = 0
-    push(`[准备] ${meta.name} 成分券 ${total} 条 · 并行度 ${parallel} · 统计抽样 ${STAT_N} · 数据时点 ${realAsOf} · 估值日期 ${fmtDateShort(date)}（参考口径）`, 'dim')
+    push(`[准备] ${meta.name} 成分券 ${total} 条 · 并行度 ${parallel} · 统计抽样 ${STAT_N} · 舆情口径 ${params.sentimentMode === 'llm' ? 'LLM 语义（DeepSeek）' : '规则打分（词频）'} · 数据时点 ${realAsOf} · 估值日期 ${fmtDateShort(date)}（参考口径）`, 'dim')
     try {
       const { job_id } = await runBatch({
         index: indexSel,
@@ -182,6 +182,7 @@ export function RunStep(props: {
         stat_n: STAT_N,
         weights: { dcf: params.dcf / 100, comp: params.comp / 100, sent: params.sent / 100 },
         sentiment_rounds: params.sentiment,
+        sentiment_mode: params.sentimentMode,
       })
       jobIdRef.current = job_id
       push(`[任务] ${job_id} 已提交，开始跟踪`, 'dim')
@@ -291,7 +292,7 @@ export function RunStep(props: {
         <div className={css.sumbox}><div className={css.sk}>指数</div><div className={css.sv}>{meta.name}</div></div>
         <div className={css.sumbox}><div className={css.sk}>估值日期</div><div className={css.sv}>{fmtDateShort(date)}</div></div>
         <div className={css.sumbox}><div className={css.sk}>方法加权</div><div className={css.sv}>DCF {params.dcf}% · 可比 {params.comp}% · 舆情 {params.sent}%</div></div>
-        <div className={css.sumbox}><div className={css.sk}>舆情轮数</div><div className={css.sv}>≤ {params.sentiment} 轮</div></div>
+        <div className={css.sumbox}><div className={css.sk}>舆情口径</div><div className={css.sv}>{params.sentimentMode === 'llm' ? 'LLM 语义' : '规则打分'} · ≤ {params.sentiment} 轮</div></div>
         <div className={css.sumbox}><div className={css.sk}>并行度</div><div className={css.sv}>每批 {parallel} 条</div></div>
         <div className={css.sumbox}><div className={css.sk}>数据时点</div><div className={css.sv}>{realMode ? realAsOf : '演示（本地生成）'}</div></div>
       </div>
@@ -408,6 +409,7 @@ export function RunStep(props: {
                   <tr><th>指数收盘</th><td>{summ.index_close != null ? summ.index_close.toFixed(2) : '—'}</td></tr>
                   <tr><th>样本</th><td>{summ.total} 条</td></tr>
                   <tr><th>出估值 / 跳过</th><td>{summ.ok} / {summ.skip}</td></tr>
+                  <tr><th>舆情口径</th><td>{params.sentimentMode === 'llm' ? 'LLM 语义（DeepSeek）' : '规则打分（词频）'} · ≤ {params.sentiment} 轮</td></tr>
                   <tr><th>数据时点（权重）</th><td>{realAsOf}</td></tr>
                   <tr><th>任务</th><td className={css.mono}>{job.id}</td></tr>
                 </tbody>
@@ -497,7 +499,7 @@ export function RunStep(props: {
             <div className={css.tblWrap}>
               <table className={css.clist}>
                 <thead>
-                  <tr><th>#</th><th>任务</th><th>指数</th><th>提交时间</th><th>状态</th><th className={css.numTd}>拟合点位</th><th className={css.numTd}>指数收盘</th><th className={css.numTd}>偏离</th><th className={css.numTd}>出估值/跳过</th><th>操作</th></tr>
+                  <tr><th>#</th><th>任务</th><th>指数</th><th>舆情</th><th>提交时间</th><th>状态</th><th className={css.numTd}>拟合点位</th><th className={css.numTd}>指数收盘</th><th className={css.numTd}>偏离</th><th className={css.numTd}>出估值/跳过</th><th>操作</th></tr>
                 </thead>
                 <tbody>
                   {hist.map((h, i) => {
@@ -514,6 +516,7 @@ export function RunStep(props: {
                           <td className={css.mono}>{i + 1}</td>
                           <td className={css.mono}>{h.id}</td>
                           <td>{indexMeta(h.index).name}</td>
+                          <td><span className={`${css.tag} ${h.sentiment_mode === 'llm' ? css.tagOk : css.tagMut}`}>{h.sentiment_mode === 'llm' ? 'LLM' : '规则'}</span></td>
                           <td>{h.created}</td>
                           <td><span className={`${css.tag} ${stCls}`}>{st}</span></td>
                           <td className={`${css.mono} ${css.numTd}`}><b>{h.fitted_point != null ? h.fitted_point.toFixed(2) : '—'}</b></td>
@@ -547,7 +550,7 @@ export function RunStep(props: {
                         </tr>
                         {expanded && (
                           <tr>
-                            <td colSpan={10} style={{ padding: 0, border: 0 }}>
+                            <td colSpan={11} style={{ padding: 0, border: 0 }}>
                               <div className={css.detailList}>
                                 {histJob!.rows.map(r => {
                                   const ok = r.status === 'ok'
