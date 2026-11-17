@@ -27,6 +27,7 @@
   max-width: 1060px;
   margin: 0 auto;
   padding: 24px 28px 40px;
+  box-sizing: border-box;
   height: 100%;
   overflow-y: auto;
   background: radial-gradient(1100px 480px at 70% -10%, var(--card), transparent 62%), var(--bg);
