@@ -692,7 +692,7 @@ body[data-ds-dark-theme] .logoRev { display: block; }
   grid-template-columns: 272px minmax(0, 1fr) 316px;
   grid-template-areas: "left center right";
   gap: 12px;
-  align-items: start;
+  align-items: stretch;
   min-width: 0;
 }
 
@@ -1336,11 +1336,31 @@ body[data-ds-dark-theme] .logoRev { display: block; }
 
 /* ---------- responsive ---------- */
 
+@media (min-width: 900px) {
+  .col { height: 100%; }
+
+  .colLeft > .card:nth-child(2) {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .colLeft > .card:nth-child(2) > .cardBd {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .colLeft .recentScroll { flex: 1 1 auto; max-height: 355px; }
+}
+
 @media (max-width: 1199px) {
   .grid {
     grid-template-columns: minmax(0, 1fr) 300px;
     grid-template-areas:
-      "center right"
+      "center center"
       "left right";
   }
 

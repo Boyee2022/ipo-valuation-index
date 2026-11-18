@@ -391,10 +391,10 @@ export function ValuationPage() {
           </div>
           <div className={`${css.col} ${css.colCenter}`} id="sec-weights">
             <ConsTable rows={cons?.rows ?? null} loading={consLoading} error={consErr} indexName={meta.name} asOf={asOf} weightComputed={cons?.weight_computed === true} />
+            <DuoCard indexName={meta.name} chenFit={viewJob?.summary?.fitted_point ?? null} />
           </div>
           <div className={`${css.col} ${css.colRight}`}>
             {paramsCard}
-            <DuoCard indexName={meta.name} chenFit={viewJob?.summary?.fitted_point ?? null} />
             <CronCard />
           </div>
         </div>

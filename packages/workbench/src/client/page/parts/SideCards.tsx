@@ -1,4 +1,4 @@
-/** 左栏 TOP15 权重 / 最近跑批，右栏双模型对比 / 定时任务。 */
+/** 左栏 TOP15 权重 / 最近跑批，中栏成分券 / 双模型对比，右栏参数与定时任务。 */
 
 import { fmtNum, pctDiff, shortTime } from '../data'
 import type { RealConstituent, JobMeta } from '../api'
