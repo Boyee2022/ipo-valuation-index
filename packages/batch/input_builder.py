@@ -70,7 +70,7 @@ def build_input(stock, universe, params, as_of):
 
     peers = pick_peers(stock, universe)
     if not peers:
-        raise ValueError('同行业可比公司不足，跳过')
+        raise ValueError('同行业可比公司不足')
 
     quotes = dsources.tencent_quotes(
         [dsources._tcode(code)] + [dsources._tcode(p['secucode']) for p in peers])

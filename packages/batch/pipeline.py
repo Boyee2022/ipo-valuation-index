@@ -207,7 +207,8 @@ def _summary_html(job):
             tag = '<span style="color:#b45309">跳过</span>'
             val = '—'
             conf = '—'
-            link = esc(str(r.get('error') or '')[:80])
+            reason = str(r.get('error') or '')[:80].removesuffix('，跳过')
+            link = esc(reason)
         ratio = ''
         if st == 'ok' and r.get('per_share') and r.get('close'):
             ratio = '%.2f' % (r['per_share'] / r['close'])
@@ -232,9 +233,9 @@ h1{font-size:24px;margin:0 0 6px}h2{font-size:18px;margin:26px 0 10px}
 table{width:100%%;border-collapse:collapse;background:#fff;font-size:13px}
 th,td{border-bottom:1px solid #eef0f3;padding:7px 9px;text-align:right}
 th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3),
-th:nth-child(4),td:nth-child(4),th:nth-child(11),td:nth-child(11){text-align:left}
+th:nth-child(4),td:nth-child(4){text-align:left}
 thead th{background:#0e7490;color:#fff;font-weight:600;text-align:right}
-thead th:first-child,thead th:nth-child(2),thead th:nth-child(3),thead th:nth-child(4),thead th:nth-child(11){text-align:left}
+thead th:first-child,thead th:nth-child(2),thead th:nth-child(3),thead th:nth-child(4){text-align:left}
 .note{color:#6b7280;font-size:12px;line-height:1.7;margin-top:14px}
 a{color:#0e7490}
 </style></head><body><div class="wrap">
