@@ -152,19 +152,16 @@ export function MiniCalendar(props: { date: Date; onDate: (d: Date) => void }) {
   )
 }
 
-const MINS_PER_STOCK = 20
-
 /** 并行度紧凑分段（右侧参数卡）。 */
-export function ParallelQuick(props: { parallel: 3 | 10; onParallel: (v: 3 | 10) => void; count: number }) {
-  const { parallel, onParallel, count } = props
-  const hours = (p: number) => +((count / p) * (MINS_PER_STOCK / 60)).toFixed(1)
+export function ParallelQuick(props: { parallel: 3 | 10; onParallel: (v: 3 | 10) => void }) {
+  const { parallel, onParallel } = props
   return (
     <div className={css.seg}>
       <button type="button" className={parallel === 3 ? css.segSel : ''} onClick={() => onParallel(3)}>
-        每批 3 条<small>≈{hours(3)}h · 稳妥</small>
+        每批 3 条
       </button>
       <button type="button" className={parallel === 10 ? css.segSel : ''} onClick={() => onParallel(10)}>
-        每批 10 条<small>≈{hours(10)}h · 激进</small>
+        每批 10 条
       </button>
     </div>
   )

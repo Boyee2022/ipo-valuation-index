@@ -298,7 +298,6 @@ export function ValuationPage() {
       onDate={setDate}
       parallel={parallel}
       onParallel={setParallel}
-      count={count}
       asOf={asOf}
       running={running}
       online={online}

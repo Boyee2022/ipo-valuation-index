@@ -19,14 +19,13 @@ export function ParamsCard(props: {
   onDate: (d: Date) => void
   parallel: 3 | 10
   onParallel: (v: 3 | 10) => void
-  count: number
   asOf: string
   running: boolean
   online: boolean
   validWeights: boolean
   onRun: () => void
 }) {
-  const { params, onChange, date, onDate, parallel, onParallel, count, asOf, running, online, validWeights, onRun } = props
+  const { params, onChange, date, onDate, parallel, onParallel, asOf, running, online, validWeights, onRun } = props
   const [calOpen, setCalOpen] = useState(false)
 
   return (
@@ -58,8 +57,8 @@ export function ParamsCard(props: {
         </div>
         <div className={css.kv}><span className={css.kvK}>剔除离群 / 估不出</span><span className={css.kvV}>开 / 自动跳过</span></div>
 
-        <div className={css.lab2} id="sec-parallel">并行度（单券约 20 分钟）</div>
-        <ParallelQuick parallel={parallel} onParallel={onParallel} count={count} />
+        <div className={css.lab2} id="sec-parallel">并行度</div>
+        <ParallelQuick parallel={parallel} onParallel={onParallel} />
 
         <div className={css.lab2} id="sec-date">估值日期</div>
         <DateQuick date={date} onDate={onDate} />
