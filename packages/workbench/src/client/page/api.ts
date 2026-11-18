@@ -143,6 +143,46 @@ export async function fetchJobs(): Promise<JobMeta[]> {
   return data.jobs ?? []
 }
 
+/** 主页当前主题：外壳把深色标记在 body 上，作为报告主题的真源。 */
+export function currentTheme(): 'dark' | 'light' {
+  return document.body?.hasAttribute('data-ds-dark-theme') ? 'dark' : 'light'
+}
+
 export function reportUrl(jobId: string, file: string): string {
-  return `${API_BASE}/api/jobs/${jobId}/reports/${encodeURIComponent(file)}`
+  const url = new URL(`${API_BASE}/api/jobs/${jobId}/reports/${encodeURIComponent(file)}`)
+  url.hash = `theme=${currentTheme()}`
+  return url.toString()
+}
+
+/** 链接渲染后主页仍可能切换主题，导航前按当前 body 标记刷新 #theme。 */
+export function installReportThemeSync(): () => void {
+  const syncAnchor = (a: HTMLAnchorElement): void => {
+    try {
+      const url = new URL(a.href)
+      url.hash = `theme=${currentTheme()}`
+      if (a.href !== url.toString()) a.href = url.toString()
+    } catch { /* 非法链接不处理 */ }
+  }
+  const syncEvent = (e: Event): void => {
+    if (!(e.target instanceof Element)) return
+    const a = e.target.closest('a[href*="/reports/"]')
+    if (a instanceof HTMLAnchorElement) syncAnchor(a)
+  }
+  const syncAll = (): void => {
+    document.querySelectorAll<HTMLAnchorElement>('a[href*="/reports/"]').forEach(syncAnchor)
+  }
+  syncAll()
+  const observer = new MutationObserver(syncAll)
+  if (document.body) {
+    observer.observe(document.body, { attributes: true, attributeFilter: ['data-ds-dark-theme'] })
+  }
+  document.addEventListener('click', syncEvent, true)
+  document.addEventListener('pointerdown', syncEvent, true)
+  document.addEventListener('auxclick', syncEvent, true)
+  return () => {
+    observer.disconnect()
+    document.removeEventListener('click', syncEvent, true)
+    document.removeEventListener('pointerdown', syncEvent, true)
+    document.removeEventListener('auxclick', syncEvent, true)
+  }
 }

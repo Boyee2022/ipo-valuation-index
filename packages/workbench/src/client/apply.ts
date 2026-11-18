@@ -14,6 +14,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
 import { BrandName } from './BrandName'
 import { en, NS, zh } from './locales'
+import { installReportThemeSync } from './page/api'
 import { ValuationPage } from './page/ValuationPage'
 import { installSidebarReports } from './SidebarReports'
 import { scheduleReportsWorkspace } from './workspace_ensure'
@@ -103,4 +104,7 @@ export function apply(ctx: ClientContext): void {
   // Historical batch reports render inside that sidebar folder (DOM layer: the
   // stock workspace browser shows sessions only).
   ctx.effect(() => installSidebarReports(), 'valuation-workbench: sidebar reports')
+  // Reports open as separate documents on :3089; stamp the current shell theme
+  // onto their links right before navigation (the shell can switch after render).
+  ctx.effect(() => installReportThemeSync(), 'valuation-workbench: report theme sync')
 }

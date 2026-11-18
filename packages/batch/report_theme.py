@@ -8,9 +8,26 @@ import re
 from pathlib import Path
 
 STYLE_ID = 'dsh-terminal-theme'
+SCRIPT_ID = 'dsh-terminal-theme-js'
 _BLOCK_RE = re.compile(r'<style[^>]*id="%s"[^>]*>.*?</style>\s*' % STYLE_ID, re.S | re.I)
+_SCRIPT_RE = re.compile(r'<script[^>]*id="%s"[^>]*>.*?</script>\s*' % SCRIPT_ID, re.S | re.I)
 _META_RE = re.compile(r'<meta[^>]*name="color-scheme"[^>]*>\s*', re.I)
 _VIEWPORT_RE = re.compile(r'<meta[^>]*name="viewport"[^>]*>', re.I)
+
+# 报告在工作台新标签页打开时带 #theme=dark|light（主页 body[data-ds-dark-theme] 为真源）；
+# 无参数时先恢复本标签页上次口径，再退回系统 prefers-color-scheme。
+SCRIPT = ('<script id="%s">(function(){try{'
+          'var h=new URLSearchParams(location.hash.replace(/^#/,"")),'
+          'q=new URLSearchParams(location.search),'
+          't=h.get("theme")||q.get("theme"),k="dsh-report-theme";'
+          'if(t!=="dark"&&t!=="light"){t="";try{var s=sessionStorage.getItem(k);'
+          'if(s==="dark"||s==="light")t=s}catch(e){}}'
+          'else{try{sessionStorage.setItem(k,t)}catch(e){}}'
+          'var mq=matchMedia("(prefers-color-scheme: dark)"),'
+          'ap=function(){document.documentElement.setAttribute("data-rt-theme",'
+          't||(mq.matches?"dark":"light"))};'
+          'ap();if(!t&&mq.addEventListener)mq.addEventListener("change",ap);'
+          '}catch(e){}})();</script>\n' % SCRIPT_ID)
 
 CSS = r"""
 /* ── 与主页一致的终端风：七级字号、发丝线、琥珀强调、等宽数字、浅/深双主题 ── */
@@ -37,15 +54,13 @@ CSS = r"""
   --r:8px;--r-sm:4px;--sh-sm:none;--sh:none;--sh-lg:none;
   --fs:12.5px;--fs-num:24px;--fs-h1:16px;--fs-h2:14px;--fs-h3:12.5px;--fs-h4:11.5px;
 }
-@media (prefers-color-scheme:dark){
-  :root{
-    color-scheme:dark;
-    --rt-bg:#151517;--rt-panel:#232324;--rt-panel2:#2c2c2e;
-    --rt-line:rgba(255,255,255,.06);--rt-line2:rgba(255,255,255,.12);
-    --rt-ink:#f9fafb;--rt-dim:#cfd3d6;--rt-faint:#8a9099;
-    --rt-amber:#ffb000;--rt-amber2:#ff8c00;--rt-on-amber:#151002;
-    --rt-up:#ff5b5b;--rt-down:#2ecc71;--rt-blue:#5aa2dc;
-  }
+:root:where([data-rt-theme="dark"]){
+  color-scheme:dark;
+  --rt-bg:#151517;--rt-panel:#232324;--rt-panel2:#2c2c2e;
+  --rt-line:rgba(255,255,255,.06);--rt-line2:rgba(255,255,255,.12);
+  --rt-ink:#f9fafb;--rt-dim:#cfd3d6;--rt-faint:#8a9099;
+  --rt-amber:#ffb000;--rt-amber2:#ff8c00;--rt-on-amber:#151002;
+  --rt-up:#ff5b5b;--rt-down:#2ecc71;--rt-blue:#5aa2dc;
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -265,10 +280,12 @@ def inject(html_text):
     if idx < 0:
         return html_text
     body = _BLOCK_RE.sub('', html_text)
+    body = _SCRIPT_RE.sub('', body)
     body = _META_RE.sub('', body)
     idx = body.lower().rfind('</head>')
     payload = ('<meta name="color-scheme" content="light dark">\n'
-               '<style id="%s">%s</style>\n' % (STYLE_ID, CSS))
+               + SCRIPT
+               + '<style id="%s">%s</style>\n' % (STYLE_ID, CSS))
     if not _VIEWPORT_RE.search(body):
         payload = '<meta name="viewport" content="width=device-width, initial-scale=1.0">\n' + payload
     return body[:idx] + payload + body[idx:]
