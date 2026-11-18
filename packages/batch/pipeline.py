@@ -230,7 +230,11 @@ h1{font-size:24px;margin:0 0 6px}h2{font-size:18px;margin:26px 0 10px}
 .cards{display:flex;gap:14px;flex-wrap:wrap;margin:18px 0}
 .card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:16px 20px;min-width:210px}
 .card b{font-size:28px;display:block;margin:4px 0 2px}.card span{color:#6b7280;font-size:12px}
-table{width:100%%;border-collapse:collapse;background:#fff;font-size:13px}
+table{width:100%%;border-collapse:collapse;background:#fff;font-size:13px;table-layout:fixed}
+th:nth-child(1){width:4.5%%}th:nth-child(2){width:10%%}th:nth-child(3){width:11%%}
+th:nth-child(4){width:11%%}th:nth-child(5){width:8.5%%}th:nth-child(6){width:9.5%%}
+th:nth-child(7){width:10%%}th:nth-child(8){width:8%%}th:nth-child(9){width:6.5%%}
+th:nth-child(10){width:10%%}th:nth-child(11){width:11%%}
 th,td{border-bottom:1px solid #eef0f3;padding:7px 9px;text-align:right}
 th:first-child,td:first-child,th:nth-child(2),td:nth-child(2),th:nth-child(3),td:nth-child(3),
 th:nth-child(4),td:nth-child(4){text-align:left}
