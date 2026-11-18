@@ -21,6 +21,7 @@ from urllib.parse import parse_qs, urlparse
 
 import dsources
 import pipeline
+import report_theme
 import sentiment_llm
 from config import INDEX_NAMES, INDEX_TENCENT, INDEX_TYPES, JOBS, PORT, SKILL_DIR
 
@@ -56,12 +57,14 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
-    def _file(self, path, content_type):
+    def _file(self, path, content_type, transform=None):
         p = Path(path)
         if not p.exists():
             self._json({'error': 'not found'}, 404)
             return
         body = p.read_bytes()
+        if transform is not None:
+            body = transform(body)
         self.send_response(200)
         self._cors()
         self.send_header('Content-Type', content_type)
@@ -128,7 +131,8 @@ class Handler(BaseHTTPRequestHandler):
                 f = JOBS / m.group(1) / m.group(2)
                 if f.is_file() and str(f.resolve()).startswith(str(JOBS.resolve())):
                     ct = 'text/html; charset=utf-8' if f.suffix == '.html' else 'application/json; charset=utf-8'
-                    self._file(f, ct)
+                    transform = report_theme.inject_bytes if f.suffix == '.html' else None
+                    self._file(f, ct, transform)
                 else:
                     self._json({'error': 'not found'}, 404)
                 return

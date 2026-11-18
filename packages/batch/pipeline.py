@@ -19,6 +19,7 @@ from pathlib import Path
 
 import dsources
 import input_builder
+import report_theme
 from config import INDEX_NAMES, INDEX_TENCENT, INDEX_TYPES, JOBS, REPORTS_DIR, SKILL_DIR
 
 PY = sys.executable
@@ -157,6 +158,11 @@ def _worker(job_id, row, universe, params):
         r = _run([PY, str(CHECK), str(rep_f), '--output', str(out_f)], 300)
         check_ok = r.returncode == 0
 
+        try:
+            report_theme.theme_file(rep_f)
+        except Exception:
+            pass
+
         syn = eng.get('synthesis') or {}
         shares = (inp.get('financials') or {}).get('total_shares_after_issue')
         mid = syn.get('weighted_mid')
@@ -279,7 +285,8 @@ def _finalize(job):
         job['finished'] = _now()
         _save(job)
     try:
-        (_job_dir(job['id']) / 'summary.html').write_text(_summary_html(job), encoding='utf-8')
+        summary_f = _job_dir(job['id']) / 'summary.html'
+        summary_f.write_text(report_theme.inject(_summary_html(job)), encoding='utf-8')
     except Exception as e:
         with _state_lock:
             job['summary_warning'] = 'summary.html 生成失败: %s' % str(e)[:200]
