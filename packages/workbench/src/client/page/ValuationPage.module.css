@@ -19,7 +19,7 @@
   --blue: #1d6fa5;
   --mono: "Cascadia Mono", "JetBrains Mono", "SF Mono", ui-monospace, Consolas, "Liberation Mono", monospace;
   --sans: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --fs-micro: 9.5px;      /* 微标签：大写键名、坐标轴、单位、表头 */
+  --fs-micro: 10.5px;     /* 微标签：大写键名、坐标轴、单位、表头 */
   --fs-caption: 11.5px;   /* 辅助文字：表格单元、日志、注释、日历 */
   --fs-body: 12.5px;      /* 正文：按钮、步骤条、输入、结果名 */
   --fs-title: 14px;       /* 小标题：卡片头、券名、强调数字 */
