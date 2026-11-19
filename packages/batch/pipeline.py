@@ -144,6 +144,11 @@ def _worker(job_id, row, universe, params):
         if r.returncode != 0:
             raise RuntimeError('估值引擎失败: %s' % _tail(r.stderr or r.stdout))
         eng = json.loads(out_f.read_text(encoding='utf-8'))
+        syn = eng.get('synthesis') or {}
+        mid = syn.get('weighted_mid')
+        n_comp = len(inp.get('comparables') or [])
+        if mid is None or mid <= 0:
+            raise ValueError('无可比且 DCF 未形成有效估值' if n_comp == 0 else '估值中枢无效（≤0）')
 
         r = _run([PY, str(STAT), str(inp_f), str(out_f), '-o', str(stat_f),
                   '--n', str(params.get('stat_n') or 1000), '--seed', '42'], 1200)
@@ -163,10 +168,16 @@ def _worker(job_id, row, universe, params):
         except Exception:
             pass
 
-        syn = eng.get('synthesis') or {}
         shares = (inp.get('financials') or {}).get('total_shares_after_issue')
-        mid = syn.get('weighted_mid')
         per_share = round(mid / shares, 2) if mid is not None and shares else None
+        conf = (eng.get('confidence') or {}).get('level')
+        conf_note = None
+        if n_comp == 0:
+            # 引擎只给区间加宽与警示；产品层面按「可比法剔除」再下调一档置信度。
+            conf = {'高': '中', '中': '低'}.get(conf, conf)
+            conf_note = '无可比，已剔除可比法'
+        elif n_comp < 3:
+            conf_note = '可比仅 %d 家' % n_comp
         with _state_lock:
             row.update({
                 'status': 'ok',
@@ -176,7 +187,9 @@ def _worker(job_id, row, universe, params):
                 'four_part': {k: (v.get('value') if isinstance(v, dict) else v)
                               for k, v in (syn.get('four_part') or {}).items()
                               if k in ('part1_dcf', 'part2_comparable_quality', 'part3_market_sentiment')},
-                'confidence_level': (eng.get('confidence') or {}).get('level'),
+                'confidence_level': conf,
+                'confidence_note': conf_note,
+                'n_comp': n_comp,
                 'stage_label': (eng.get('lifecycle') or {}).get('stage_label'),
                 'basis': (eng.get('net_profit_basis_used') or {}).get('basis'),
                 'warnings': (eng.get('warnings') or [])[:6],
@@ -202,6 +215,8 @@ def _summary_html(job):
             tag = '<span style="color:#0f766e">估值完成</span>'
             val = '%s' % ('%.2f' % r['per_share'] if r.get('per_share') is not None else '—')
             conf = esc(str(r.get('confidence_level') or '—'))
+            if r.get('confidence_note'):
+                conf += '<br><small style="color:#b45309">%s</small>' % esc(str(r['confidence_note']))
             link = '<a href="./%s">报告</a>' % esc(r.get('report', ''))
         else:
             tag = '<span style="color:#b45309">跳过</span>'

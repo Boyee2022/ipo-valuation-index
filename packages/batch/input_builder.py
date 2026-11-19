@@ -5,7 +5,8 @@
 - 营收/归母净利取最近年报口径（与净利披露档 annual 一致；9M 累计不含在 TTM 内，避免口径混用）；
 - WACC/永续增速不显式给 → 引擎 capm_auto + 行业参数底座自动解析；
 - 舆情：东财新闻搜索+股吧帖（免费公开接口），词频+规则打分 → company_news_sentiment + sentiment_adjustment_pct 显式传入；
-- 可比公司：同行业、剔除自身、按自由流通市值对数距离取前 4 家，标注「自动选取、未经人工核验」。
+- 可比公司：同行业优先，细行业样本不足时回退行业前缀/粗板块，按自由流通市值对数距离取前 4 家，
+  标注「自动选取、未经人工核验」；无可比时不跳过，引擎剔除可比法并下调置信度。
 """
 import math
 
@@ -15,28 +16,75 @@ import sentiment_llm
 
 PEER_N = 4
 
+# 细行业在可比池中样本过少时的粗板块归组；仅用于兜底，不影响正常同行业选取。
+SECTOR_GROUPS = {
+    '消费出行': ('旅游零售Ⅱ', '旅游及景区', '酒店餐饮', '航空机场', '一般零售', '专业连锁Ⅱ', '贸易Ⅱ'),
+    '家电': ('其他家电Ⅱ', '白色家电', '黑色家电', '小家电', '厨卫电器', '家电零部件Ⅱ', '照明设备Ⅱ'),
+    '农业': ('农业综合Ⅱ', '动物保健Ⅱ', '养殖业', '种植业', '饲料', '渔业', '农产品加工'),
+    '能源化工': ('焦炭Ⅱ', '油气开采Ⅱ', '煤炭开采', '炼化及贸易', '化学原料', '化学制品', '化学纤维', '燃气Ⅱ'),
+    '材料': ('非金属材料Ⅱ', '玻璃玻纤', '水泥', '装修建材', '化学制品', '塑料', '橡胶', '金属新材料'),
+    '美妆个护': ('化妆品', '个护用品', '医疗美容'),
+}
+
+
+def _industry_base(ind):
+    return (ind or '').replace('Ⅱ', '').replace('Ⅲ', '').strip()
+
+
+def _industry_tokens(ind):
+    base = _industry_base(ind)
+    return {base[i:i + 2] for i in range(len(base) - 1)}
+
+
+def _sector_members(ind):
+    for members in SECTOR_GROUPS.values():
+        if ind in members:
+            return members
+    return ()
+
 
 def pick_peers(stock, universe, n=PEER_N):
-    """同行业可比候选；行业不足 2 家时退到同行业大类（Ⅱ 前段）；仍无则返回空。"""
+    """同行业可比候选；细行业样本不足时逐级回退到行业前缀/粗板块；仍无则返回空。"""
     code = stock.get('secucode')
     ind = (stock.get('industry') or '').strip()
     me = stock.get('free_cap') or 0
-    base = ind.split('Ⅱ')[0] if ind else ''
-    cands = [r for r in universe
-             if r.get('industry') and r.get('secucode') != code and (r.get('free_cap') or 0) > 0
-             and r.get('industry') == ind]
-    if len(cands) < 2 and base:
-        cands = [r for r in universe
-                 if r.get('industry') and r.get('secucode') != code and (r.get('free_cap') or 0) > 0
-                 and (r.get('industry') or '').startswith(base)]
+    if me <= 0:
+        me = next(((r.get('free_cap') or 0) for r in universe if r.get('secucode') == code), 0)
+    base = _industry_base(ind)
+
+    def usable(r):
+        return (bool(r.get('industry')) and r.get('secucode') != code
+                and (r.get('free_cap') or 0) > 0)
 
     def dist(r):
         cap = r.get('free_cap') or 0
         if me <= 0 or cap <= 0:
             return 1e9
         return abs(math.log(cap / me))
-    cands.sort(key=dist)
-    return cands[:n]
+
+    same = [r for r in universe if usable(r) and r.get('industry') == ind]
+    if len(same) >= 2:
+        return sorted(same, key=dist)[:n]
+
+    prefix = []
+    if base:
+        prefix = [r for r in universe if usable(r) and (r.get('industry') or '').startswith(base)]
+        # 只要前缀还有候选就沿用旧口径，避免把本来有可比的公司改判成跨板块。
+        if prefix:
+            return sorted(prefix, key=dist)[:n]
+
+    members = _sector_members(ind)
+    if not members:
+        return []
+
+    tokens = _industry_tokens(ind)
+    pool = [r for r in universe if usable(r) and r.get('industry') in members]
+
+    def rank(r):
+        shared = bool(tokens & _industry_tokens(r.get('industry')))
+        return (0 if shared else 1, dist(r))
+
+    return sorted(pool, key=rank)[:n]
 
 
 def _exchange(secucode):
@@ -57,8 +105,9 @@ def _consensus_first(con):
 
 
 def build_input(stock, universe, params, as_of):
-    """组装单券输入。数据缺失抛 ValueError → 跑批跳过并留痕。"""
+    """组装单券输入。财务数据缺失抛 ValueError（跑批跳过）；无可比公司时照常出估值，由引擎剔除可比法并降级。"""
     code = stock['secucode']
+    ind = (stock.get('industry') or '').strip()
     fin = dsources.financials(code)
     rev = None
     by_year = fin.get('revenue_by_year') or {}
@@ -69,8 +118,6 @@ def build_input(stock, universe, params, as_of):
         raise ValueError('披露财务缺失（营收/归母净利），跳过')
 
     peers = pick_peers(stock, universe)
-    if not peers:
-        raise ValueError('同行业可比公司不足')
 
     quotes = dsources.tencent_quotes(
         [dsources._tcode(code)] + [dsources._tcode(p['secucode']) for p in peers])
@@ -96,6 +143,8 @@ def build_input(stock, universe, params, as_of):
         if p.get('eps') is not None and p.get('total_shares'):
             net_profit = round(p['eps'] * p['total_shares'], 2)
         ps = round(mktcap / prev, 2) if mktcap and prev else None
+        peer_ind = (p.get('industry') or '').strip()
+        scope = '同行业' if peer_ind == ind else '同板块'
         comparables.append({
             'name': p['name'],
             'code': p['secucode'],
@@ -105,7 +154,8 @@ def build_input(stock, universe, params, as_of):
             'pe': pe,
             'ps': ps,
             'growth_pct': growth,
-            'note': '同行业自动选取（%s），公开行情 %s，未经人工核验' % (stock.get('industry') or '—', as_of),
+            'note': '%s自动选取（%s%s），公开行情 %s，未经人工核验' % (
+                scope, ind or '—', '' if peer_ind == ind else '→' + (peer_ind or '—'), as_of),
         })
 
     margins = fin.get('margin_history') or []
@@ -172,6 +222,10 @@ def build_input(stock, universe, params, as_of):
             },
             'scenario_weights': {'bear': 0.25, 'base': 0.5, 'bull': 0.25},
             'exclude_outliers': True,
+        },
+        'dcf_cost': {
+            # 可比法不可用时按剩余方法再归一，避免把可比法按 0 计入导致综合值静默缩水。
+            'method_drop_mode': 'renormalize',
         },
         'data_sources': [
             {'source': '东财 datacenter 业绩报表/F10/机构一致预期（公开披露）',
