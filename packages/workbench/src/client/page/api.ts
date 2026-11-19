@@ -1,6 +1,6 @@
 /** 批跑服务 API 客户端（Mac 内网 3089）。服务不可达时由调用方回退演示数据。 */
 
-export const API_BASE = 'http://10.200.100.68:3089'
+export const API_BASE = 'http://10.200.103.86:3089'
 
 export interface RealConstituent {
   code: string | null

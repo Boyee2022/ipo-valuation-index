@@ -1,6 +1,6 @@
 # 免 token（2026-11-13，用户要求）：connection 插件 anonymousAccess=true —— 每个请求都视为
 # 浏览器对等方，不再要求启动日志里的 ?token= URL。仅适用于网络边界已可信的内网
-# （本实例只绑定 10.200.100.68 内网地址）；注意它同时放开 /api 传输通道。
+# （本实例只绑定 10.200.103.86 内网地址）；注意它同时放开 /api 传输通道。
 - id: connection
   name: '@deepseek-ai/dsh-client-connection'
   config:

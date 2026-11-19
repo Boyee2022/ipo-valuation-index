@@ -339,7 +339,7 @@ export function ValuationPage() {
           <div className={css.ttl}>估值工作台<small>INDEX VALUATION WORKBENCH</small></div>
           <div className={css.topRight}>
             <span className={`${css.live} ${consLoading ? css.liveWait : online ? css.liveOn : css.liveOff}`}>
-              <i />{consLoading ? '连接批跑服务…' : online ? '批跑服务已连接 · 10.200.100.68:3089' : '批跑服务未连接 · 10.200.100.68:3089'}
+              <i />{consLoading ? '连接批跑服务…' : online ? '批跑服务已连接 · 10.200.103.86:3089' : '批跑服务未连接 · 10.200.103.86:3089'}
             </span>
             <span className={css.topMeta}>
               成分数据时点 <b className={css.mono}>{asOf || '—'}</b> · 引擎 llm-ipo-valuation · 统计层 MC {params.statN} 次

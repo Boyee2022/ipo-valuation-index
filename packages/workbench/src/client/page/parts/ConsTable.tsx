@@ -33,7 +33,7 @@ export function ConsTable(props: {
           <div className={css.offlineBox}>
             <b>批跑服务未连接</b>
             <span>{error}</span>
-            <span className={css.mono}>http://10.200.100.68:3089</span>
+            <span className={css.mono}>http://10.200.103.86:3089</span>
           </div>
         )}
         {!loading && !error && list.length === 0 && <p className={css.empty}>未返回成分券数据。</p>}
