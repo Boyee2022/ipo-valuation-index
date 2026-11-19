@@ -158,10 +158,10 @@ export function ParallelQuick(props: { parallel: 3 | 10; onParallel: (v: 3 | 10)
   return (
     <div className={css.seg}>
       <button type="button" className={parallel === 3 ? css.segSel : ''} onClick={() => onParallel(3)}>
-        每批 3 条
+        每批 3 条<small>稳妥</small>
       </button>
       <button type="button" className={parallel === 10 ? css.segSel : ''} onClick={() => onParallel(10)}>
-        每批 10 条
+        每批 10 条<small>激进</small>
       </button>
     </div>
   )
