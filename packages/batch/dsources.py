@@ -4,7 +4,9 @@
 缓存目录 runtime/cache（不入 git）。尽力而为：单项失败上抛，由调用方（跑批 worker）决定跳过。
 """
 import json
+import os
 import sys
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -39,7 +41,8 @@ def _cache_get(name, ttl, loader):
         except Exception:
             pass
     data = loader()
-    tmp = f.with_suffix('.tmp')
+    # 唯一临时名：并行 worker 会同时回填同一代码（本券+被选为可比），固定 .tmp 会让后写者的 replace 扑空
+    tmp = f.with_suffix('.tmp.%d.%d' % (os.getpid(), threading.get_ident()))
     tmp.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
     tmp.replace(f)
     return data
