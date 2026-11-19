@@ -23,6 +23,9 @@ import { WorkbenchIcon } from './WorkbenchIcon'
 /** The id shared by the sidebar entry and the main panel it opens. */
 export const PANEL_ID = 'workbench' as MainPanelId
 
+/** The shell keeps the active main panel in memory only; remember it across reloads. */
+const PANEL_STORAGE_KEY = 'valuation-workbench:main-panel'
+
 /** Product name of this instance, replacing the shell's baked-in brand. */
 export const PRODUCT_NAME = 'ValuationSystem'
 
@@ -107,4 +110,48 @@ export function apply(ctx: ClientContext): void {
   // Reports open as separate documents on :3089; stamp the current shell theme
   // onto their links right before navigation (the shell can switch after render).
   ctx.effect(() => installReportThemeSync(), 'valuation-workbench: report theme sync')
+  // A page reload or a client-plugin rebuild (the shell's HMR) resets the
+  // in-memory main-panel selection to the conversation, which looks like the
+  // workbench jumping back to a new session. Remember the selection and put it
+  // back on the next apply; switching to another panel forgets it, while the
+  // conversation (null) keeps it so refreshes reopen the workbench.
+  ctx.effect(() => {
+    const store = window.localStorage
+    const remembered = (): boolean => {
+      try { return store.getItem(PANEL_STORAGE_KEY) === PANEL_ID } catch { return false }
+    }
+    const remember = (on: boolean): void => {
+      try {
+        if (on) store.setItem(PANEL_STORAGE_KEY, PANEL_ID)
+        else store.removeItem(PANEL_STORAGE_KEY)
+      } catch { /* storage unavailable: the selection stays per page */ }
+    }
+    const active = (): boolean => ctx.layout.panelInfo.getSnapshot().activePanelId === PANEL_ID
+    let restoring = remembered()
+    let attempts = 0
+    let timer: number | undefined
+    const restore = (): void => {
+      if (!restoring) return
+      if (active()) { restoring = false; return }
+      try {
+        ctx.layout.selectPanel(PANEL_ID)
+        restoring = false
+      } catch {
+        if (++attempts > 40) { restoring = false; return }
+        timer = window.setTimeout(restore, 50)
+      }
+    }
+    const sync = (): void => {
+      const id = ctx.layout.panelInfo.getSnapshot().activePanelId
+      if (id === PANEL_ID) { restoring = false; remember(true) }
+      else if (id !== null) { restoring = false; remember(false) }
+    }
+    sync()
+    const off = ctx.layout.panelInfo.subscribe(sync)
+    if (restoring) timer = window.setTimeout(restore, 0)
+    return () => {
+      off()
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+  }, 'valuation-workbench: remembered panel')
 }
