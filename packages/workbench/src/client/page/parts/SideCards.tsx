@@ -60,7 +60,10 @@ export function RecentRunsCard(props: {
                       onClick={() => onPick(h.id)}
                       title={`查看 ${h.id}`}
                     >
-                      <td className={css.mono}>{shortTime(h.created)}</td>
+                      <td className={css.mono}>
+                        {shortTime(h.created)}
+                        {h.shadow_mode && <span className={css.tag} style={{ marginLeft: 4 }} title="影子评审任务">影</span>}
+                      </td>
                       <td className={`${css.numTd} ${css.mono} ${css.am}`}>{h.fitted_point != null ? fmtNum(h.fitted_point) : '—'}</td>
                       <td className={`${css.numTd} ${css.mono} ${diff == null ? '' : diff >= 0 ? css.up : css.down}`}>{diff == null ? '—' : pctDiff(diff)}</td>
                       <td className={css.numTd}><span className={`${css.tag} ${tag}`}>{st}</span></td>

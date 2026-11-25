@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { fmtNum, medianOf, pctDiff, type BatchParams } from '../data'
 import { reportUrl, type JobStatus, type JobRow } from '../api'
 import { ReportModal } from '../ReportModal'
+import { ShadowCard } from './Shadow'
 import css from '../ValuationPage.module.css'
 
 const diffOf = (per?: number | null, close?: number | null) =>
@@ -141,8 +142,13 @@ function DirectionDonut({ up, down }: { up: number; down: number }) {
   )
 }
 
-export function Results(props: { job: JobStatus | null; params: BatchParams; loading: boolean }) {
-  const { job, params, loading } = props
+export function Results(props: {
+  job: JobStatus | null
+  params: BatchParams
+  loading: boolean
+  onAdoption: (code: string, action: 'adopted' | 'rejected' | 'clear') => Promise<void>
+}) {
+  const { job, params, loading, onAdoption } = props
   const [sel, setSel] = useState<JobRow | null>(null)
 
   if (!job) {
@@ -183,6 +189,8 @@ export function Results(props: { job: JobStatus | null; params: BatchParams; loa
           <span>偏离 <b className={`${css.mono} ${diff == null ? '' : diff >= 0 ? css.up : css.down}`}>{diff == null ? '—' : pctDiff(diff)}</b></span>
         </div>
       </div>
+
+      {job.shadow_mode && <ShadowCard job={job} onAdoption={onAdoption} />}
 
       {!done && (
         <div className={css.card}>

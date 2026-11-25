@@ -16,6 +16,49 @@ export interface RealConstituent {
   free_cap: number | null
 }
 
+export type ShadowParam = 'comp_weight_pp' | 'wacc_pp' | 'tg_pp'
+export type ShadowDecision = 'accept' | 'partial' | 'reject' | 'hold' | 'error'
+export type ShadowAdoption = 'adopted' | 'rejected' | null
+
+export interface ShadowItem {
+  param: ShadowParam
+  delta: number
+  status: 'accept' | 'clamp' | 'reject'
+}
+
+export interface ShadowRow {
+  decision: ShadowDecision | null
+  confidence: number | null
+  one_line: string
+  adoption: ShadowAdoption
+  base: { comp: number | null; wacc: number | null; tg: number | null }
+  items: ShadowItem[]
+  n_issue: number
+  n_gated?: number
+  error?: string | null
+}
+
+export interface ShadowDispersion {
+  median: number | null
+  iqr: [number | null, number | null]
+  nonzero: number
+  n: number
+}
+
+export interface ShadowMetrics {
+  reviewed: number
+  errors: number
+  suggested: number
+  accepted_items: number
+  gated?: number
+  decision_dist: Record<ShadowDecision, number>
+  mean_confidence: number | null
+  dispersion: Record<ShadowParam, ShadowDispersion>
+  adoption: { adopted: number; rejected: number; pending: number; rate: number | null }
+  wow: (null | { prev_job: string; prev_created: string; n: number } & Record<ShadowParam, number | null>)
+  generated: string
+}
+
 export interface JobRow {
   idx: number
   code: string | null
@@ -37,6 +80,7 @@ export interface JobRow {
   check_ok?: boolean
   warnings?: string[]
   report?: string
+  shadow?: ShadowRow
 }
 
 export interface JobSummary {
@@ -63,6 +107,9 @@ export interface JobStatus {
   sentiment_mode?: 'rule' | 'llm'
   wacc_pct?: number | null
   terminal_growth_pct?: number | null
+  shadow_mode?: boolean
+  shadow_metrics?: ShadowMetrics | null
+  shadow_warning?: string
   rows: JobRow[]
   summary?: JobSummary
   error?: string | null
@@ -90,6 +137,7 @@ export interface JobMeta {
   ok: number | null
   skip: number | null
   sentiment_mode?: 'rule' | 'llm'
+  shadow_mode?: boolean
 }
 
 async function jfetch(url: string, init?: RequestInit, ms = 15000): Promise<Response> {
@@ -117,6 +165,7 @@ export async function runBatch(payload: {
   sentiment_mode: 'rule' | 'llm'
   wacc_pct?: number | null
   terminal_growth_pct?: number | null
+  shadow?: boolean
 }): Promise<{ job_id: string }> {
   const res = await jfetch(`${API_BASE}/api/run`, {
     method: 'POST',
@@ -138,6 +187,33 @@ export async function pollJob(id: string): Promise<JobStatus> {
   const res = await jfetch(`${API_BASE}/api/jobs/${id}`, undefined, 12000)
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
+}
+
+/** 人工采纳标记：adopted / rejected / clear（再次点击已选项 = 清除）。 */
+export async function setShadowAdoption(
+  jobId: string,
+  code: string,
+  action: 'adopted' | 'rejected' | 'clear',
+): Promise<{ shadow: ShadowRow; shadow_metrics: ShadowMetrics | null }> {
+  const res = await jfetch(`${API_BASE}/api/shadow/adopt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ job: jobId, code, action }),
+  })
+  if (!res.ok) {
+    let detail = ''
+    try {
+      const body = (await res.json()) as { error?: string }
+      if (body.error) detail = ` · ${body.error}`
+    } catch { /* 非 JSON 错误响应 */ }
+    throw new Error(`HTTP ${res.status}${detail}`)
+  }
+  return res.json()
+}
+
+/** 单券影子评审完整记录（含证据、专家原始建议、主审逐条意见）。 */
+export function shadowRecordUrl(jobId: string, secucode: string): string {
+  return `${API_BASE}/api/jobs/${jobId}/reports/${encodeURIComponent(`${secucode.replace(/\./g, '_')}.shadow.json`)}`
 }
 
 export async function fetchJobs(): Promise<JobMeta[]> {

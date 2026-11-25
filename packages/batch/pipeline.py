@@ -2,6 +2,7 @@
 """跑批执行：并行逐券「输入组装→引擎→统计校验→HTML 报告→八项机检」，按权重合成拟合点位。
 
 - 失败券自动跳过并留痕（对应需求「单券估不出 → 跳过」，不阻断整批）；
+- 影子模式开启时，逐券完成后追加「可比质量专家 + 主审」两级评审——只留痕，不改引擎参数；
 - 拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)，跳过券不计入分子分母；
 - 任务状态落盘 runtime/jobs/<id>/state.json，服务重启后可读。
 """
@@ -20,6 +21,7 @@ from pathlib import Path
 import dsources
 import input_builder
 import report_theme
+import shadow
 from config import INDEX_NAMES, INDEX_TENCENT, INDEX_TYPES, JOBS, REPORTS_DIR, SKILL_DIR
 
 PY = sys.executable
@@ -69,7 +71,7 @@ def _bump_done_and_save(job):
 
 def start(params):
     """创建任务并后台执行。params: {index, parallel, stat_n, weights{dcf,comp,sent}, sentiment_rounds,
-    wacc_pct?, terminal_growth_pct?}"""
+    wacc_pct?, terminal_growth_pct?, shadow_mode?}"""
     job_id = 'job_%s_%s' % (time.strftime('%Y%m%d_%H%M%S'), uuid.uuid4().hex[:6])
     job = {
         'id': job_id,
@@ -81,6 +83,8 @@ def start(params):
         'sentiment_mode': 'llm' if params.get('sentiment_mode') == 'llm' else 'rule',
         'wacc_pct': params.get('wacc_pct'),
         'terminal_growth_pct': params.get('terminal_growth_pct'),
+        'shadow_mode': bool(params.get('shadow_mode')),
+        'shadow_metrics': None,
         'created': _now(),
         'state': 'running',
         'done': 0,
@@ -122,10 +126,27 @@ def list_jobs():
                 'fitted_point': s.get('fitted_point'), 'index_close': s.get('index_close'),
                 'ok': s.get('ok'), 'skip': s.get('skip'),
                 'sentiment_mode': j.get('sentiment_mode') or 'rule',
+                'shadow_mode': bool(j.get('shadow_mode')),
             })
         except Exception:
             continue
     return out
+
+
+def _shadow_review(job, row, inp, eng):
+    """影子评审：失败只记该券评审错误，绝不影响估值结果与任务状态。"""
+    try:
+        rec = shadow.review(inp, eng, job.get('weights') or {})
+    except Exception as exc:
+        rec = shadow.error_record(inp, eng, job.get('weights') or {}, exc)
+    stem = row['secucode'].replace('.', '_')
+    try:
+        shadow.save_record(_job_dir(job['id']) / ('%s.shadow.json' % stem), rec)
+    except Exception:
+        pass
+    with _state_lock:
+        row['shadow'] = shadow.row_summary(rec)
+        _save(job)
 
 
 def _worker(job_id, row, universe, params):
@@ -200,6 +221,8 @@ def _worker(job_id, row, universe, params):
                 'report': rep_f.name,
             })
             _bump_done_and_save(job)
+        if job and job.get('shadow_mode'):
+            _shadow_review(job, row, inp, eng)
     except Exception as e:
         with _state_lock:
             row['status'] = 'skip'
@@ -302,6 +325,13 @@ def _finalize(job):
         w_p += w * (r.get('close') or 0)
     idx = job.get('index_close') or 0
     fitted = round(idx * w_v / w_p, 2) if w_p > 0 and idx else None
+    shadow_metrics = None
+    shadow_warning = None
+    if job.get('shadow_mode'):
+        try:
+            shadow_metrics = shadow.metrics(job, _prev_shadow_job(job))
+        except Exception as e:
+            shadow_warning = '影子指标计算失败: %s' % str(e)[:200]
     with _state_lock:
         job['summary'] = {
             'fitted_point': fitted,
@@ -310,6 +340,10 @@ def _finalize(job):
             'skip': sum(1 for r in job['rows'] if r.get('status') == 'skip'),
             'total': job['total'],
         }
+        if job.get('shadow_mode'):
+            job['shadow_metrics'] = shadow_metrics
+            if shadow_warning:
+                job['shadow_warning'] = shadow_warning
         job['state'] = 'done'
         job['finished'] = _now()
         _save(job)
@@ -320,6 +354,14 @@ def _finalize(job):
         with _state_lock:
             job['summary_warning'] = 'summary.html 生成失败: %s' % str(e)[:200]
             _save(job)
+    if job.get('shadow_mode'):
+        try:
+            shadow_f = _job_dir(job['id']) / 'shadow.html'
+            shadow_f.write_text(report_theme.inject(shadow.report_html(job)), encoding='utf-8')
+        except Exception as e:
+            with _state_lock:
+                job['shadow_warning'] = 'shadow.html 生成失败: %s' % str(e)[:200]
+                _save(job)
     try:
         _archive_reports(job)
     except Exception as e:
@@ -334,6 +376,59 @@ def _archive_reports(job):
     archive.mkdir(parents=True, exist_ok=True)
     for f in _job_dir(job['id']).glob('*.html'):
         shutil.copy2(f, archive / f.name)
+
+
+def _prev_shadow_job(job):
+    """同指数、更早的已完成影子任务，用于周环比参数稳定性。"""
+    for meta in list_jobs():
+        if meta.get('id') == job.get('id') or meta.get('index') != job.get('index'):
+            continue
+        if not meta.get('shadow_mode') or meta.get('state') != 'done':
+            continue
+        if meta.get('created') and job.get('created') and meta['created'] >= job['created']:
+            continue
+        prev = get(meta['id'])
+        if prev and prev.get('rows'):
+            return prev
+    return None
+
+
+def set_shadow_adoption(job_id, code, action, by='operator'):
+    """人工采纳标记：adopted / rejected / clear；返回该券摘要与刷新后的任务级指标。"""
+    if action not in ('adopted', 'rejected', 'clear'):
+        raise ValueError('未知采纳操作: %s' % action)
+    with _state_lock:
+        job = get(job_id)
+        if job is None:
+            return None
+        if not job.get('shadow_mode'):
+            raise ValueError('该任务未开启影子模式')
+        if job.get('state') != 'done':
+            raise ValueError('任务尚未完成，暂不能标记采纳')
+        row = next((r for r in job.get('rows') or [] if r.get('secucode') == code), None)
+        if row is None:
+            return None
+        summary = row.get('shadow') or {}
+        if summary.get('decision') in (None, 'error'):
+            raise ValueError('该券没有有效影子评审记录')
+        adoption = None if action == 'clear' else {
+            'action': action, 'by': str(by or 'operator')[:40], 'at': _now(),
+        }
+        rec_path = _job_dir(job_id) / (str(code).replace('.', '_') + '.shadow.json')
+        if rec_path.exists():
+            try:
+                rec = json.loads(rec_path.read_text(encoding='utf-8'))
+                rec['adoption'] = adoption
+                shadow.save_record(rec_path, rec)
+            except Exception:
+                pass
+        row['shadow'] = dict(summary, adoption=None if adoption is None else adoption['action'])
+        try:
+            job['shadow_metrics'] = shadow.metrics(job, _prev_shadow_job(job))
+        except Exception:
+            pass
+        _save(job)
+        return {'shadow': row['shadow'], 'shadow_metrics': job.get('shadow_metrics')}
 
 
 def run_job(job_id):

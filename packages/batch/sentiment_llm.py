@@ -65,14 +65,14 @@ SYSTEM_PROMPT = (
 )
 
 
-def _chat(messages, env, timeout=90.0):
+def _chat(messages, env, timeout=90.0, max_tokens=400):
     base = (env.get('DEEPSEEK_BASE_URL') or DEFAULT_BASE).rstrip('/')
     model = env.get('DEEPSEEK_MODEL') or DEFAULT_MODEL
     body = {
         'model': model,
         'messages': messages,
         'temperature': 0.1,
-        'max_tokens': 400,
+        'max_tokens': max_tokens,
         'response_format': {'type': 'json_object'},
         'stream': False,
     }

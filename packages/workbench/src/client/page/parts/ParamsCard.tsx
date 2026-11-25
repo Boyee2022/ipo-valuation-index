@@ -9,6 +9,7 @@ import {
   ParallelQuick,
   PctInput,
   SentimentSeg,
+  ShadowSeg,
   WeightsEditor,
 } from './fields'
 import css from '../ValuationPage.module.css'
@@ -46,6 +47,12 @@ export function ParamsCard(props: {
 
         <div className={css.lab2}>方法加权比例</div>
         <WeightsEditor params={params} onChange={onChange} />
+
+        <div className={css.lab2}>影子评审</div>
+        <ShadowSeg value={params.shadow} onChange={v => onChange({ ...params, shadow: v })} />
+        {params.shadow && (
+          <p className={css.overrideNote}>逐券追加「可比质量专家 + 主审」两级评审，只产出变更单，不改变本批引擎参数。</p>
+        )}
 
         <div className={css.kv}>
           <span className={css.kvK}>WACC 覆盖</span>

@@ -11,6 +11,8 @@ export interface BatchParams {
   waccPct: number | null
   /** 永续增速覆盖（%），null = 引擎行业底座逐券校准。 */
   terminalGrowthPct: number | null
+  /** 影子评审（可比质量专家 + 主审），只留痕不改引擎参数，默认关。 */
+  shadow: boolean
 }
 
 /** 覆盖参数冲突校验：两者都显式给时，永续增速必须低于 WACC。 */

@@ -5,10 +5,11 @@
   GET  /api/health                                  → 存活与数据源状态
   GET  /api/constituents?index=sh50                 → 真实成分券 + 权重 + 指数收盘
   POST /api/run  {index, parallel, stat_n, weights{dcf,comp,sent}, sentiment_rounds,
-                  wacc_pct?, terminal_growth_pct?} → {job_id}
+                  wacc_pct?, terminal_growth_pct?, shadow?} → {job_id}
+  POST /api/shadow/adopt {job, code, action:adopted|rejected|clear} → 采纳标记与刷新后指标
   GET  /api/jobs                                   → 任务列表
   GET  /api/jobs/<id>                              → 任务状态（进度/逐券结果/拟合点位）
-  GET  /api/jobs/<id>/reports/<file>               → 逐券 HTML 报告 / summary.html
+  GET  /api/jobs/<id>/reports/<file>               → 逐券 HTML 报告 / summary.html / shadow.html
 
 CORS 放行（仅内网使用）；文件名白名单校验。无密钥、无鉴权——服务只读公开数据、只写本机任务目录。
 """
@@ -105,7 +106,8 @@ class Handler(BaseHTTPRequestHandler):
                     rows_n = 0
                     err = str(ex)
                 self._json({'ok': True, 'components_as_of': (c or {}).get('as_of'),
-                            'components_rows': rows_n, 'error': err})
+                            'components_rows': rows_n, 'error': err,
+                            'shadow_ready': sentiment_llm.available()})
                 return
             if path == '/api/constituents':
                 idx = (qs.get('index') or ['sh50'])[0]
@@ -167,8 +169,9 @@ class Handler(BaseHTTPRequestHandler):
                     parallel = 3
                 weights = body.get('weights') or {}
                 sentiment_mode = 'llm' if body.get('sentiment_mode') == 'llm' else 'rule'
-                if sentiment_mode == 'llm' and not sentiment_llm.available():
-                    self._json({'error': 'LLM 舆情未配置：请在 ~/.dsh-valuation/sentiment-llm.env 写入 DEEPSEEK_API_KEY（仓库外）'}, 400)
+                shadow_mode = bool(body.get('shadow'))
+                if (sentiment_mode == 'llm' or shadow_mode) and not sentiment_llm.available():
+                    self._json({'error': 'LLM 未配置：请在 ~/.dsh-valuation/sentiment-llm.env 写入 DEEPSEEK_API_KEY（仓库外）'}, 400)
                     return
                 wacc_pct = _opt_pct(body, 'wacc_pct', 1, 20, 'WACC 覆盖')
                 tg_pct = _opt_pct(body, 'terminal_growth_pct', 0, 5, '永续增速覆盖')
@@ -188,9 +191,28 @@ class Handler(BaseHTTPRequestHandler):
                     'sentiment_mode': sentiment_mode,
                     'wacc_pct': wacc_pct,
                     'terminal_growth_pct': tg_pct,
+                    'shadow_mode': shadow_mode,
                 }
                 job_id = pipeline.start(params)
                 self._json({'job_id': job_id})
+                return
+            if parsed.path == '/api/shadow/adopt':
+                n = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(n).decode('utf-8') or '{}')
+                job_id = str(body.get('job') or '')
+                code = str(body.get('code') or '')
+                action = str(body.get('action') or '')
+                if not job_id or not code or not SAFE.match(job_id):
+                    self._json({'error': '缺少有效的任务或证券代码'}, 400)
+                    return
+                if action not in ('adopted', 'rejected', 'clear'):
+                    self._json({'error': '未知采纳操作: %s' % action}, 400)
+                    return
+                res = pipeline.set_shadow_adoption(job_id, code, action, body.get('by') or '')
+                if res is None:
+                    self._json({'error': '任务或成分券不存在'}, 404)
+                    return
+                self._json(res)
                 return
             self._json({'error': 'not found'}, 404)
         except Exception as e:

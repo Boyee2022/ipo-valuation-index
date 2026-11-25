@@ -13,6 +13,7 @@ import {
   pollJob,
   reportUrl,
   runBatch,
+  setShadowAdoption,
   type ConstituentsPayload,
   type JobMeta,
   type JobStatus,
@@ -41,6 +42,7 @@ export function ValuationPage() {
     statN: 1000,
     waccPct: null,
     terminalGrowthPct: null,
+    shadow: false,
   })
   const [indexSel, setIndexSel] = useState('sh50')
   const [date, setDate] = useState<Date>(() => new Date())
@@ -207,7 +209,7 @@ export function ValuationPage() {
       params.waccPct != null ? `WACC ${params.waccPct}%` : null,
       params.terminalGrowthPct != null ? `永续增速 ${params.terminalGrowthPct}%` : null,
     ].filter(Boolean).join(' / ')
-    push(`[准备] ${meta.name} ${count} 条 · 并行 ${parallel} · 抽样 ${params.statN} · 舆情 ${params.sentimentMode === 'llm' ? 'LLM 语义' : '规则打分'} ≤${params.sentiment} 轮 · 估值日期 ${fmtDateShort(date)}（参考） · 数据时点 ${cons?.as_of ?? '—'}${ov ? ` · 覆盖 ${ov}` : ''}`, 'dim')
+    push(`[准备] ${meta.name} ${count} 条 · 并行 ${parallel} · 抽样 ${params.statN} · 舆情 ${params.sentimentMode === 'llm' ? 'LLM 语义' : '规则打分'} ≤${params.sentiment} 轮 · 影子评审 ${params.shadow ? '开（可比 + 主审）' : '关'} · 估值日期 ${fmtDateShort(date)}（参考） · 数据时点 ${cons?.as_of ?? '—'}${ov ? ` · 覆盖 ${ov}` : ''}`, 'dim')
     document.getElementById('sec-run')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     try {
       const { job_id } = await runBatch({
@@ -219,6 +221,7 @@ export function ValuationPage() {
         sentiment_mode: params.sentimentMode,
         wacc_pct: params.waccPct,
         terminal_growth_pct: params.terminalGrowthPct,
+        shadow: params.shadow,
       })
       jobIdRef.current = job_id
       push(`[任务] ${job_id} 已提交，开始跟踪`, 'dim')
@@ -254,6 +257,24 @@ export function ValuationPage() {
     if (id === indexSel) return
     if (running) { showToast('跑批进行中，完成后可切换指数', 'warn'); return }
     setIndexSel(id)
+  }
+
+  const markShadow = async (code: string, action: 'adopted' | 'rejected' | 'clear') => {
+    const job = viewJob
+    if (!job) return
+    try {
+      const res = await setShadowAdoption(job.id, code, action)
+      setViewJob(prev => prev && prev.id === job.id
+        ? {
+            ...prev,
+            shadow_metrics: res.shadow_metrics ?? prev.shadow_metrics,
+            rows: prev.rows.map(r => (r.secucode === code ? { ...r, shadow: res.shadow } : r)),
+          }
+        : prev)
+      showToast(action === 'adopted' ? '已标记采纳' : action === 'rejected' ? '已标记否决' : '已清除采纳标记', 'ok')
+    } catch (e) {
+      showToast(`标记失败：${msgOf(e)}`, 'err')
+    }
   }
 
   const pickJob = async (id: string) => {
@@ -336,7 +357,7 @@ export function ValuationPage() {
     />
   )
 
-  const results = <Results job={viewJob} params={params} loading={viewLoading} />
+  const results = <Results job={viewJob} params={params} loading={viewLoading} onAdoption={markShadow} />
 
   return (
     <div className={css.page}>

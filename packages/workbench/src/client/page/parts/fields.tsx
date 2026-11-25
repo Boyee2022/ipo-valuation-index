@@ -127,6 +127,21 @@ export function SentimentSeg(props: { value: 'rule' | 'llm'; onChange: (v: 'rule
   )
 }
 
+/** 影子评审开关：默认关，开启后只产出变更单，引擎仍用原参数。 */
+export function ShadowSeg(props: { value: boolean; onChange: (v: boolean) => void }) {
+  const { value, onChange } = props
+  return (
+    <div className={css.seg}>
+      <button type="button" className={!value ? css.segSel : ''} onClick={() => onChange(false)}>
+        关闭<small>仅引擎参数</small>
+      </button>
+      <button type="button" className={value ? css.segSel : ''} onClick={() => onChange(true)}>
+        可比 + 主审<small>影子留痕</small>
+      </button>
+    </div>
+  )
+}
+
 /** 今天 / 昨天快捷选择。 */
 export function DateQuick(props: { date: Date; onDate: (d: Date) => void }) {
   const { date, onDate } = props
