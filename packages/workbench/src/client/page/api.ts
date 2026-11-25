@@ -61,6 +61,8 @@ export interface JobStatus {
   weights?: { dcf: number; comp: number; sent: number }
   sentiment_rounds?: number
   sentiment_mode?: 'rule' | 'llm'
+  wacc_pct?: number | null
+  terminal_growth_pct?: number | null
   rows: JobRow[]
   summary?: JobSummary
   error?: string | null
@@ -113,6 +115,8 @@ export async function runBatch(payload: {
   weights: { dcf: number; comp: number; sent: number }
   sentiment_rounds: number
   sentiment_mode: 'rule' | 'llm'
+  wacc_pct?: number | null
+  terminal_growth_pct?: number | null
 }): Promise<{ job_id: string }> {
   const res = await jfetch(`${API_BASE}/api/run`, {
     method: 'POST',

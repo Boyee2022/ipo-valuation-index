@@ -1,12 +1,13 @@
 /** 右侧参数卡：舆情轮数、方法权重、口径、抽样、并行度与估值日期，全部可直接编辑。 */
 
 import { useState } from 'react'
-import type { BatchParams } from '../data'
+import { overrideError, type BatchParams } from '../data'
 import {
   DateQuick,
   MiniCalendar,
   NumInput,
   ParallelQuick,
+  PctInput,
   SentimentSeg,
   WeightsEditor,
 } from './fields'
@@ -27,6 +28,7 @@ export function ParamsCard(props: {
 }) {
   const { params, onChange, date, onDate, parallel, onParallel, asOf, running, online, validWeights, onRun } = props
   const [calOpen, setCalOpen] = useState(false)
+  const overrideErr = overrideError(params)
 
   return (
     <div className={css.card} id="sec-params">
@@ -45,9 +47,25 @@ export function ParamsCard(props: {
         <div className={css.lab2}>方法加权比例</div>
         <WeightsEditor params={params} onChange={onChange} />
 
-        <div className={css.kv}><span className={css.kvK}>WACC 口径</span><span className={css.kvV}>5.61%</span></div>
+        <div className={css.kv}>
+          <span className={css.kvK}>WACC 覆盖</span>
+          <span className={css.kvV}>
+            <PctInput value={params.waccPct} onChange={v => onChange({ ...params, waccPct: v })} min={2} max={20} placeholder="逐券 CAPM" label="WACC 覆盖（%）" />
+            <span className={css.kvUnit}>%</span>
+          </span>
+        </div>
         <div className={css.kv}><span className={css.kvK}>rf / ERP / β</span><span className={css.kvV}>1.7% / 6% / 0.65</span></div>
-        <div className={css.kv}><span className={css.kvK}>永续增长率</span><span className={css.kvV}>3.0%</span></div>
+        <div className={css.kv}>
+          <span className={css.kvK}>永续增速覆盖</span>
+          <span className={css.kvV}>
+            <PctInput value={params.terminalGrowthPct} onChange={v => onChange({ ...params, terminalGrowthPct: v })} min={0} max={5} placeholder="底座校准" label="永续增速覆盖（%）" />
+            <span className={css.kvUnit}>%</span>
+          </span>
+        </div>
+        {(params.waccPct != null || params.terminalGrowthPct != null) && (
+          <p className={css.overrideNote}>覆盖对本批全部成分券同值生效（不区分行业），留空 = 逐券自动。</p>
+        )}
+        {overrideErr && <p className={css.overrideWarn}>{overrideErr}</p>}
         <div className={css.kv}>
           <span className={css.kvK}>蒙特卡洛抽样</span>
           <span className={css.kvV}>
@@ -73,7 +91,7 @@ export function ParamsCard(props: {
         <button
           type="button"
           className={css.btn2}
-          disabled={running || !online || !validWeights}
+          disabled={running || !online || !validWeights || !!overrideErr}
           onClick={onRun}
         >
           {running ? '跑批进行中…' : '开始跑批（真实执行）'}
@@ -81,11 +99,13 @@ export function ParamsCard(props: {
         <div className={css.paramStatus}>
           {!online
             ? '批跑服务未连接，无法提交任务'
-            : !validWeights
-              ? '方法加权合计需等于 100%'
-              : running
-                ? '任务执行中，可在运行栏跟踪进度'
-                : '提交后由 Mac 批跑服务逐券执行'}
+            : overrideErr
+              ? overrideErr
+              : !validWeights
+                ? '方法加权合计需等于 100%'
+                : running
+                  ? '任务执行中，可在运行栏跟踪进度'
+                  : '提交后由 Mac 批跑服务逐券执行'}
         </div>
       </div>
     </div>

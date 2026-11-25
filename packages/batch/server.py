@@ -4,7 +4,8 @@
 路由：
   GET  /api/health                                  → 存活与数据源状态
   GET  /api/constituents?index=sh50                 → 真实成分券 + 权重 + 指数收盘
-  POST /api/run  {index, parallel, stat_n, weights{dcf,comp,sent}, sentiment_rounds} → {job_id}
+  POST /api/run  {index, parallel, stat_n, weights{dcf,comp,sent}, sentiment_rounds,
+                  wacc_pct?, terminal_growth_pct?} → {job_id}
   GET  /api/jobs                                   → 任务列表
   GET  /api/jobs/<id>                              → 任务状态（进度/逐券结果/拟合点位）
   GET  /api/jobs/<id>/reports/<file>               → 逐券 HTML 报告 / summary.html
@@ -26,6 +27,17 @@ import sentiment_llm
 from config import INDEX_NAMES, INDEX_TENCENT, INDEX_TYPES, JOBS, PORT, SKILL_DIR
 
 SAFE = re.compile(r'^[\w.\-]+$')
+
+
+def _opt_pct(body, key, lo, hi, label):
+    """可选百分比覆盖参数：缺省/空串 → None；越界直接拒绝。"""
+    v = body.get(key)
+    if v is None or v == '':
+        return None
+    v = float(v)
+    if not (lo <= v <= hi):
+        raise ValueError('%s 超出允许范围 %g%%~%g%%' % (label, lo, hi))
+    return round(v, 2)
 
 
 def _lan_host():
@@ -158,6 +170,11 @@ class Handler(BaseHTTPRequestHandler):
                 if sentiment_mode == 'llm' and not sentiment_llm.available():
                     self._json({'error': 'LLM 舆情未配置：请在 ~/.dsh-valuation/sentiment-llm.env 写入 DEEPSEEK_API_KEY（仓库外）'}, 400)
                     return
+                wacc_pct = _opt_pct(body, 'wacc_pct', 1, 20, 'WACC 覆盖')
+                tg_pct = _opt_pct(body, 'terminal_growth_pct', 0, 5, '永续增速覆盖')
+                if wacc_pct is not None and tg_pct is not None and wacc_pct <= tg_pct:
+                    self._json({'error': 'WACC 覆盖必须高于永续增速覆盖'}, 400)
+                    return
                 params = {
                     'index': idx,
                     'parallel': parallel,
@@ -169,6 +186,8 @@ class Handler(BaseHTTPRequestHandler):
                     },
                     'sentiment_rounds': int(body.get('sentiment_rounds') or 10),
                     'sentiment_mode': sentiment_mode,
+                    'wacc_pct': wacc_pct,
+                    'terminal_growth_pct': tg_pct,
                 }
                 job_id = pipeline.start(params)
                 self._json({'job_id': job_id})

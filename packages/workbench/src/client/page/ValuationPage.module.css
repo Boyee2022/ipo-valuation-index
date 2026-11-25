@@ -887,6 +887,9 @@ body[data-ds-dark-theme] .logoRev { display: block; }
 .kvV { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); font-family: var(--mono); font-size: var(--fs-caption); }
 .kvUnit { color: var(--faint); font-family: var(--sans); font-size: var(--fs-micro); }
 
+.overrideNote { margin: 3px 0 2px; color: var(--faint); font-size: var(--fs-micro); line-height: 1.55; }
+.overrideWarn { margin: 3px 0 2px; color: var(--up); font-size: var(--fs-micro); line-height: 1.55; }
+
 .lab2 {
   margin: 10px 0 5px;
   color: var(--faint);

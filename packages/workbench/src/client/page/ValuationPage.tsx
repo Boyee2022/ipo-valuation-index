@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import logoStd from '../assets/logo-csindex.png'
 import logoRev from '../assets/logo-csindex-white.png'
-import { fmtDateShort, fmtNum, indexMeta, type BatchParams } from './data'
+import { fmtDateShort, fmtNum, indexMeta, overrideError, type BatchParams } from './data'
 import {
   fetchConstituents,
   fetchJobs,
@@ -39,6 +39,8 @@ export function ValuationPage() {
     sent: 20,
     sentimentMode: 'rule',
     statN: 1000,
+    waccPct: null,
+    terminalGrowthPct: null,
   })
   const [indexSel, setIndexSel] = useState('sh50')
   const [date, setDate] = useState<Date>(() => new Date())
@@ -63,7 +65,8 @@ export function ValuationPage() {
   const count = cons?.rows.length ?? meta.count
   const weightSum = params.dcf + params.comp + params.sent
   const validWeights = weightSum === 100
-  const canRun = online && !running && validWeights
+  const overrideErr = overrideError(params)
+  const canRun = online && !running && validWeights && !overrideErr
 
   const pollRef = useRef<number | null>(null)
   const seenRef = useRef<Set<number>>(new Set())
@@ -192,6 +195,7 @@ export function ValuationPage() {
     if (!online) { showToast('批跑服务未连接，无法提交任务', 'err'); return }
     if (running) { showToast('已有跑批在进行中，请等待完成', 'warn'); return }
     if (!validWeights) { showToast('方法加权合计需等于 100%', 'warn'); return }
+    if (overrideErr) { showToast(overrideErr, 'warn'); return }
     stopPolling()
     setRunning(true)
     setTracking(true)
@@ -199,7 +203,11 @@ export function ValuationPage() {
     setLogs([])
     seenRef.current = new Set()
     failRef.current = 0
-    push(`[准备] ${meta.name} ${count} 条 · 并行 ${parallel} · 抽样 ${params.statN} · 舆情 ${params.sentimentMode === 'llm' ? 'LLM 语义' : '规则打分'} ≤${params.sentiment} 轮 · 估值日期 ${fmtDateShort(date)}（参考） · 数据时点 ${cons?.as_of ?? '—'}`, 'dim')
+    const ov = [
+      params.waccPct != null ? `WACC ${params.waccPct}%` : null,
+      params.terminalGrowthPct != null ? `永续增速 ${params.terminalGrowthPct}%` : null,
+    ].filter(Boolean).join(' / ')
+    push(`[准备] ${meta.name} ${count} 条 · 并行 ${parallel} · 抽样 ${params.statN} · 舆情 ${params.sentimentMode === 'llm' ? 'LLM 语义' : '规则打分'} ≤${params.sentiment} 轮 · 估值日期 ${fmtDateShort(date)}（参考） · 数据时点 ${cons?.as_of ?? '—'}${ov ? ` · 覆盖 ${ov}` : ''}`, 'dim')
     document.getElementById('sec-run')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     try {
       const { job_id } = await runBatch({
@@ -209,6 +217,8 @@ export function ValuationPage() {
         weights: { dcf: params.dcf / 100, comp: params.comp / 100, sent: params.sent / 100 },
         sentiment_rounds: params.sentiment,
         sentiment_mode: params.sentimentMode,
+        wacc_pct: params.waccPct,
+        terminal_growth_pct: params.terminalGrowthPct,
       })
       jobIdRef.current = job_id
       push(`[任务] ${job_id} 已提交，开始跟踪`, 'dim')

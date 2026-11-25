@@ -1,6 +1,6 @@
 /** Reusable parameter fields: weights, sentiment mode, dates and parallelism. */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { WEEK_CN, WEEK_HEAD, fmtMonthDay, sameDay, type BatchParams } from '../data'
 import css from '../ValuationPage.module.css'
 
@@ -31,6 +31,58 @@ export function NumInput(props: {
       value={value}
       aria-label={label}
       onChange={e => onChange(clamp(int(e.target.value, value), min, max))}
+    />
+  )
+}
+
+/** 百分比覆盖输入：支持两位小数，留空 = null（逐券自动）。 */
+export function PctInput(props: {
+  value: number | null
+  onChange: (v: number | null) => void
+  min?: number
+  max?: number
+  width?: number
+  placeholder?: string
+  label?: string
+}) {
+  const { value, onChange, min = 0, max = 100, width = 56, placeholder = '逐券自算', label } = props
+  const [text, setText] = useState(() => (value == null ? '' : String(value)))
+  const last = useRef(value)
+
+  useEffect(() => {
+    if (value !== last.current) {
+      last.current = value
+      setText(value == null ? '' : String(value))
+    }
+  }, [value])
+
+  const commit = (s: string) => {
+    setText(s)
+    const t = s.trim()
+    if (t === '') {
+      last.current = null
+      onChange(null)
+      return
+    }
+    const n = Number.parseFloat(t)
+    if (!Number.isFinite(n)) return
+    const v = clamp(Math.round(n * 100) / 100, min, max)
+    last.current = v
+    onChange(v)
+  }
+
+  return (
+    <input
+      className={css.numInput}
+      style={{ width }}
+      type="text"
+      inputMode="decimal"
+      value={text}
+      placeholder={placeholder}
+      aria-label={label}
+      title={placeholder}
+      onChange={e => commit(e.target.value)}
+      onBlur={() => setText(value == null ? '' : String(value))}
     />
   )
 }

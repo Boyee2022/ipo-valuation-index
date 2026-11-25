@@ -3,7 +3,8 @@
 
 口径说明（与技能输入 schema 对齐，单位：金额=亿元、比率=小数、股本=亿股）：
 - 营收/归母净利取最近年报口径（与净利披露档 annual 一致；9M 累计不含在 TTM 内，避免口径混用）；
-- WACC/永续增速不显式给 → 引擎 capm_auto + 行业参数底座自动解析；
+- WACC/永续增速默认不显式给 → 引擎 capm_auto + 行业参数底座自动解析；工作台覆盖时按 % ÷ 100
+  写入 financials.wacc / financials.terminal_growth，优先于引擎自动解析；
 - 舆情：东财新闻搜索+股吧帖（免费公开接口），词频+规则打分 → company_news_sentiment + sentiment_adjustment_pct 显式传入；
 - 可比公司：同行业优先，细行业样本不足时回退行业前缀/粗板块，按自由流通市值对数距离取前 4 家，
   标注「自动选取、未经人工核验」；无可比时不跳过，引擎剔除可比法并下调置信度。
@@ -172,6 +173,8 @@ def build_input(stock, universe, params, as_of):
     roe_pct = stock.get('roe')
     weights = params.get('weights') or {}
     mode = str(params.get('sentiment_mode') or 'rule')
+    wacc_pct = params.get('wacc_pct')
+    tg_pct = params.get('terminal_growth_pct')
     if mode == 'llm':
         snt = sentiment_llm.score_stock(code, stock['name'], rounds=int(params.get('sentiment_rounds') or 10))
     else:
@@ -237,4 +240,16 @@ def build_input(stock, universe, params, as_of):
                        'company_news_sentiment=%s，adjustment_pct=%+.1f%%' % (snt['label'], snt['adjustment_pct'])]},
         ],
     }
+    if wacc_pct is not None or tg_pct is not None:
+        ov = []
+        if wacc_pct is not None:
+            inp['financials']['wacc'] = round(float(wacc_pct) / 100, 4)
+            ov.append('WACC %.2f%%' % float(wacc_pct))
+        if tg_pct is not None:
+            inp['financials']['terminal_growth'] = round(float(tg_pct) / 100, 4)
+            ov.append('永续增速 %.2f%%' % float(tg_pct))
+        inp['data_sources'].append({
+            'source': '工作台参数覆盖（人工指定，全批统一）',
+            'items': ['%s：显式传入引擎，优先于逐券 CAPM 与行业参数底座' % '、'.join(ov)],
+        })
     return inp

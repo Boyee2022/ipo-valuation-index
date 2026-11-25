@@ -68,7 +68,8 @@ def _bump_done_and_save(job):
 
 
 def start(params):
-    """创建任务并后台执行。params: {index, parallel, stat_n, weights{dcf,comp,sent}, sentiment_rounds}"""
+    """创建任务并后台执行。params: {index, parallel, stat_n, weights{dcf,comp,sent}, sentiment_rounds,
+    wacc_pct?, terminal_growth_pct?}"""
     job_id = 'job_%s_%s' % (time.strftime('%Y%m%d_%H%M%S'), uuid.uuid4().hex[:6])
     job = {
         'id': job_id,
@@ -78,6 +79,8 @@ def start(params):
         'weights': params.get('weights') or {'dcf': 0.3, 'comp': 0.5, 'sent': 0.2},
         'sentiment_rounds': int(params.get('sentiment_rounds') or 10),
         'sentiment_mode': 'llm' if params.get('sentiment_mode') == 'llm' else 'rule',
+        'wacc_pct': params.get('wacc_pct'),
+        'terminal_growth_pct': params.get('terminal_growth_pct'),
         'created': _now(),
         'state': 'running',
         'done': 0,
@@ -235,6 +238,13 @@ def _summary_html(job):
                 (r.get('weight') or 0), '%.2f' % r['close'] if r.get('close') is not None else '—',
                 val, ratio, conf, tag, link))
     fitted = s.get('fitted_point')
+    ov = []
+    if job.get('wacc_pct') is not None:
+        ov.append('WACC %.2f%%' % job['wacc_pct'])
+    if job.get('terminal_growth_pct') is not None:
+        ov.append('永续增速 %.2f%%' % job['terminal_growth_pct'])
+    cost_note = ('本批参数覆盖：%s（全批统一，引擎显式采用）' % '、'.join(ov)) if ov else (
+        'WACC/永续增速未显式给定，由引擎行业参数底座自动解析')
     return """<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <title>估值跑批总结报告 · %(index)s · %(jobid)s</title>
 <style>
@@ -271,8 +281,7 @@ a{color:#0e7490}
 <tbody>%(rows)s</tbody></table>
 <div class="note">
 拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)，跳过券不计入分子分母。<br>
-口径：成分权重为前一日收盘权重（东财指数成分表）；估值中枢=引擎综合中枢÷总股本；WACC/永续增速未显式给定，
-由引擎行业参数底座自动解析；舆情=东财免费公开数据（近30天新闻搜索+股吧帖）词频+规则打分，情绪字段显式传入引擎。<br>
+口径：成分权重为前一日收盘权重（东财指数成分表）；估值中枢=引擎综合中枢÷总股本；%(cost_note)s；舆情=东财免费公开数据（近30天新闻搜索+股吧帖）词频+规则打分，情绪字段显式传入引擎。<br>
 本报告由估值跑批管线自动生成，仅作探索性研究参考，不构成投资建议。
 </div></div></body></html>""" % {
         'index': esc(INDEX_NAMES.get(job.get('index'), job.get('index'))),
@@ -280,7 +289,7 @@ a{color:#0e7490}
         'ts': _now(), 'fitted': ('%.2f' % fitted) if fitted is not None else '—',
         'close': ('%.2f' % s.get('index_close')) if s.get('index_close') is not None else '—',
         'total': job.get('total', 0), 'ok': s.get('ok', 0), 'skip': s.get('skip', 0),
-        'rows': ''.join(body_rows),
+        'rows': ''.join(body_rows), 'cost_note': cost_note,
     }
 
 

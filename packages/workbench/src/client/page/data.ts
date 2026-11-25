@@ -7,6 +7,18 @@ export interface BatchParams {
   sent: number
   sentimentMode: 'rule' | 'llm'
   statN: number
+  /** WACC 覆盖（%），null = 逐券 CAPM 自动。 */
+  waccPct: number | null
+  /** 永续增速覆盖（%），null = 引擎行业底座逐券校准。 */
+  terminalGrowthPct: number | null
+}
+
+/** 覆盖参数冲突校验：两者都显式给时，永续增速必须低于 WACC。 */
+export function overrideError(p: BatchParams): string | null {
+  if (p.waccPct != null && p.terminalGrowthPct != null && p.waccPct <= p.terminalGrowthPct) {
+    return '参数冲突：WACC 覆盖需高于永续增速覆盖'
+  }
+  return null
 }
 
 export interface IndexMeta {
