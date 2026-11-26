@@ -6,6 +6,7 @@ export const NS = 'valuation-workbench'
 /** Simplified Chinese dictionary (the key-set source of truth). */
 export const zh = {
   'panel': '估值跑批',
+  'panel.agents': '估值智能体',
   'page.title': '估值跑批工作台',
   'page.lede': '用估值替代价格、按权重合成指数点位。上证50、上证180、科创50、沪深300 全部真实数据跑批。',
   'step.1': '参数确认',
@@ -19,6 +20,7 @@ export const zh = {
 /** English dictionary (key set follows zh). */
 export const en = {
   'panel': 'Valuation',
+  'panel.agents': 'Valuation Agents',
   'page.title': 'Valuation Batch Workbench',
   'page.lede': 'Estimate constituents, replace price with valuation, and synthesize the index level by weight. SSE50, SSE180, STAR50 and CSI300 all run on real data.',
   'step.1': 'Parameters',

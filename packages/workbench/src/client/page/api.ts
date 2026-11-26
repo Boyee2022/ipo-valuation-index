@@ -175,6 +175,7 @@ export interface JobMeta {
   sentiment_mode?: 'rule' | 'llm'
   agent_mode?: AgentMode
   shadow_mode?: boolean
+  agent_config_version?: number | null
 }
 
 async function jfetch(url: string, init?: RequestInit, ms = 15000): Promise<Response> {

@@ -12,6 +12,7 @@ import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client'
 import type {} from '@deepseek-ai/dsh-client-ui-slots'
+import { installAgentsPanel } from './AgentsPanel'
 import { BrandName } from './BrandName'
 import { en, NS, zh } from './locales'
 import { installReportThemeSync } from './page/api'
@@ -101,6 +102,9 @@ export function apply(ctx: ClientContext): void {
     ctx.layout.selectPanel(PANEL_ID)
     return true
   }), 'valuation-workbench: entry activation')
+  // The「估值智能体」panel: configuration UI for the three experts + reviewer,
+  // served by the batch service's /api/agents (single source, per-batch snapshot).
+  installAgentsPanel(ctx)
   // Register the「估值跑批工作台」host-directory workspace folder (idempotent,
   // retried with backoff until the host directory exists).
   scheduleReportsWorkspace(ctx)

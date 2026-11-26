@@ -4,8 +4,8 @@
 - 三个专家各管一段证据：可比质量 → comp_weight_pp；折现参数 → wacc_pp / tg_pp；舆情 → sent_weight_pp。
   主审独立复核、夹断或驳回；专家不得跨域提参数。
 - shadow：建议只留痕，引擎始终使用原参数；apply：主审通过项由调用方写回输入后重跑引擎。
-- 证据门槛：须声明 severity、confidence≥0.65、evidence 引用具体数字、reason 齐全、方向自洽；
-  幅度按 severity 夹断（可比 medium/high/critical = 5/8/10pp、舆情 5/10pp、WACC 0.4/1.0pp、永续 0.2/0.6pp）。
+- 证据门槛：须声明 severity、confidence≥门槛（默认 0.65，按批配置）、evidence 引用具体数字、reason 齐全、方向自洽；
+  幅度按 severity 夹断（默认可比 medium/high/critical = 5/8/10pp、舆情 5/10pp、WACC 0.4/1.0pp、永续 0.2/0.6pp，按批配置覆写）。
 - 金融类（银行/保险/券商）走 RIM/DDM 路由：权重不生效，WACC 参数面实为股权成本 Ke
   （写回 rim.cost_of_equity 与 ddm.cost_of_equity），永续增速写回 ddm.terminal_growth。
 - 评估只看离散度、置信度校准、周环比稳定性与人工采纳率，不看拟合点位是否更贴近指数收盘。
@@ -23,6 +23,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+import agent_config
 import sentiment_llm
 
 PARAM_SPEC = {
@@ -58,6 +59,18 @@ MIN_SUGGEST_CONF = 0.65
 DECISION_CN = {'accept': '通过', 'partial': '部分通过', 'reject': '驳回', 'hold': '维持', 'error': '评审失败'}
 
 _SLOTS = threading.BoundedSemaphore(max(1, int(os.environ.get('VALUATION_SHADOW_CONCURRENCY') or 6)))
+_SLOT_POOL = {}
+_SLOT_LOCK = threading.Lock()
+
+
+def _slots(n):
+    """按本批配置的并发度取信号量；同一并发度复用同一个实例。"""
+    n = max(1, min(12, int(n or 6)))
+    with _SLOT_LOCK:
+        sema = _SLOT_POOL.get(n)
+        if sema is None:
+            sema = _SLOT_POOL[n] = threading.BoundedSemaphore(n)
+        return sema
 
 _BASE_RULES = (
     '默认结论是维持原参数。只有证据指出具体、可量化的缺陷时才提建议；不要为了提而提。\n'
@@ -424,18 +437,19 @@ def evidence_text(inp, eng, base, focus='all'):
 
 # ── 建议生成、规则化与主审合并 ─────────────────────────────────────────────
 
-def _normalize(param, delta):
+def _normalize(param, delta, hi=None):
     """归到允许步长与上限；不足最小步长 → 0。权重类步长 5pp，比率类 0.2pp。"""
     spec = PARAM_SPEC.get(param)
     d = _num(delta) or 0.0
     if spec is None or d == 0:
         return 0.0
+    limit = spec['max'] if hi is None else max(spec['step'], float(hi))
     if param.endswith('_weight_pp'):
         if abs(d) < spec['step']:
             return 0.0
-        return round(_clamp(d, -spec['max'], spec['max']), 1)
+        return round(_clamp(d, -limit, limit), 1)
     d = round(d / spec['step']) * spec['step']
-    return round(_clamp(d, -spec['max'], spec['max']), 1)
+    return round(_clamp(d, -limit, limit), 1)
 
 
 _DOWN_WORDS = ('下调', '降低', '减少', '调低', '压低')
@@ -464,7 +478,7 @@ def _comp_sample_poor(inp, eng):
             or (cov is not None and cov < 20.0))
 
 
-def _gate(agent, s, base, inp, eng):
+def _gate(agent, s, base, inp, eng, min_conf=MIN_SUGGEST_CONF):
     """单项建议的证据门槛；返回 (param, raw, conf, severity, evidence, reason, gate)。"""
     param = str(s.get('param') or '')
     raw = _num(s.get('delta'))
@@ -482,8 +496,8 @@ def _gate(agent, s, base, inp, eng):
         gate = '严重档仅用于可比权重'
     elif spec and severity not in spec['caps']:
         gate = '未声明有效严重度'
-    elif conf is None or conf < MIN_SUGGEST_CONF:
-        gate = '置信度低于 0.65'
+    elif conf is None or conf < min_conf:
+        gate = '置信度低于 %.2f' % min_conf
     elif len(evidence) < 6 or not re.search(r'\d', evidence):
         gate = '证据未引用具体数字'
     elif len(reason) < 4:
@@ -499,14 +513,15 @@ def _gate(agent, s, base, inp, eng):
     return param, raw, conf, severity, evidence, reason, gate
 
 
-def _proposals(agent, expert, base, inp, eng):
+def _proposals(agent, expert, base, inp, eng, cfg):
     """规则化单个专家的建议并执行证据门槛；未过门槛的进入 gated 留痕，不送主审。"""
     out, gated = [], []
     seen = set()
+    min_conf = agent_config.gate(cfg, agent)
     for s in (expert or {}).get('suggestions') or []:
         if not isinstance(s, dict):
             continue
-        param, raw, conf, severity, evidence, reason, gate = _gate(agent, s, base, inp, eng)
+        param, raw, conf, severity, evidence, reason, gate = _gate(agent, s, base, inp, eng, min_conf)
         if param in seen:
             continue
         seen.add(param)
@@ -518,14 +533,15 @@ def _proposals(agent, expert, base, inp, eng):
         if gate:
             gated.append(dict(item, gate=gate))
             continue
-        norm = _normalize(param, raw)
+        caps = agent_config.caps_for(cfg, param)
+        norm = _normalize(param, raw, max(caps.values()) if caps else None)
         if norm == 0.0:
             gated.append(dict(item, gate='幅度低于最小步长'))
             continue
         if _direction_conflict(reason, norm):
             gated.append(dict(item, gate='建议方向与理由矛盾'))
             continue
-        cap = SEVERITY_CAP[param][severity]
+        cap = caps.get(severity, PARAM_SPEC[param]['caps'][severity])
         capped = abs(norm) > cap
         if capped:
             norm = round((1.0 if norm > 0 else -1.0) * cap, 1)
@@ -644,11 +660,12 @@ def _bounds(base, items):
     return applied
 
 
-def _ask(messages, env, max_tokens, timeout):
+def _ask(messages, env, max_tokens, timeout, slots=None):
     last = None
+    sema = _slots(slots) if slots else _SLOTS
     for _ in range(2):
         try:
-            with _SLOTS:
+            with sema:
                 return sentiment_llm._chat(messages, env, timeout=timeout, max_tokens=max_tokens)
         except Exception as exc:
             last = exc
@@ -656,12 +673,12 @@ def _ask(messages, env, max_tokens, timeout):
     raise RuntimeError('LLM 调用失败: %s' % last)
 
 
-def _run_expert(agent, env, ev, timeout):
+def _run_expert(agent, env, ev, timeout, slots, rules):
     try:
         content, model = _ask([
-            {'role': 'system', 'content': AGENT_SYSTEM[agent]},
+            {'role': 'system', 'content': AGENT_SYSTEM[agent] + rules},
             {'role': 'user', 'content': ev},
-        ], env, 700, timeout)
+        ], env, 700, timeout, slots)
         return {'agent': agent, 'ok': True, 'data': _json_of(content), 'model': model, 'error': None}
     except Exception as exc:
         return {'agent': agent, 'ok': False, 'data': None, 'model': None, 'error': str(exc)[:200]}
@@ -682,20 +699,34 @@ def _main_prompt(ev, by_agent, proposals, base):
                 } for p in proposals], ensure_ascii=False)))
 
 
-def review(inp, eng, weights=None, timeout=75.0, mode='shadow'):
-    """执行一次三专家 + 主审评审；不触碰引擎参数。返回落盘用记录（密钥缺失抛异常由调用方兜底）。"""
+def review(inp, eng, weights=None, timeout=None, mode='shadow', cfg=None):
+    """执行一次三专家 + 主审评审；不触碰引擎参数。cfg 为本批配置快照，缺省读当前文件。"""
     t0 = time.time()
+    cfg = agent_config.normalize(cfg or agent_config.load())
+    timeout = float(timeout or cfg.get('timeout_s') or 90.0)
+    slots = int(cfg.get('concurrency') or 6)
     env = sentiment_llm._env()
     if not env.get('DEEPSEEK_API_KEY'):
         raise RuntimeError('评审未配置：需要在仓库外 ~/.dsh-valuation/sentiment-llm.env 提供 DEEPSEEK_API_KEY')
+    if cfg.get('model'):
+        env = dict(env, DEEPSEEK_MODEL=cfg['model'])
     base = baseline(eng, weights, inp)
     prefs = inp.get('preferences') or {}
     base['sentiment_mode'] = prefs.get('sentiment_mode') or inp.get('sentiment_mode')
-    agents = ['financial'] if base.get('routed') else ['comparable', 'financial', 'sentiment']
+    if base.get('routed'):
+        agents = ['financial'] if agent_config.enabled(cfg, 'financial') else []
+    else:
+        agents = [a for a in ('comparable', 'financial', 'sentiment') if agent_config.enabled(cfg, a)]
+    if not agents:
+        rec = error_record(inp, eng, weights, RuntimeError('所有专家已关闭'), mode, cfg)
+        rec.update({'baseline': base, 'error': None, 'decision': 'hold',
+                    'one_line': '所有专家已关闭，维持原参数', 'config': cfg})
+        return rec
     ev_all = evidence_text(inp, eng, base, 'all')
     experts = {}
     with ThreadPoolExecutor(max_workers=len(agents)) as ex:
-        futs = {ex.submit(_run_expert, a, env, evidence_text(inp, eng, base, a), timeout): a for a in agents}
+        futs = {ex.submit(_run_expert, a, env, evidence_text(inp, eng, base, a), timeout,
+                          slots, agent_config.prompt_rules(cfg, a)): a for a in agents}
         for fut in as_completed(futs):
             r = fut.result()
             experts[r['agent']] = r
@@ -707,7 +738,7 @@ def review(inp, eng, weights=None, timeout=75.0, mode='shadow'):
         d = r.get('data') or {}
         pr, ga = ([], [])
         if r.get('ok'):
-            pr, ga = _proposals(a, d, base, inp, eng)
+            pr, ga = _proposals(a, d, base, inp, eng, cfg)
             proposals.extend(pr)
             gated.extend(ga)
             for x in (d.get('issues') or [])[:5]:
@@ -727,12 +758,13 @@ def review(inp, eng, weights=None, timeout=75.0, mode='shadow'):
 
     main = None
     main_error = None
-    if proposals:
+    main_enabled = agent_config.enabled(cfg, 'main')
+    if proposals and main_enabled:
         try:
             mcontent, model = _ask([
-                {'role': 'system', 'content': MAIN_SYSTEM},
+                {'role': 'system', 'content': MAIN_SYSTEM + agent_config.prompt_rules(cfg, 'main')},
                 {'role': 'user', 'content': _main_prompt(ev_all, by_agent, proposals, base)},
-            ], env, 800, timeout)
+            ], env, 800, timeout, slots)
             main = _json_of(mcontent)
             if model and model not in models:
                 models.append(model)
@@ -748,7 +780,7 @@ def review(inp, eng, weights=None, timeout=75.0, mode='shadow'):
     for p in proposals:
         m = main_by.get(p['param'])
         if m is None:
-            status, final, why = 'reject', 0.0, '主审未列示，建议作废'
+            status, final, why = 'reject', 0.0, ('主审未启用，建议仅留痕' if not main_enabled else '主审未列示，建议作废')
         else:
             status = str(m.get('status') or 'reject')
             if status not in ('accept', 'clamp', 'reject'):
@@ -756,7 +788,7 @@ def review(inp, eng, weights=None, timeout=75.0, mode='shadow'):
             final = _normalize(p['param'], m.get('final_delta')) if status != 'reject' else 0.0
             why = _one_line(m.get('reason'), 60)
             if status != 'reject' and final:
-                cap = SEVERITY_CAP[p['param']][p['severity']]
+                cap = agent_config.caps_for(cfg, p['param']).get(p['severity'], SEVERITY_CAP[p['param']][p['severity']])
                 if abs(final) > cap:
                     final = round((1.0 if final > 0 else -1.0) * cap, 1)
                     status = 'clamp'
@@ -775,6 +807,8 @@ def review(inp, eng, weights=None, timeout=75.0, mode='shadow'):
     active = [it for it in items if it.get('final_delta')]
     if not ok_agents:
         decision = 'error'
+    elif not main_enabled:
+        decision = 'hold'
     elif not items:
         decision = 'hold'
     elif not active:
@@ -795,6 +829,8 @@ def review(inp, eng, weights=None, timeout=75.0, mode='shadow'):
         one = '建议未过证据门槛（%d 条），维持原参数' % len(gated)
     if not ok_agents:
         one = '专家均调用失败'
+    elif not main_enabled and proposals:
+        one = '主审已关闭（%d 条建议仅留痕）' % len(proposals)
     if main_error and proposals:
         one = (one + '；' if one else '') + '主审调用失败，建议全部作废'
     rec = {
@@ -805,6 +841,7 @@ def review(inp, eng, weights=None, timeout=75.0, mode='shadow'):
         'elapsed_ms': int((time.time() - t0) * 1000),
         'model': ','.join(models) if models else None,
         'agent_mode': mode,
+        'config': cfg,
         'baseline': base,
         'evidence': ev_all,
         'agents': by_agent,
@@ -836,6 +873,72 @@ def review(inp, eng, weights=None, timeout=75.0, mode='shadow'):
         'adoption': None,
     }
     return rec
+
+
+_EVIDENCE_GUIDE = {
+    'comparable': [
+        '公司行：公司 / 代码 / 行业 / 会计准则',
+        '当前参数：可比权重、舆情权重、折现率与永续增速（含来源）',
+        '估值结果：综合中枢与三法数值、权重、离散度与两两偏离（不含指数拟合点位）',
+        '纳入可比：逐家 PE / PS / 营收 / 市值 / 增长 / 准则 / 报告期（最多 8 家）',
+        '筛池：长名单规模、中位营收与市值、规模倍数、剔除原因分布、覆盖率与筛池状态',
+    ],
+    'financial': [
+        '公司行：公司 / 代码 / 行业 / 会计准则',
+        '当前参数：同上（金融类 RIM/DDM 路由时标注股权成本 Ke 与 DDM 永续增速）',
+        '估值结果：综合中枢、三法或路由法数值与权重、离散度（不含指数拟合点位）',
+        'CAPM：rf / ERP / beta 与来源 / kd / 税率 / D/E → 权益成本',
+        '财务：TTM 营收、净利率、ROE、3 年营收 CAGR、是否亏损',
+        '质量：OCF/净利、ROIC、应收/营收、商誉/净资产、非经常性占比',
+        '生命周期：阶段与置信度、可比中位增长、隐含永续增速',
+    ],
+    'sentiment': [
+        '公司行：公司 / 代码 / 行业 / 会计准则',
+        '当前参数与估值结果：同上（不含指数拟合点位）',
+        '舆情输入：口径（规则/LLM）、板块情绪、个股新闻、调整幅度、情绪因子',
+        '舆情证据：新闻与股吧语料摘要',
+        '舆情法 vs 可比法偏离',
+    ],
+    'main': [
+        '三名专家可见证据的合并完整版（公司、参数、估值结果、财务、可比、筛池、舆情）',
+        '当前基线：折现率 / Ke、可比权重、舆情权重、永续增速',
+        '各专家结论：逐位专家的一句话结论与置信度',
+        '待审建议：每条 agent / param / delta / severity / 专家置信度 / 专家证据 / 理由（JSON）',
+    ],
+}
+
+_CODE = {'comparable': 'CMP', 'financial': 'DCF', 'sentiment': 'SNT', 'main': 'REV'}
+
+
+def prompt_preview(cfg=None):
+    """只读预览：四个角色实际使用的 system 提示词（含本批配置行）与输入证据结构。"""
+    cfg = agent_config.normalize(cfg or agent_config.load())
+    roles = {}
+    for agent in ('comparable', 'financial', 'sentiment', 'main'):
+        params = []
+        for param in AGENT_PARAMS.get(agent, ()):
+            caps = agent_config.caps_for(cfg, param)
+            params.append({
+                'key': param,
+                'label': LABEL[param],
+                'caps': {s: caps.get(s) for s in agent_config.PARAM_SEVERITIES.get(param, ())},
+            })
+        if agent == 'main':
+            params = [{'key': p, 'label': LABEL[p],
+                       'caps': {s: agent_config.caps_for(cfg, p).get(s)
+                                for s in agent_config.PARAM_SEVERITIES[p]}} for p in PARAMS]
+        roles[agent] = {
+            'code': _CODE[agent],
+            'label': AGENT_LABEL.get(agent, '主审'),
+            'enabled': agent_config.enabled(cfg, agent),
+            'gate': None if agent == 'main' else agent_config.gate(cfg, agent),
+            'params': params,
+            'system': (MAIN_SYSTEM if agent == 'main' else AGENT_SYSTEM[agent])
+                      + agent_config.prompt_rules(cfg, agent),
+            'evidence': list(_EVIDENCE_GUIDE[agent]),
+        }
+    return {'version': int(cfg.get('version') or 0), 'model': cfg.get('model') or '',
+            'generated': _now(), 'roles': roles}
 
 
 def apply_to_input(inp, eng, rec):
@@ -939,7 +1042,7 @@ def apply_to_input(inp, eng, rec):
     return new, changes, skipped
 
 
-def error_record(inp, eng, weights, exc, mode='shadow'):
+def error_record(inp, eng, weights, exc, mode='shadow', cfg=None):
     base = baseline(eng, weights, inp)
     return {
         'code': _one_line((inp.get('meta') or {}).get('ticker'), 14),
@@ -949,6 +1052,7 @@ def error_record(inp, eng, weights, exc, mode='shadow'):
         'elapsed_ms': 0,
         'model': None,
         'agent_mode': mode,
+        'config': cfg,
         'baseline': base,
         'evidence': '',
         'agents': [],

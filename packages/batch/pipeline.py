@@ -4,6 +4,7 @@
 - 失败券自动跳过并留痕（对应需求「单券估不出 → 跳过」，不阻断整批）；
 - agent_mode=shadow：逐券追加「三专家 + 主审」评审，只留痕，不改引擎参数；
 - agent_mode=apply：评审通过项写回输入后重跑引擎（基线输入/输出保留 *.baseline.json，失败回滚）；
+- 智能体配置在每批开始时读一次并写入 state.json，运行中的任务不受后续保存影响；
 - 拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)，跳过券不计入分子分母；
 - 任务状态落盘 runtime/jobs/<id>/state.json，服务重启后可读。
 """
@@ -19,6 +20,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
+import agent_config
 import dsources
 import input_builder
 import report_theme
@@ -96,6 +98,7 @@ def start(params):
         'terminal_growth_pct': params.get('terminal_growth_pct'),
         'agent_mode': agent_mode,
         'shadow_mode': agent_mode != 'off',
+        'agent_config': agent_config.load() if agent_mode != 'off' else None,
         'shadow_metrics': None,
         'created': _now(),
         'state': 'running',
@@ -140,6 +143,7 @@ def list_jobs():
                 'sentiment_mode': j.get('sentiment_mode') or 'rule',
                 'agent_mode': j.get('agent_mode') or ('shadow' if j.get('shadow_mode') else 'off'),
                 'shadow_mode': bool(j.get('shadow_mode')),
+                'agent_config_version': (j.get('agent_config') or {}).get('version'),
             })
         except Exception:
             continue
@@ -180,10 +184,12 @@ def _worker(job_id, row, universe, params):
         mode = (job or {}).get('agent_mode') or ('shadow' if (job or {}).get('shadow_mode') else 'off')
         rec = None
         if mode in ('shadow', 'apply'):
+            cfg = (job or {}).get('agent_config')
             try:
-                rec = shadow.review(inp, eng, (job or {}).get('weights') or {}, mode=mode)
+                rec = shadow.review(inp, eng, (job or {}).get('weights') or {}, mode=mode, cfg=cfg)
             except Exception as exc:
-                rec = shadow.error_record(inp, eng, (job or {}).get('weights') or {}, exc, mode=mode)
+                rec = shadow.error_record(inp, eng, (job or {}).get('weights') or {}, exc,
+                                          mode=mode, cfg=cfg)
             if mode == 'apply' and rec.get('decision') != 'error':
                 mid0 = mid
                 new_inp, changes, skipped = shadow.apply_to_input(inp, eng, rec)

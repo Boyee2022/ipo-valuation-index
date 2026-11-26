@@ -4,6 +4,8 @@
 路由：
   GET  /api/health                                  → 存活与数据源状态
   GET  /api/constituents?index=sh50                 → 真实成分券 + 权重 + 指数收盘
+  GET  /api/agents                                  → 智能体配置（唯一配置源）+ 默认值 + 环境信息
+  POST /api/agents {config}                         → 严格校验后保存，版本号自增，下一批生效
   POST /api/run  {index, parallel, stat_n, weights{dcf,comp,sent}, sentiment_rounds,
                   wacc_pct?, terminal_growth_pct?, shadow?} → {job_id}
   POST /api/shadow/adopt {job, code, action:adopted|rejected|clear} → 采纳标记与刷新后指标
@@ -21,10 +23,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import agent_config
 import dsources
 import pipeline
 import report_theme
 import sentiment_llm
+import shadow
 from config import INDEX_NAMES, INDEX_TENCENT, INDEX_TYPES, JOBS, PORT, SKILL_DIR
 
 SAFE = re.compile(r'^[\w.\-]+$')
@@ -51,6 +55,26 @@ def _lan_host():
         except Exception:
             continue
     return '0.0.0.0'
+
+
+def _agents_payload(saved=False):
+    cfg = agent_config.load()
+    try:
+        model_env = (sentiment_llm._env() or {}).get('DEEPSEEK_MODEL') or ''
+    except Exception:
+        model_env = ''
+    return {
+        'config': cfg,
+        'defaults': agent_config.DEFAULTS,
+        'labels': agent_config.AGENT_LABEL,
+        'path': agent_config.display_path(),
+        'exists': agent_config.path().exists(),
+        'updated_at': agent_config.updated_at(),
+        'model_env': model_env,
+        'llm_ready': sentiment_llm.available(),
+        'prompts': shadow.prompt_preview(cfg),
+        'saved': saved,
+    }
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -129,6 +153,9 @@ class Handler(BaseHTTPRequestHandler):
                                'eps', 'roe', 'total_shares', 'free_cap')} for r in c['rows']],
                 })
                 return
+            if path == '/api/agents':
+                self._json(_agents_payload())
+                return
             if path == '/api/jobs':
                 self._json({'jobs': pipeline.list_jobs()})
                 return
@@ -157,6 +184,20 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         parsed = urlparse(self.path)
         try:
+            if parsed.path == '/api/agents':
+                n = int(self.headers.get('Content-Length') or 0)
+                body = json.loads(self.rfile.read(n).decode('utf-8') or '{}')
+                raw = body.get('config') if isinstance(body.get('config'), dict) else body
+                if not isinstance(raw, dict) or not raw:
+                    self._json({'error': '缺少配置内容'}, 400)
+                    return
+                try:
+                    agent_config.save(raw)
+                except ValueError as ex:
+                    self._json({'error': str(ex)}, 400)
+                    return
+                self._json(_agents_payload(saved=True))
+                return
             if parsed.path == '/api/run':
                 n = int(self.headers.get('Content-Length') or 0)
                 body = json.loads(self.rfile.read(n).decode('utf-8') or '{}')
