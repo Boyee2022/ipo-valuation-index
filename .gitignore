@@ -4,3 +4,5 @@ lib/
 *.log
 
 runtime/
+*.bak
+*.bak.*
