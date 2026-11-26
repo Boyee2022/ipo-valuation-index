@@ -3,13 +3,13 @@
 import { useState } from 'react'
 import { overrideError, type BatchParams } from '../data'
 import {
+  AgentSeg,
   DateQuick,
   MiniCalendar,
   NumInput,
   ParallelQuick,
   PctInput,
   SentimentSeg,
-  ShadowSeg,
   WeightsEditor,
 } from './fields'
 import css from '../ValuationPage.module.css'
@@ -48,10 +48,17 @@ export function ParamsCard(props: {
         <div className={css.lab2}>方法加权比例</div>
         <WeightsEditor params={params} onChange={onChange} />
 
-        <div className={css.lab2}>影子评审</div>
-        <ShadowSeg value={params.shadow} onChange={v => onChange({ ...params, shadow: v })} />
-        {params.shadow && (
-          <p className={css.overrideNote}>逐券追加「可比质量专家 + 主审」两级评审，只产出变更单，不改变本批引擎参数。</p>
+        <div className={css.lab2}>多 agent 评审</div>
+        <AgentSeg value={params.agentMode} onChange={v => onChange({ ...params, agentMode: v })} />
+        {params.agentMode === 'shadow' && (
+          <p className={css.overrideNote}>
+            逐券三专家（可比质量 · 折现参数 · 舆情）+ 主审两级评审，只产出变更单，不改变本批引擎参数。
+          </p>
+        )}
+        {params.agentMode === 'apply' && (
+          <p className={css.overrideNote}>
+            主审通过的建议回写输入并逐券重跑引擎，基线留 input/out.baseline.json，重跑失败自动回滚。
+          </p>
         )}
 
         <div className={css.kv}>

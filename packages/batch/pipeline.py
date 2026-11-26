@@ -2,7 +2,8 @@
 """跑批执行：并行逐券「输入组装→引擎→统计校验→HTML 报告→八项机检」，按权重合成拟合点位。
 
 - 失败券自动跳过并留痕（对应需求「单券估不出 → 跳过」，不阻断整批）；
-- 影子模式开启时，逐券完成后追加「可比质量专家 + 主审」两级评审——只留痕，不改引擎参数；
+- agent_mode=shadow：逐券追加「三专家 + 主审」评审，只留痕，不改引擎参数；
+- agent_mode=apply：评审通过项写回输入后重跑引擎（基线输入/输出保留 *.baseline.json，失败回滚）；
 - 拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)，跳过券不计入分子分母；
 - 任务状态落盘 runtime/jobs/<id>/state.json，服务重启后可读。
 """
@@ -43,6 +44,13 @@ def _run(cmd, timeout):
     return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
 
 
+def _engine(inp_f, out_f):
+    r = _run([PY, str(ENGINE), str(inp_f), '-o', str(out_f)], 600)
+    if r.returncode != 0:
+        raise RuntimeError('估值引擎失败: %s' % _tail(r.stderr or r.stdout))
+    return json.loads(Path(out_f).read_text(encoding='utf-8'))
+
+
 def _tail(s, n=200):
     s = (s or '').strip()
     return s[-n:] if len(s) > n else s
@@ -71,7 +79,10 @@ def _bump_done_and_save(job):
 
 def start(params):
     """创建任务并后台执行。params: {index, parallel, stat_n, weights{dcf,comp,sent}, sentiment_rounds,
-    wacc_pct?, terminal_growth_pct?, shadow_mode?}"""
+    wacc_pct?, terminal_growth_pct?, agent_mode?, shadow_mode?}"""
+    agent_mode = params.get('agent_mode')
+    if agent_mode not in ('off', 'shadow', 'apply'):
+        agent_mode = 'shadow' if params.get('shadow_mode') else 'off'
     job_id = 'job_%s_%s' % (time.strftime('%Y%m%d_%H%M%S'), uuid.uuid4().hex[:6])
     job = {
         'id': job_id,
@@ -83,7 +94,8 @@ def start(params):
         'sentiment_mode': 'llm' if params.get('sentiment_mode') == 'llm' else 'rule',
         'wacc_pct': params.get('wacc_pct'),
         'terminal_growth_pct': params.get('terminal_growth_pct'),
-        'shadow_mode': bool(params.get('shadow_mode')),
+        'agent_mode': agent_mode,
+        'shadow_mode': agent_mode != 'off',
         'shadow_metrics': None,
         'created': _now(),
         'state': 'running',
@@ -126,6 +138,7 @@ def list_jobs():
                 'fitted_point': s.get('fitted_point'), 'index_close': s.get('index_close'),
                 'ok': s.get('ok'), 'skip': s.get('skip'),
                 'sentiment_mode': j.get('sentiment_mode') or 'rule',
+                'agent_mode': j.get('agent_mode') or ('shadow' if j.get('shadow_mode') else 'off'),
                 'shadow_mode': bool(j.get('shadow_mode')),
             })
         except Exception:
@@ -133,20 +146,13 @@ def list_jobs():
     return out
 
 
-def _shadow_review(job, row, inp, eng):
-    """影子评审：失败只记该券评审错误，绝不影响估值结果与任务状态。"""
-    try:
-        rec = shadow.review(inp, eng, job.get('weights') or {})
-    except Exception as exc:
-        rec = shadow.error_record(inp, eng, job.get('weights') or {}, exc)
+def _persist_review(job, row, rec):
+    """评审记录落盘：完整记录在 <code>.shadow.json，摘要已随 state.json 保存。"""
     stem = row['secucode'].replace('.', '_')
     try:
         shadow.save_record(_job_dir(job['id']) / ('%s.shadow.json' % stem), rec)
     except Exception:
         pass
-    with _state_lock:
-        row['shadow'] = shadow.row_summary(rec)
-        _save(job)
 
 
 def _worker(job_id, row, universe, params):
@@ -164,15 +170,47 @@ def _worker(job_id, row, universe, params):
         rep_f = jdir / ('%s.report.html' % stem)
         inp_f.write_text(json.dumps(inp, ensure_ascii=False, indent=2), encoding='utf-8')
 
-        r = _run([PY, str(ENGINE), str(inp_f), '-o', str(out_f)], 600)
-        if r.returncode != 0:
-            raise RuntimeError('估值引擎失败: %s' % _tail(r.stderr or r.stdout))
-        eng = json.loads(out_f.read_text(encoding='utf-8'))
+        eng = _engine(inp_f, out_f)
         syn = eng.get('synthesis') or {}
         mid = syn.get('weighted_mid')
         n_comp = len(inp.get('comparables') or [])
         if mid is None or mid <= 0:
             raise ValueError('无可比且 DCF 未形成有效估值' if n_comp == 0 else '估值中枢无效（≤0）')
+
+        mode = (job or {}).get('agent_mode') or ('shadow' if (job or {}).get('shadow_mode') else 'off')
+        rec = None
+        if mode in ('shadow', 'apply'):
+            try:
+                rec = shadow.review(inp, eng, (job or {}).get('weights') or {}, mode=mode)
+            except Exception as exc:
+                rec = shadow.error_record(inp, eng, (job or {}).get('weights') or {}, exc, mode=mode)
+            if mode == 'apply' and rec.get('decision') != 'error':
+                mid0 = mid
+                new_inp, changes, skipped = shadow.apply_to_input(inp, eng, rec)
+                apply_info = {'mode': 'apply', 'changed': False, 'changes': changes,
+                              'skipped': skipped, 'baseline_mid': round(mid0, 2),
+                              'final_mid': round(mid0, 2), 'error': None}
+                if changes:
+                    base_in = jdir / ('%s.input.baseline.json' % stem)
+                    base_out = jdir / ('%s.out.baseline.json' % stem)
+                    try:
+                        shutil.copy2(inp_f, base_in)
+                        shutil.copy2(out_f, base_out)
+                        inp_f.write_text(json.dumps(new_inp, ensure_ascii=False, indent=2), encoding='utf-8')
+                        eng2 = _engine(inp_f, out_f)
+                        mid2 = (eng2.get('synthesis') or {}).get('weighted_mid')
+                        if mid2 is None or mid2 <= 0:
+                            raise ValueError('回写后估值中枢无效（≤0）')
+                        inp, eng, syn, mid = new_inp, eng2, eng2.get('synthesis') or {}, mid2
+                        apply_info.update({'changed': True, 'final_mid': round(mid2, 2)})
+                    except Exception as exc:
+                        try:
+                            shutil.copy2(base_in, inp_f)
+                            shutil.copy2(base_out, out_f)
+                        except Exception:
+                            pass
+                        apply_info['error'] = '回写重跑失败，已回滚基线: %s' % str(exc)[:180]
+                rec['apply'] = apply_info
 
         r = _run([PY, str(STAT), str(inp_f), str(out_f), '-o', str(stat_f),
                   '--n', str(params.get('stat_n') or 1000), '--seed', '42'], 1200)
@@ -220,9 +258,13 @@ def _worker(job_id, row, universe, params):
                 'check_ok': check_ok,
                 'report': rep_f.name,
             })
+            if rec is not None:
+                row['shadow'] = shadow.row_summary(rec)
+                if rec.get('apply'):
+                    row['apply'] = rec['apply']
             _bump_done_and_save(job)
-        if job and job.get('shadow_mode'):
-            _shadow_review(job, row, inp, eng)
+        if rec is not None and job is not None:
+            _persist_review(job, row, rec)
     except Exception as e:
         with _state_lock:
             row['status'] = 'skip'

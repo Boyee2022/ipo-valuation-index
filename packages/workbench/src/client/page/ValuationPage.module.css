@@ -1554,6 +1554,38 @@ body[data-ds-dark-theme] .logoRev { display: block; }
   overflow: auto;
 }
 
+/* 明细表按内容分配列宽，避免继承报告弹窗的 th{width:42%} */
+.shTblAgents,
+.shTblItems { table-layout: fixed; width: 100%; }
+
+.shModal .shTblAgents th,
+.shModal .shTblAgents td,
+.shModal .shTblItems th,
+.shModal .shTblItems td {
+  text-align: left;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  padding-left: 6px;
+  padding-right: 6px;
+}
+
+.shTblAgents th:nth-child(1) { width: 15%; }
+.shTblAgents th:nth-child(2) { width: 9%; }
+.shTblAgents th:nth-child(3) { width: 8%; }
+.shTblAgents th:nth-child(4) { width: 68%; }
+
+.shTblItems th:nth-child(1) { width: 9%; }
+.shTblItems th:nth-child(2) { width: 9%; }
+.shTblItems th:nth-child(3) { width: 11%; }
+.shTblItems th:nth-child(4) { width: 8%; }
+.shTblItems th:nth-child(5) { width: 10%; }
+.shTblItems th:nth-child(6) { width: 11%; }
+.shTblItems th:nth-child(7) { width: 42%; }
+
+.shTblWrap { width: 100%; overflow-x: auto; }
+.shTblItems { min-width: 640px; }
+
 @media (max-width: 899px) {
   .shRow { grid-template-columns: minmax(0, 1fr) auto; }
   .shSug { grid-column: 1; }

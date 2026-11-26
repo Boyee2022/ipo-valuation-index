@@ -42,7 +42,7 @@ export function ValuationPage() {
     statN: 1000,
     waccPct: null,
     terminalGrowthPct: null,
-    shadow: false,
+    agentMode: 'off',
   })
   const [indexSel, setIndexSel] = useState('sh50')
   const [date, setDate] = useState<Date>(() => new Date())
@@ -209,7 +209,8 @@ export function ValuationPage() {
       params.waccPct != null ? `WACC ${params.waccPct}%` : null,
       params.terminalGrowthPct != null ? `永续增速 ${params.terminalGrowthPct}%` : null,
     ].filter(Boolean).join(' / ')
-    push(`[准备] ${meta.name} ${count} 条 · 并行 ${parallel} · 抽样 ${params.statN} · 舆情 ${params.sentimentMode === 'llm' ? 'LLM 语义' : '规则打分'} ≤${params.sentiment} 轮 · 影子评审 ${params.shadow ? '开（可比 + 主审）' : '关'} · 估值日期 ${fmtDateShort(date)}（参考） · 数据时点 ${cons?.as_of ?? '—'}${ov ? ` · 覆盖 ${ov}` : ''}`, 'dim')
+    const modeCn = params.agentMode === 'apply' ? '开（三专家 · 回写重跑）' : params.agentMode === 'shadow' ? '开（三专家 · 只留痕）' : '关'
+    push(`[准备] ${meta.name} ${count} 条 · 并行 ${parallel} · 抽样 ${params.statN} · 舆情 ${params.sentimentMode === 'llm' ? 'LLM 语义' : '规则打分'} ≤${params.sentiment} 轮 · 多 agent 评审 ${modeCn} · 估值日期 ${fmtDateShort(date)}（参考） · 数据时点 ${cons?.as_of ?? '—'}${ov ? ` · 覆盖 ${ov}` : ''}`, 'dim')
     document.getElementById('sec-run')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     try {
       const { job_id } = await runBatch({
@@ -221,7 +222,7 @@ export function ValuationPage() {
         sentiment_mode: params.sentimentMode,
         wacc_pct: params.waccPct,
         terminal_growth_pct: params.terminalGrowthPct,
-        shadow: params.shadow,
+        agent_mode: params.agentMode,
       })
       jobIdRef.current = job_id
       push(`[任务] ${job_id} 已提交，开始跟踪`, 'dim')

@@ -1,6 +1,7 @@
 /** Reusable parameter fields: weights, sentiment mode, dates and parallelism. */
 
 import { useEffect, useRef, useState } from 'react'
+import type { AgentMode } from '../api'
 import { WEEK_CN, WEEK_HEAD, fmtMonthDay, sameDay, type BatchParams } from '../data'
 import css from '../ValuationPage.module.css'
 
@@ -127,17 +128,21 @@ export function SentimentSeg(props: { value: 'rule' | 'llm'; onChange: (v: 'rule
   )
 }
 
-/** 影子评审开关：默认关，开启后只产出变更单，引擎仍用原参数。 */
-export function ShadowSeg(props: { value: boolean; onChange: (v: boolean) => void }) {
+/** 多 agent 评审三态：关 / 影子留痕 / 生效回写（apply）。 */
+export function AgentSeg(props: { value: AgentMode; onChange: (v: AgentMode) => void }) {
   const { value, onChange } = props
+  const opts: { v: AgentMode; cn: string; sub: string }[] = [
+    { v: 'off', cn: '关闭', sub: '仅引擎参数' },
+    { v: 'shadow', cn: '影子', sub: '只留痕' },
+    { v: 'apply', cn: '生效', sub: '回写重跑' },
+  ]
   return (
     <div className={css.seg}>
-      <button type="button" className={!value ? css.segSel : ''} onClick={() => onChange(false)}>
-        关闭<small>仅引擎参数</small>
-      </button>
-      <button type="button" className={value ? css.segSel : ''} onClick={() => onChange(true)}>
-        可比 + 主审<small>影子留痕</small>
-      </button>
+      {opts.map(o => (
+        <button key={o.v} type="button" className={value === o.v ? css.segSel : ''} onClick={() => onChange(o.v)}>
+          {o.cn}<small>{o.sub}</small>
+        </button>
+      ))}
     </div>
   )
 }

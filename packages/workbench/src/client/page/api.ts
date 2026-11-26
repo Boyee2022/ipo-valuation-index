@@ -16,7 +16,8 @@ export interface RealConstituent {
   free_cap: number | null
 }
 
-export type ShadowParam = 'comp_weight_pp' | 'wacc_pp' | 'tg_pp'
+export type AgentMode = 'off' | 'shadow' | 'apply'
+export type ShadowParam = 'comp_weight_pp' | 'sent_weight_pp' | 'wacc_pp' | 'tg_pp'
 export type ShadowDecision = 'accept' | 'partial' | 'reject' | 'hold' | 'error'
 export type ShadowAdoption = 'adopted' | 'rejected' | null
 
@@ -24,17 +25,48 @@ export interface ShadowItem {
   param: ShadowParam
   delta: number
   status: 'accept' | 'clamp' | 'reject'
+  agent?: string
+}
+
+export interface ShadowAgent {
+  agent: string
+  label: string
+  ok: boolean
+  confidence: number | null
+  one_line?: string
+  error?: string | null
+}
+
+export interface ShadowApplyChange {
+  param: string
+  label: string
+  from: number | string
+  to: number | string
+  delta: number | null
+}
+
+export interface ShadowApply {
+  mode?: 'apply' | null
+  changed: boolean
+  changes: ShadowApplyChange[]
+  skipped?: string[]
+  baseline_mid: number | null
+  final_mid: number | null
+  error?: string | null
 }
 
 export interface ShadowRow {
+  mode?: AgentMode
   decision: ShadowDecision | null
   confidence: number | null
   one_line: string
   adoption: ShadowAdoption
-  base: { comp: number | null; wacc: number | null; tg: number | null }
+  base: { comp: number | null; sent?: number | null; wacc: number | null; tg: number | null; rate_kind?: 'wacc' | 'ke' }
   items: ShadowItem[]
+  agents?: ShadowAgent[]
   n_issue: number
   n_gated?: number
+  apply?: ShadowApply | null
   error?: string | null
 }
 
@@ -55,6 +87,8 @@ export interface ShadowMetrics {
   mean_confidence: number | null
   dispersion: Record<ShadowParam, ShadowDispersion>
   adoption: { adopted: number; rejected: number; pending: number; rate: number | null }
+  apply?: { changed: number; errors: number; moved: number; median_move: number | null } | null
+  mode?: AgentMode
   wow: (null | { prev_job: string; prev_created: string; n: number } & Record<ShadowParam, number | null>)
   generated: string
 }
@@ -81,6 +115,7 @@ export interface JobRow {
   warnings?: string[]
   report?: string
   shadow?: ShadowRow
+  apply?: ShadowApply | null
 }
 
 export interface JobSummary {
@@ -107,6 +142,7 @@ export interface JobStatus {
   sentiment_mode?: 'rule' | 'llm'
   wacc_pct?: number | null
   terminal_growth_pct?: number | null
+  agent_mode?: AgentMode
   shadow_mode?: boolean
   shadow_metrics?: ShadowMetrics | null
   shadow_warning?: string
@@ -137,6 +173,7 @@ export interface JobMeta {
   ok: number | null
   skip: number | null
   sentiment_mode?: 'rule' | 'llm'
+  agent_mode?: AgentMode
   shadow_mode?: boolean
 }
 
@@ -165,6 +202,7 @@ export async function runBatch(payload: {
   sentiment_mode: 'rule' | 'llm'
   wacc_pct?: number | null
   terminal_growth_pct?: number | null
+  agent_mode?: AgentMode
   shadow?: boolean
 }): Promise<{ job_id: string }> {
   const res = await jfetch(`${API_BASE}/api/run`, {

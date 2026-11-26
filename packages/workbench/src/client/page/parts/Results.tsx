@@ -174,6 +174,7 @@ export function Results(props: {
   const med = medianOf(items.map(x => x.diff))
   const weights = job.weights ? `${Math.round(job.weights.dcf * 100)}/${Math.round(job.weights.comp * 100)}/${Math.round(job.weights.sent * 100)}` : `${params.dcf}/${params.comp}/${params.sent}`
   const mode = (job.sentiment_mode ?? params.sentimentMode) === 'llm' ? 'LLM 语义' : '规则打分'
+  const agentMode = job.agent_mode ?? (job.shadow_mode ? 'shadow' : 'off')
 
   return (
     <div className={css.resultWrap}>
@@ -190,7 +191,7 @@ export function Results(props: {
         </div>
       </div>
 
-      {job.shadow_mode && <ShadowCard job={job} onAdoption={onAdoption} />}
+      {agentMode !== 'off' && <ShadowCard job={job} onAdoption={onAdoption} />}
 
       {!done && (
         <div className={css.card}>
@@ -268,6 +269,7 @@ export function Results(props: {
                         <span className={css.resNm}>{r.name}</span>
                         <span className={`${css.resCode} ${css.mono}`}>{r.secucode}</span>
                         {!ok && <span className={`${css.tag} ${css.tagWarn}`}>跳过</span>}
+                        {ok && r.apply?.changed && <span className={`${css.tag} ${css.tagOk}`}>已回写</span>}
                         {ok && r.warnings && r.warnings.length > 0 && <span className={`${css.tag} ${css.tagMut}`}>预警 {r.warnings.length}</span>}
                       </div>
                       {ok ? (

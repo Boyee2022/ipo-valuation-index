@@ -169,8 +169,10 @@ class Handler(BaseHTTPRequestHandler):
                     parallel = 3
                 weights = body.get('weights') or {}
                 sentiment_mode = 'llm' if body.get('sentiment_mode') == 'llm' else 'rule'
-                shadow_mode = bool(body.get('shadow'))
-                if (sentiment_mode == 'llm' or shadow_mode) and not sentiment_llm.available():
+                agent_mode = body.get('agent_mode')
+                if agent_mode not in ('off', 'shadow', 'apply'):
+                    agent_mode = 'shadow' if body.get('shadow') else 'off'
+                if (sentiment_mode == 'llm' or agent_mode != 'off') and not sentiment_llm.available():
                     self._json({'error': 'LLM 未配置：请在 ~/.dsh-valuation/sentiment-llm.env 写入 DEEPSEEK_API_KEY（仓库外）'}, 400)
                     return
                 wacc_pct = _opt_pct(body, 'wacc_pct', 1, 20, 'WACC 覆盖')
@@ -191,7 +193,8 @@ class Handler(BaseHTTPRequestHandler):
                     'sentiment_mode': sentiment_mode,
                     'wacc_pct': wacc_pct,
                     'terminal_growth_pct': tg_pct,
-                    'shadow_mode': shadow_mode,
+                    'agent_mode': agent_mode,
+                    'shadow_mode': agent_mode != 'off',
                 }
                 job_id = pipeline.start(params)
                 self._json({'job_id': job_id})
