@@ -133,5 +133,5 @@ export function CronCard() {
 }
 
 export function recentForIndex(hist: JobMeta[] | null, index: string): JobMeta[] {
-  return (hist ?? []).filter(h => h.index === index).slice(0, 12)
+  return (hist ?? []).filter(h => h.index === index)
 }

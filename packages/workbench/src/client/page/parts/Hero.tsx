@@ -119,7 +119,7 @@ export function Hero(props: { meta: IndexMeta; job: JobStatus | null; spark: Spa
         </div>
         <div className={css.hbox}>
           <div className={css.hboxK}>
-            近 {spark.length} 次跑批 <span>SPARKLINE</span>
+            全部 {spark.length} 次跑批 <span>SPARKLINE</span>
             <small className={css.sparkLegend}><i className={css.lgFit} />拟合点位<i className={css.lgIdx} />指数收盘</small>
           </div>
           <Sparkline pts={spark} />

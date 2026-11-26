@@ -8,6 +8,7 @@ import logoStd from '../assets/logo-csindex.png'
 import logoRev from '../assets/logo-csindex-white.png'
 import { fmtDateShort, fmtNum, indexMeta, overrideError, type BatchParams } from './data'
 import {
+  API_BASE,
   fetchConstituents,
   fetchJobs,
   pollJob,
@@ -39,7 +40,7 @@ export function ValuationPage() {
     comp: 50,
     sent: 20,
     sentimentMode: 'rule',
-    statN: 1000,
+    statN: 3000,
     waccPct: null,
     terminalGrowthPct: null,
     agentMode: 'off',
@@ -313,7 +314,6 @@ export function ValuationPage() {
     () =>
       (hist ?? [])
         .filter(h => h.index === indexSel && h.state === 'done' && h.fitted_point != null && h.index_close != null)
-        .slice(0, 12)
         .reverse()
         .map(h => ({ fit: h.fitted_point!, close: h.index_close! })),
     [hist, indexSel],
@@ -371,7 +371,7 @@ export function ValuationPage() {
           <div className={css.ttl}>估值工作台<small>INDEX VALUATION WORKBENCH</small></div>
           <div className={css.topRight}>
             <span className={`${css.live} ${consLoading ? css.liveWait : online ? css.liveOn : css.liveOff}`}>
-              <i />{consLoading ? '连接批跑服务…' : online ? '批跑服务已连接 · 10.200.103.86:3089' : '批跑服务未连接 · 10.200.103.86:3089'}
+              <i />{consLoading ? '连接批跑服务…' : online ? `批跑服务已连接 · ${API_BASE.slice(7)}` : `批跑服务未连接 · ${API_BASE.slice(7)}`}
             </span>
             <span className={css.topMeta}>
               成分数据时点 <b className={css.mono}>{asOf || '—'}</b> · 引擎 llm-ipo-valuation · 统计层 MC {params.statN} 次
@@ -387,7 +387,7 @@ export function ValuationPage() {
           <button type="button" className={css.go} onClick={() => void startRun()} title="提交真实跑批">&lt;GO&gt;</button>
           <span className={css.cur} />
           <div className={css.cmdRight}>
-            <span className={css.formula}>拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)</span>
+            <span className={css.formula}>拟合点位 = 指数收盘 × Σ(权重×每股估值÷收盘价) / Σ权重（指数加权）</span>
           </div>
         </div>
       </div>
@@ -423,10 +423,10 @@ export function ValuationPage() {
           <div className={`${css.col} ${css.colCenter}`} id="sec-weights">
             <ConsTable rows={cons?.rows ?? null} loading={consLoading} error={consErr} indexName={meta.name} asOf={asOf} weightComputed={cons?.weight_computed === true} />
             <DuoCard indexName={meta.name} chenFit={viewJob?.summary?.fitted_point ?? null} />
+            <CronCard />
           </div>
           <div className={`${css.col} ${css.colRight}`}>
             {paramsCard}
-            <CronCard />
           </div>
         </div>
         <div className={css.resultsSection} id="sec-results">{results}</div>

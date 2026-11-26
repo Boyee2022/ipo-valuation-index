@@ -1,6 +1,6 @@
 /** 成分券与权重（真实东财成分表，前一日收盘权重口径）。 */
 
-import type { RealConstituent } from '../api'
+import { API_BASE, type RealConstituent } from '../api'
 import css from '../ValuationPage.module.css'
 
 export function ConsTable(props: {
@@ -33,7 +33,7 @@ export function ConsTable(props: {
           <div className={css.offlineBox}>
             <b>批跑服务未连接</b>
             <span>{error}</span>
-            <span className={css.mono}>http://10.200.103.86:3089</span>
+            <span className={css.mono}>{API_BASE}</span>
           </div>
         )}
         {!loading && !error && list.length === 0 && <p className={css.empty}>未返回成分券数据。</p>}

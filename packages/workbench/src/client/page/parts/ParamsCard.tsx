@@ -68,7 +68,9 @@ export function ParamsCard(props: {
             <span className={css.kvUnit}>%</span>
           </span>
         </div>
-        <div className={css.kv}><span className={css.kvK}>rf / ERP / β</span><span className={css.kvV}>1.7% / 6% / 0.65</span></div>
+        <div className={css.kv}><span className={css.kvK}>rf / ERP / β</span><span className={css.kvV}>1.9% / 8.04% / 逐券回归</span></div>
+        <div className={css.kv}><span className={css.kvK}>β 退化护栏</span><span className={css.kvV}>银行 0.90 · 其余 0.5~2.0</span></div>
+        <div className={css.kv}><span className={css.kvK}>kd / 税率 / D/E</span><span className={css.kvV}>3.5% / 15% / 0.3</span></div>
         <div className={css.kv}>
           <span className={css.kvK}>永续增速覆盖</span>
           <span className={css.kvV}>
@@ -80,6 +82,11 @@ export function ParamsCard(props: {
           <p className={css.overrideNote}>覆盖对本批全部成分券同值生效（不区分行业），留空 = 逐券自动。</p>
         )}
         {overrideErr && <p className={css.overrideWarn}>{overrideErr}</p>}
+        <div className={css.kv}><span className={css.kvK}>金融类方法</span><span className={css.kvV}>RIM 主 + 可比（DDM 交叉）</span></div>
+        <div className={css.kv}><span className={css.kvK}>DCF 现金流</span><span className={css.kvV}>报表驱动 FCFF（三表联立） · NWC 3 年均值（负值下限 −20%）</span></div>
+        <div className={css.kv}><span className={css.kvK}>Layer 0 前提判别</span><span className={css.kvV}>非金融 A/B 门 · 负 FCFF&gt;60% 封顶 0.3</span></div>
+        <div className={css.kv}><span className={css.kvK}>可比筛选</span><span className={css.kvV}>5 家 · 年报口径 · 5× 规模</span></div>
+        <div className={css.kv}><span className={css.kvK}>可比合成</span><span className={css.kvV}>倍数均值（仅正值） · PEG 单列不计入 · &gt;2.5× 市值不适用</span></div>
         <div className={css.kv}>
           <span className={css.kvK}>蒙特卡洛抽样</span>
           <span className={css.kvV}>

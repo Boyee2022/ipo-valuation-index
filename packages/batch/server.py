@@ -224,7 +224,7 @@ class Handler(BaseHTTPRequestHandler):
                 params = {
                     'index': idx,
                     'parallel': parallel,
-                    'stat_n': int(body.get('stat_n') or 1000),
+                    'stat_n': int(body.get('stat_n') or 3000),
                     'weights': {
                         'dcf': float(weights.get('dcf', 0.3)),
                         'comp': float(weights.get('comp', 0.5)),

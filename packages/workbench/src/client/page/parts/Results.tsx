@@ -10,6 +10,8 @@ import css from '../ValuationPage.module.css'
 const diffOf = (per?: number | null, close?: number | null) =>
   per != null && close != null && close > 0 ? per / close - 1 : null
 
+const isExtreme = (d: number | null) => d != null && (d >= 4 || d <= -0.8)
+
 const tickText = (x: number) => (x === 0 ? '0' : `${x > 0 ? '+' : '−'}${Math.abs(Math.round(x * 100))}%`)
 
 interface DiffItem {
@@ -269,6 +271,9 @@ export function Results(props: {
                         <span className={css.resNm}>{r.name}</span>
                         <span className={`${css.resCode} ${css.mono}`}>{r.secucode}</span>
                         {!ok && <span className={`${css.tag} ${css.tagWarn}`}>跳过</span>}
+                        {ok && isExtreme(d) && (
+                          <span className={`${css.tag} ${css.tagWarn}`} title="估值/价 ≥5× 或 ≤0.2×（展示层提示，不改变估值）">极端</span>
+                        )}
                         {ok && r.apply?.changed && <span className={`${css.tag} ${css.tagOk}`}>已回写</span>}
                         {ok && r.warnings && r.warnings.length > 0 && <span className={`${css.tag} ${css.tagMut}`}>预警 {r.warnings.length}</span>}
                       </div>
@@ -307,7 +312,7 @@ export function Results(props: {
             </div>
           </div>
           <p className={css.resultNote}>
-            <b>差异口径：</b>差异 = 中枢/股 ÷ 现价 − 1，只展示估值与现价的偏离，<b>不做反向校正</b>。拟合点位 = 指数收盘 × Σ(权重×中枢/股) / Σ(权重×收盘价)，跳过券不计入分子分母。估值中枢为引擎综合中枢（DCF / 可比 / 舆情按 {weights} 加权），逐券口径见各券报告。探索性研究，不构成投资建议。
+            <b>差异口径：</b>差异 = 中枢/股 ÷ 现价 − 1，只展示估值与现价的偏离，<b>不做反向校正</b>。拟合点位 = 指数收盘 × Σ(权重×中枢/股÷现价) / Σ权重（指数加权），跳过券不计入分子分母。估值中枢为引擎综合中枢（DCF / 可比 / 舆情按 {weights} 加权），逐券口径见各券报告。标注「极端」的个股满足 估值/价 ≥5× 或 ≤0.2×，仅提示偏离，不改变估值与拟合。探索性研究，不构成投资建议。
           </p>
         </>
       )}

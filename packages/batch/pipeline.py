@@ -5,7 +5,7 @@
 - agent_mode=shadow：逐券追加「三专家 + 主审」评审，只留痕，不改引擎参数；
 - agent_mode=apply：评审通过项写回输入后重跑引擎（基线输入/输出保留 *.baseline.json，失败回滚）；
 - 智能体配置在每批开始时读一次并写入 state.json，运行中的任务不受后续保存影响；
-- 拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)，跳过券不计入分子分母；
+- 拟合点位（指数加权）= 指数收盘 × Σ(权重×每股估值÷收盘价) / Σ权重，跳过券不计入分子分母；
 - 任务状态落盘 runtime/jobs/<id>/state.json，服务重启后可读。
 """
 import html
@@ -90,7 +90,7 @@ def start(params):
         'id': job_id,
         'index': params.get('index', 'sh50'),
         'parallel': int(params.get('parallel') or 3),
-        'stat_n': int(params.get('stat_n') or 1000),
+        'stat_n': int(params.get('stat_n') or 3000),
         'weights': params.get('weights') or {'dcf': 0.3, 'comp': 0.5, 'sent': 0.2},
         'sentiment_rounds': int(params.get('sentiment_rounds') or 10),
         'sentiment_mode': 'llm' if params.get('sentiment_mode') == 'llm' else 'rule',
@@ -219,7 +219,7 @@ def _worker(job_id, row, universe, params):
                 rec['apply'] = apply_info
 
         r = _run([PY, str(STAT), str(inp_f), str(out_f), '-o', str(stat_f),
-                  '--n', str(params.get('stat_n') or 1000), '--seed', '42'], 1200)
+                  '--n', str(params.get('stat_n') or 3000), '--seed', '42'], 1200)
         if r.returncode != 0:
             raise RuntimeError('统计校验失败: %s' % _tail(r.stderr or r.stdout))
 
@@ -283,6 +283,10 @@ def _summary_html(job):
     rows = job.get('rows') or []
     esc = html.escape
     body_rows = []
+    ext_rows = []
+    w_sum = sum((r.get('weight') or 0) for r in rows
+                if r.get('status') == 'ok' and r.get('per_share') is not None
+                and (r.get('weight') or 0) > 0 and (r.get('close') or 0) > 0)
     for r in rows:
         st = r.get('status')
         if st == 'ok':
@@ -300,7 +304,12 @@ def _summary_html(job):
             link = esc(reason)
         ratio = ''
         if st == 'ok' and r.get('per_share') and r.get('close'):
-            ratio = '%.2f' % (r['per_share'] / r['close'])
+            rf = r['per_share'] / r['close']
+            ratio = '%.2f' % rf
+            if rf >= 5 or rf <= 0.2:
+                ratio += ' <span class="xb">极端</span>'
+                contrib = (r.get('weight') or 0) * (rf - 1) / w_sum * 100 if w_sum else 0.0
+                ext_rows.append((abs(contrib), contrib, r, rf))
         body_rows.append(
             '<tr><td>%d</td><td>%s</td><td>%s</td><td>%s</td><td>%.2f%%</td><td>%s</td><td>%s</td>'
             '<td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
@@ -308,6 +317,26 @@ def _summary_html(job):
                 esc(str(r.get('industry') or '—')),
                 (r.get('weight') or 0), '%.2f' % r['close'] if r.get('close') is not None else '—',
                 val, ratio, conf, tag, link))
+    ext_rows.sort(key=lambda x: -x[0])
+    ext_body = []
+    for _, contrib, r, rf in ext_rows:
+        ext_body.append(
+            '<tr><td>%d</td><td>%s</td><td>%s</td><td>%.2f×</td><td>%.2f</td><td>%.2f</td>'
+            '<td>%.2f%%</td><td class="%s">%+.2f pp</td></tr>' % (
+                r.get('idx', 0) + 1, esc(r.get('name') or ''), esc(str(r.get('secucode') or '')),
+                rf, r.get('close') or 0, r.get('per_share') or 0, (r.get('weight') or 0),
+                'down' if contrib < 0 else 'up', contrib))
+    ext_section = ''
+    if ext_body:
+        ext_section = (
+            '<h2>极端偏离个股（%d 只）</h2>'
+            '<table class="xt"><thead><tr><th>#</th><th>名称</th><th>代码</th><th>估值/价</th>'
+            '<th>现价</th><th>中枢/股</th><th>权重</th><th>对拟合偏离贡献</th></tr></thead>'
+            '<tbody>%s</tbody></table>'
+            '<p class="subnote">判定阈值：估值/价 ≥5× 或 ≤0.2×（偏离 ≥+400%% 或 ≤−80%%）；'
+            '贡献 = 权重 ×（估值/价 − 1）÷ Σ权重，Σ权重为出估值券权重之和，单位 pp。'
+            '本表仅提示偏离结构，不改变估值、权重与拟合点位。</p>'
+        ) % (len(ext_body), ''.join(ext_body))
     fitted = s.get('fitted_point')
     ov = []
     if job.get('wacc_pct') is not None:
@@ -338,11 +367,15 @@ thead th{background:#0e7490;color:#fff;font-weight:600;text-align:right}
 thead th:first-child,thead th:nth-child(2),thead th:nth-child(3),thead th:nth-child(4){text-align:left}
 .note{color:#6b7280;font-size:12px;line-height:1.7;margin-top:14px}
 a{color:#0e7490}
+.xb{display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #f59e0b;border-radius:4px;padding:0 4px;font-size:11px;margin-left:2px}
+.xt{margin-top:6px}
+.up{color:#b91c1c}.down{color:#047857}
+.subnote{color:#6b7280;font-size:12px;line-height:1.7;margin:8px 0 0}
 </style></head><body><div class="wrap">
 <h1>%(index)s 估值跑批总结报告</h1>
 <div class="meta">任务 %(jobid)s · 数据时点（成分权重）%(as_of)s · 生成时间 %(ts)s</div>
 <div class="cards">
-<div class="card"><span>拟合点位（陈老师口径）</span><b>%(fitted)s</b><span>指数收盘 %(close)s</span></div>
+<div class="card"><span>拟合点位（指数加权）</span><b>%(fitted)s</b><span>指数收盘 %(close)s</span></div>
 <div class="card"><span>样本</span><b>%(total)d</b><span>成分券</span></div>
 <div class="card"><span>出估值 / 跳过</span><b>%(ok)d / %(skip)d</b><span>跳过券不计入合成</span></div>
 </div>
@@ -350,8 +383,10 @@ a{color:#0e7490}
 <table><thead><tr><th>#</th><th>名称</th><th>代码</th><th>行业</th><th>权重</th><th>收盘价</th>
 <th>估值中枢/股</th><th>估值/价</th><th>置信度</th><th>状态</th><th>报告/原因</th></tr></thead>
 <tbody>%(rows)s</tbody></table>
+%(ext_section)s
 <div class="note">
-拟合点位 = 指数收盘 × Σ(权重×每股估值) / Σ(权重×收盘价)，跳过券不计入分子分母。<br>
+拟合点位 = 指数收盘 × Σ(权重×每股估值÷收盘价) / Σ权重（指数加权），跳过券不计入分子分母。<br>
+极端判定：估值/价 ≥5× 或 ≤0.2×（即偏离 ≥+400%% 或 ≤−80%%），仅做标识。<br>
 口径：成分权重为前一日收盘权重（东财指数成分表）；估值中枢=引擎综合中枢÷总股本；%(cost_note)s；舆情=东财免费公开数据（近30天新闻搜索+股吧帖）词频+规则打分，情绪字段显式传入引擎。<br>
 本报告由估值跑批管线自动生成，仅作探索性研究参考，不构成投资建议。
 </div></div></body></html>""" % {
@@ -360,19 +395,24 @@ a{color:#0e7490}
         'ts': _now(), 'fitted': ('%.2f' % fitted) if fitted is not None else '—',
         'close': ('%.2f' % s.get('index_close')) if s.get('index_close') is not None else '—',
         'total': job.get('total', 0), 'ok': s.get('ok', 0), 'skip': s.get('skip', 0),
-        'rows': ''.join(body_rows), 'cost_note': cost_note,
+        'rows': ''.join(body_rows), 'ext_section': ext_section, 'cost_note': cost_note,
     }
 
 
 def _finalize(job):
     ok = [r for r in job['rows'] if r.get('status') == 'ok' and r.get('per_share') is not None]
-    w_v = w_p = 0.0
+    w_sum = w_ratio = w_v = w_p = 0.0
     for r in ok:
         w = r.get('weight') or 0
+        close = r.get('close') or 0
+        if w > 0 and close > 0:
+            w_sum += w
+            w_ratio += w * (r['per_share'] / close)
         w_v += w * r['per_share']
-        w_p += w * (r.get('close') or 0)
+        w_p += w * close
     idx = job.get('index_close') or 0
-    fitted = round(idx * w_v / w_p, 2) if w_p > 0 and idx else None
+    fitted = round(idx * w_ratio / w_sum, 2) if w_sum > 0 and idx else None
+    fitted_pw = round(idx * w_v / w_p, 2) if w_p > 0 and idx else None
     shadow_metrics = None
     shadow_warning = None
     if job.get('shadow_mode'):
@@ -383,6 +423,9 @@ def _finalize(job):
     with _state_lock:
         job['summary'] = {
             'fitted_point': fitted,
+            'fitted_point_index': fitted,
+            'fitted_point_price_weighted': fitted_pw,
+            'fitted_point_basis': 'index_weight',
             'index_close': idx,
             'ok': len(ok),
             'skip': sum(1 for r in job['rows'] if r.get('status') == 'skip'),
@@ -497,6 +540,14 @@ def run_job(job_id):
             job['index_close'] = None
         _save(job)
         universe = dsources.peer_universe()['rows']
+        try:
+            pool_codes = set()
+            for r in job['rows']:
+                pool_codes.update(p['secucode'] for p in
+                                  input_builder.pick_peers(r, universe, n=10 ** 6))
+            dsources.warm_annual_revenue(sorted(pool_codes))
+        except Exception as e:
+            job['pool_warm_warning'] = str(e)[:200]
         with ThreadPoolExecutor(max_workers=max(1, job['parallel'])) as ex:
             futs = [ex.submit(_worker, job_id, r, universe, job) for r in job['rows']]
             for fut in as_completed(futs):
