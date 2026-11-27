@@ -53,6 +53,7 @@ export function RecentRunsCard(props: {
                   const diff = h.fitted_point != null && h.index_close ? h.fitted_point / h.index_close - 1 : null
                   const tag = h.state === 'done' ? css.tagOk : h.state === 'running' ? css.tagWarn : css.tagErr
                   const st = h.state === 'done' ? '完成' : h.state === 'running' ? '进行中' : '异常'
+                  const am = h.agent_mode ?? (h.shadow_mode ? 'shadow' : 'off')
                   return (
                     <tr
                       key={h.id}
@@ -62,7 +63,12 @@ export function RecentRunsCard(props: {
                     >
                       <td className={css.mono}>
                         {shortTime(h.created)}
-                        {h.shadow_mode && <span className={css.tag} style={{ marginLeft: 4 }} title="影子评审任务">影</span>}
+                        {am !== 'off' && (
+                          <span className={css.tag} style={{ marginLeft: 4 }}
+                            title={am === 'apply' ? '生效回写（已改参重跑）' : '影子留痕（未改参）'}>
+                            {am === 'apply' ? '回' : '影'}
+                          </span>
+                        )}
                       </td>
                       <td className={`${css.numTd} ${css.mono} ${css.am}`}>{h.fitted_point != null ? fmtNum(h.fitted_point) : '—'}</td>
                       <td className={`${css.numTd} ${css.mono} ${diff == null ? '' : diff >= 0 ? css.up : css.down}`}>{diff == null ? '—' : pctDiff(diff)}</td>

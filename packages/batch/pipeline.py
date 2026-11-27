@@ -412,6 +412,68 @@ def _summary_html(job):
         ov.append('永续增速 %.2f%%' % job['terminal_growth_pct'])
     cost_note = ('本批参数覆盖：%s（全批统一，引擎显式采用）' % '、'.join(ov)) if ov else (
         'WACC/永续增速未显式给定，由引擎行业参数底座自动解析')
+    agent_mode = job.get('agent_mode') or ('shadow' if job.get('shadow_mode') else 'off')
+    mode_note = {
+        'off': '关闭',
+        'shadow': '影子留痕（建议未进入引擎）',
+        'apply': '生效回写（通过项改写输入并重跑）',
+    }.get(agent_mode, agent_mode)
+    ap_changed, ap_errors, ap_moves = [], [], []
+    for r in rows:
+        ap = r.get('apply') or {}
+        if ap.get('mode') != 'apply':
+            continue
+        if ap.get('error'):
+            ap_errors.append(r)
+        elif ap.get('changed'):
+            ap_changed.append(r)
+            b, f = ap.get('baseline_mid'), ap.get('final_mid')
+            if b is not None and f is not None:
+                ap_moves.append(abs(f - b))
+    if agent_mode == 'apply':
+        mode_note += ' · 回写生效 %d 只 / 失败 %d 只 / 中枢实际变动 %d 只' % (
+            len(ap_changed), len(ap_errors), sum(1 for m in ap_moves if m > 1e-9))
+        if ap_moves:
+            mode_note += '（中位 |Δ| %.2f 亿元）' % sorted(ap_moves)[len(ap_moves) // 2]
+    apply_section = ''
+    if agent_mode == 'apply':
+        ap_body = []
+        for r in ap_changed + ap_errors:
+            ap = r.get('apply') or {}
+            b, f = ap.get('baseline_mid'), ap.get('final_mid')
+            mid_txt = '%s → %s' % (('%.2f' % b) if b is not None else '—',
+                                   ('%.2f' % f) if f is not None else '—')
+            if ap.get('error'):
+                changes_txt = esc(str(ap.get('error')))
+                state_txt = '<span class="up">失败回滚，沿用基线</span>'
+            else:
+                parts = ['%s %s→%s' % (c.get('label') or c.get('param'),
+                                       c.get('from'), c.get('to'))
+                         for c in (ap.get('changes') or [])]
+                changes_txt = esc('；'.join(parts) or '—')
+                if ap.get('skipped'):
+                    changes_txt += '<br><small class="sks">跳过：%s</small>' % esc(
+                        '；'.join(str(x) for x in ap['skipped']))
+                state_txt = '<span class="okc">已生效</span>'
+            ap_body.append(
+                '<tr><td>%d</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>' % (
+                    r.get('idx', 0) + 1, esc(r.get('name') or ''),
+                    esc(str(r.get('secucode') or '')), changes_txt, mid_txt, state_txt))
+        if ap_body:
+            apply_section = (
+                '<h2>回写明细（apply · %d 只）</h2>'
+                '<table class="aw"><thead><tr><th>#</th><th>名称</th><th>代码</th>'
+                '<th>参数改动（主审通过）</th><th>估值中枢 基线 → 最终</th><th>状态</th></tr></thead>'
+                '<tbody>%s</tbody></table>'
+                '<p class="subnote">仅列主审通过并改写输入的券；中枢为绝对估值（亿元），'
+                '逐券结果表展示的均为重跑后的最终值；失败项已回滚基线，'
+                '基线 JSON 保留在任务目录 *.baseline.json。</p>'
+            ) % (len(ap_body), ''.join(ap_body))
+        else:
+            apply_section = (
+                '<h2>回写明细（apply）</h2>'
+                '<p class="subnote">本批无主审通过项，未改动任何输入，全部结果沿用基线。</p>'
+            )
     return """<!doctype html><html lang="zh"><head><meta charset="utf-8">
 <title>估值跑批总结报告 · %(index)s · %(jobid)s</title>
 <style>
@@ -436,11 +498,15 @@ thead th:first-child,thead th:nth-child(2),thead th:nth-child(3),thead th:nth-ch
 a{color:#0e7490}
 .xb{display:inline-block;background:#fef3c7;color:#92400e;border:1px solid #f59e0b;border-radius:4px;padding:0 4px;font-size:11px;margin-left:2px}
 .xt{margin-top:6px}
+.aw{margin-top:6px}
+.aw th:nth-child(1){width:4%%}.aw th:nth-child(2){width:15%%}.aw th:nth-child(3){width:11%%}
+.aw th:nth-child(4){width:41%%}.aw th:nth-child(5){width:21%%}.aw th:nth-child(6){width:8%%}
+.sks{color:#6b7280}.okc{color:#0f766e}
 .up{color:#b91c1c}.down{color:#047857}
 .subnote{color:#6b7280;font-size:12px;line-height:1.7;margin:8px 0 0}
 </style></head><body><div class="wrap">
 <h1>%(index)s 估值跑批总结报告</h1>
-<div class="meta">任务 %(jobid)s · 数据时点（成分权重）%(as_of)s · 生成时间 %(ts)s</div>
+<div class="meta">任务 %(jobid)s · 评审 %(mode_note)s · 数据时点（成分权重）%(as_of)s · 生成时间 %(ts)s</div>
 <div class="cards">
 <div class="card"><span>拟合点位（指数加权）</span><b>%(fitted)s</b><span>指数收盘 %(close)s</span></div>
 <div class="card"><span>情景区间（悲观 / 乐观）</span><b>%(slow)s / %(shigh)s</b><span>逐券估值区间按权重合成</span></div>
@@ -452,6 +518,7 @@ a{color:#0e7490}
 <th>估值中枢/股</th><th>估值/价</th><th>置信度</th><th>状态</th><th>报告/原因</th></tr></thead>
 <tbody>%(rows)s</tbody></table>
 %(ext_section)s
+%(apply_section)s
 <div class="note">
 拟合点位 = 指数收盘 × Σ(权重×每股估值÷收盘价) / Σ权重（指数加权），跳过券不计入分子分母。<br>
 情景点位 = 逐券估值区间按同一权重合成：悲观取区间下沿、乐观取区间上沿（分别不高于/不低于基准）。<br>
@@ -467,6 +534,7 @@ a{color:#0e7490}
         'shigh': ('%.2f' % s['scenario_high']) if s.get('scenario_high') is not None else '—',
         'total': job.get('total', 0), 'ok': s.get('ok', 0), 'skip': s.get('skip', 0),
         'rows': ''.join(body_rows), 'ext_section': ext_section, 'cost_note': cost_note,
+        'apply_section': apply_section, 'mode_note': mode_note,
     }
 
 
