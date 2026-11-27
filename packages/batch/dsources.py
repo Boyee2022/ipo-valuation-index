@@ -5,6 +5,8 @@
 """
 import json
 import os
+import re
+from datetime import datetime, timedelta
 import sys
 import threading
 import time
@@ -48,8 +50,130 @@ def _cache_get(name, ttl, loader):
     return data
 
 
+def _num(v):
+    """push2 数值字段：停牌/缺失时为 '-'，统一转 float 或 None。"""
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+SSE_ST_PREFIX = re.compile(r'^(?:(?:XD|XR|DR))?(?:S)?\*?ST')
+
+
+def _sse_st_name(name):
+    """ST/*ST（兼容 XD/XR/DR 除权除息前缀与历史 S 前缀）。"""
+    return bool(SSE_ST_PREFIX.match(str(name or '').upper()))
+
+
+def _sse_recent_listings(as_of):
+    """as_of 前一年内上市的沪市股票 {code: 上市日}；按截止日缓存 2 天。"""
+    cut = (datetime.strptime(as_of, '%Y-%m-%d') - timedelta(days=365)).strftime('%Y-%m-%d')
+
+    def load():
+        out = {}
+        page = 1
+        while True:
+            q = {'reportName': 'RPT_F10_BASIC_ORGINFO',
+                 'columns': 'SECUCODE,SECURITY_CODE,LISTING_DATE',
+                 'pageSize': '2000', 'pageNumber': str(page),
+                 'filter': "(LISTING_DATE>='%s')" % cut,
+                 'sortColumns': 'LISTING_DATE', 'sortTypes': '-1'}
+            d = _get_json(EM + '?' + urllib.parse.urlencode(q), timeout=90)
+            rs = ((d.get('result') or {}).get('data') or [])
+            for r in rs:
+                if str(r.get('SECUCODE') or '').endswith('.SH'):
+                    out[str(r.get('SECURITY_CODE'))] = str(r.get('LISTING_DATE') or '')[:10]
+            if len(rs) < 2000:
+                break
+            page += 1
+        return out
+
+    return _cache_get('sse_recent_listings_%s' % cut.replace('-', ''), 2 * 86400, load)
+
+
+def _sse_components(force=False):
+    """上证综指：东财 datacenter 全 A 股估值快照（RPT_VALUEANALYSIS_DET）取沪市 A 股。
+
+    datacenter 成分表不含该指数，改用逐股估值快照合成。按上证综指编制口径：
+    总市值加权（A+H 公司计全部股本，单样本 15% 上限，样本均远低于上限）；
+    剔除 ST/*ST；新股上市满一年计入，总市值前 10 名满三个月计入（以当前总市值近似日均）。
+    as_of 为快照交易日，批跑合成时点位与收盘同口径。
+    """
+    def load():
+        q = {'reportName': 'RPT_VALUEANALYSIS_DET', 'columns': 'TRADE_DATE',
+             'pageSize': '1', 'pageNumber': '1', 'sortColumns': 'TRADE_DATE', 'sortTypes': '-1'}
+        d = _get_json(EM + '?' + urllib.parse.urlencode(q))
+        latest = (((d.get('result') or {}).get('data')) or [{}])[0]
+        as_of = str(latest.get('TRADE_DATE') or '')[:10]
+        if not as_of:
+            raise ValueError('上证综指：估值快照交易日获取失败')
+        q = {'reportName': 'RPT_VALUEANALYSIS_DET', 'columns': 'ALL',
+             'pageSize': '6000', 'pageNumber': '1',
+             'filter': "(TRADE_DATE='%s')" % as_of,
+             'sortColumns': 'SECURITY_CODE', 'sortTypes': '1'}
+        d = _get_json(EM + '?' + urllib.parse.urlencode(q), timeout=90)
+        rows = ((d.get('result') or {}).get('data') or [])
+        out = []
+        for r in rows:
+            sec = str(r.get('SECUCODE') or '')
+            if not sec.endswith('.SH'):
+                continue
+            pe = _num(r.get('PE_TTM'))
+            pb = _num(r.get('PB_MRQ'))
+            close = _num(r.get('CLOSE_PRICE'))
+            total_cap = _num(r.get('TOTAL_MARKET_CAP'))
+            if not total_cap:
+                total_cap = (_num(r.get('TOTAL_SHARES')) or 0) * (close or 0) or None
+            out.append({
+                'code': r.get('SECURITY_CODE'),
+                'secucode': sec,
+                'name': r.get('SECURITY_NAME_ABBR'),
+                'industry': r.get('BOARD_NAME'),
+                'weight': None,
+                'close': close,
+                'pe': pe,
+                'eps': None,
+                'bps': None,
+                # 快照无 ROE 字段：PB/PE 推 TTM ROE（同口径近似），供非金融引擎参考
+                'roe': round(pb / pe * 100, 4) if (pe and pb and pe > 0 and pb > 0) else None,
+                'total_shares': None,
+                'free_cap': _num(r.get('NOTLIMITED_MARKETCAP_A')) or total_cap,
+                'total_cap': total_cap,
+            })
+        recent = _sse_recent_listings(as_of)
+        cut = (datetime.strptime(as_of, '%Y-%m-%d') - timedelta(days=365)).strftime('%Y-%m-%d')
+        cut3 = (datetime.strptime(as_of, '%Y-%m-%d') - timedelta(days=92)).strftime('%Y-%m-%d')
+        top10 = {r['code'] for r in sorted(out, key=lambda x: -(x.get('total_cap') or 0))[:10]}
+        st_n = new_n = 0
+        members = []
+        for r in out:
+            if _sse_st_name(r.get('name')):
+                st_n += 1
+                continue
+            ld = recent.get(r['code'])
+            if ld and ld > cut:
+                if r['code'] in top10 and ld <= cut3:
+                    members.append(r)
+                else:
+                    new_n += 1
+                continue
+            members.append(r)
+        cap_sum = sum(r.get('total_cap') or 0 for r in members)
+        if cap_sum > 0:
+            for r in members:
+                cap = r.get('total_cap') or 0
+                r['weight'] = round(cap / cap_sum * 100, 4) if cap else None
+        return {'as_of': as_of, 'rows': members, 'weight_computed': bool(members),
+                'source': 'datacenter 全A估值快照（沪市 A 股，总市值权重，剔除 ST 与未满计入期新股）',
+                'excluded': {'st': st_n, 'new': new_n}}
+    return _cache_get('components_sse', 0 if force else TTL_COMPONENTS, load)
+
+
 def components(itype, force=False):
     """指数成分 + 收盘权重（东财 RPT_INDEX_TS_COMPONENT，MAXTRADEDATE=前一日口径）。"""
+    if itype == 'sse':
+        return _sse_components(force)
     def load():
         q = {'reportName': 'RPT_INDEX_TS_COMPONENT', 'columns': 'ALL',
              'pageSize': '400', 'filter': '(TYPE="%s")' % itype}
@@ -82,6 +206,35 @@ def components(itype, force=False):
                     r['weight'] = round(cap / cap_sum * 100, 4) if cap else None
         return {'as_of': as_of, 'rows': out, 'weight_computed': weight_computed}
     return _cache_get('components_%s' % itype, 0 if force else TTL_COMPONENTS, load)
+
+
+def industry_valuation(force=False):
+    """申万二级行业估值（东财 RPT_VALUEINDUSTRY_DET，最新交易日全表）：行业名 → pe/ps/pb 与样本数。"""
+    def load():
+        q = {'reportName': 'RPT_VALUEINDUSTRY_DET', 'columns': 'ALL',
+             'pageSize': '1', 'pageNumber': '1',
+             'sortColumns': 'TRADE_DATE', 'sortTypes': '-1'}
+        d = _get_json(EM + '?' + urllib.parse.urlencode(q), timeout=60)
+        rows = ((d.get('result') or {}).get('data') or [])
+        as_of = str(rows[0].get('TRADE_DATE') or '')[:10] if rows else ''
+        if not as_of:
+            raise ValueError('行业估值：最新交易日获取失败')
+        q = {'reportName': 'RPT_VALUEINDUSTRY_DET', 'columns': 'ALL',
+             'pageSize': '500', 'pageNumber': '1',
+             'filter': "(TRADE_DATE='%s')" % as_of}
+        d = _get_json(EM + '?' + urllib.parse.urlencode(q), timeout=60)
+        rows = ((d.get('result') or {}).get('data') or [])
+        out = {}
+        for r in rows:
+            name = (r.get('BOARD_NAME') or '').strip()
+            if not name:
+                continue
+            out[name] = {'pe': _num(r.get('PE_TTM')), 'ps': _num(r.get('PS_TTM')),
+                         'pb': _num(r.get('PB_MRQ')), 'n': _num(r.get('NUM')),
+                         'as_of': as_of}
+        return {'as_of': as_of, 'rows': out,
+                'source': 'datacenter 申万二级行业估值（东财 RPT_VALUEINDUSTRY_DET，整体法）'}
+    return _cache_get('industry_val', 0 if force else TTL_UNIVERSE, load)
 
 
 def peer_universe(force=False):
@@ -182,8 +335,8 @@ def revenue_by_year(code):
         y = rd[:4]
         if y in by_year or rev is None:
             continue
-        rev_yi = round(rev / 1e8, 2) if abs(rev) > 1e6 else rev
-        np_yi = round(np_ / 1e8, 2) if np_ is not None and abs(np_) > 1e6 else np_
+        rev_yi = round(rev / 1e8, 2) or round(rev / 1e8, 6)  # 微营收（<100 万元）保留 6 位，避免序列出现 0 触发引擎零除
+        np_yi = round(np_ / 1e8, 2) if np_ is not None else None
         by_year[y] = rev_yi
         if np_yi is not None and rev_yi:
             margins.append(round(np_yi / rev_yi, 4))

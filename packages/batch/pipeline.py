@@ -76,6 +76,9 @@ def _bump_done_and_save(job):
     if job is None:
         return
     job['done'] = sum(1 for x in job['rows'] if x.get('status') in ('ok', 'skip'))
+    # 大任务（全市场指数）逐行落盘会因 state.json 体积放大而拖慢跑批：每 10 行落一次
+    if (job.get('total') or 0) > 800 and job['done'] % 10 != 0:
+        return
     _save(job)
 
 
@@ -123,6 +126,27 @@ def get(job_id):
     return json.loads(f.read_text(encoding='utf-8'))
 
 
+def reconcile_running():
+    """服务重启后磁盘上的 running 任务已无执行线程，标记为中断，避免前端误挂跟踪。"""
+    if not JOBS.exists():
+        return 0
+    n = 0
+    for jd in JOBS.iterdir():
+        f = jd / 'state.json'
+        if not f.is_file():
+            continue
+        try:
+            j = json.loads(f.read_text(encoding='utf-8'))
+        except Exception:
+            continue
+        if j.get('state') == 'running':
+            j['state'] = 'error'
+            j['error'] = '批跑服务重启，任务中断（已完成 %s/%s）' % (j.get('done'), j.get('total'))
+            _save(j)
+            n += 1
+    return n
+
+
 def list_jobs():
     if not JOBS.exists():
         return []
@@ -134,11 +158,20 @@ def list_jobs():
         try:
             j = json.loads(sf.read_text(encoding='utf-8'))
             s = j.get('summary') or {}
+            sc = None
+            if s.get('scenario_low') is not None and s.get('scenario_high') is not None:
+                sc = {'low': s['scenario_low'], 'base': s.get('fitted_point'), 'high': s['scenario_high']}
+            elif j.get('state') == 'done':
+                # 历史任务：按逐券区间与权重即时回填三情景点位
+                sc = _scenario(j.get('rows'), s.get('fitted_point'), s.get('index_close'))
             out.append({
                 'id': j.get('id'), 'index': j.get('index'), 'created': j.get('created'),
                 'state': j.get('state'), 'done': j.get('done'), 'total': j.get('total'),
                 'components_as_of': j.get('components_as_of'),
                 'fitted_point': s.get('fitted_point'), 'index_close': s.get('index_close'),
+                'scenario_low': (sc or {}).get('low'),
+                'scenario_base': (sc or {}).get('base'),
+                'scenario_high': (sc or {}).get('high'),
                 'ok': s.get('ok'), 'skip': s.get('skip'),
                 'sentiment_mode': j.get('sentiment_mode') or 'rule',
                 'agent_mode': j.get('agent_mode') or ('shadow' if j.get('shadow_mode') else 'off'),
@@ -148,6 +181,33 @@ def list_jobs():
         except Exception:
             continue
     return out
+
+
+def _scenario(rows, fitted, index_close):
+    """逐券估值区间按指数权重合成三情景点位（与拟合点位同为 Σw·(ps/close)/Σw 口径）。"""
+    if not (rows and fitted is not None and index_close):
+        return None
+    lo = hi = wsum = 0.0
+    for r in rows:
+        if r.get('status') != 'ok' or not r.get('interval'):
+            continue
+        shares = r.get('shares') or r.get('total_shares')
+        w = r.get('weight') or 0
+        close = r.get('close') or 0
+        if not (shares and w > 0 and close > 0):
+            continue
+        try:
+            a, b = float(r['interval'][0]), float(r['interval'][1])
+        except (TypeError, ValueError, IndexError):
+            continue
+        lo += w * (a / shares) / close
+        hi += w * (b / shares) / close
+        wsum += w
+    if not wsum > 0:
+        return None
+    return {'low': round(min(index_close * lo / wsum, fitted), 2),
+            'base': round(fitted, 2),
+            'high': round(max(index_close * hi / wsum, fitted), 2)}
 
 
 def _persist_review(job, row, rec):
@@ -240,7 +300,13 @@ def _worker(job_id, row, universe, params):
         per_share = round(mid / shares, 2) if mid is not None and shares else None
         conf = (eng.get('confidence') or {}).get('level')
         conf_note = None
-        if n_comp == 0:
+        basis = (eng.get('net_profit_basis_used') or {}).get('basis')
+        # v3.31.0：行业基准兜底（可比法与 DCF 均无效）→ 置信度「低」、口径标注兜底
+        if (syn.get('industry_fallback') or {}).get('enabled'):
+            conf = '低'
+            conf_note = '行业基准兜底（无可比/DCF，单点参照）'
+            basis = '行业基准兜底'
+        elif n_comp == 0:
             # 引擎只给区间加宽与警示；产品层面按「可比法剔除」再下调一档置信度。
             conf = {'高': '中', '中': '低'}.get(conf, conf)
             conf_note = '无可比，已剔除可比法'
@@ -250,6 +316,7 @@ def _worker(job_id, row, universe, params):
             row.update({
                 'status': 'ok',
                 'weighted_mid': mid,
+                'shares': shares,
                 'per_share': per_share,
                 'interval': syn.get('interval'),
                 'four_part': {k: (v.get('value') if isinstance(v, dict) else v)
@@ -259,7 +326,7 @@ def _worker(job_id, row, universe, params):
                 'confidence_note': conf_note,
                 'n_comp': n_comp,
                 'stage_label': (eng.get('lifecycle') or {}).get('stage_label'),
-                'basis': (eng.get('net_profit_basis_used') or {}).get('basis'),
+                'basis': basis,
                 'warnings': (eng.get('warnings') or [])[:6],
                 'check_ok': check_ok,
                 'report': rep_f.name,
@@ -376,6 +443,7 @@ a{color:#0e7490}
 <div class="meta">任务 %(jobid)s · 数据时点（成分权重）%(as_of)s · 生成时间 %(ts)s</div>
 <div class="cards">
 <div class="card"><span>拟合点位（指数加权）</span><b>%(fitted)s</b><span>指数收盘 %(close)s</span></div>
+<div class="card"><span>情景区间（悲观 / 乐观）</span><b>%(slow)s / %(shigh)s</b><span>逐券估值区间按权重合成</span></div>
 <div class="card"><span>样本</span><b>%(total)d</b><span>成分券</span></div>
 <div class="card"><span>出估值 / 跳过</span><b>%(ok)d / %(skip)d</b><span>跳过券不计入合成</span></div>
 </div>
@@ -386,6 +454,7 @@ a{color:#0e7490}
 %(ext_section)s
 <div class="note">
 拟合点位 = 指数收盘 × Σ(权重×每股估值÷收盘价) / Σ权重（指数加权），跳过券不计入分子分母。<br>
+情景点位 = 逐券估值区间按同一权重合成：悲观取区间下沿、乐观取区间上沿（分别不高于/不低于基准）。<br>
 极端判定：估值/价 ≥5× 或 ≤0.2×（即偏离 ≥+400%% 或 ≤−80%%），仅做标识。<br>
 口径：成分权重为前一日收盘权重（东财指数成分表）；估值中枢=引擎综合中枢÷总股本；%(cost_note)s；舆情=东财免费公开数据（近30天新闻搜索+股吧帖）词频+规则打分，情绪字段显式传入引擎。<br>
 本报告由估值跑批管线自动生成，仅作探索性研究参考，不构成投资建议。
@@ -394,6 +463,8 @@ a{color:#0e7490}
         'jobid': esc(job['id']), 'as_of': esc(str(job.get('components_as_of') or '—')),
         'ts': _now(), 'fitted': ('%.2f' % fitted) if fitted is not None else '—',
         'close': ('%.2f' % s.get('index_close')) if s.get('index_close') is not None else '—',
+        'slow': ('%.2f' % s['scenario_low']) if s.get('scenario_low') is not None else '—',
+        'shigh': ('%.2f' % s['scenario_high']) if s.get('scenario_high') is not None else '—',
         'total': job.get('total', 0), 'ok': s.get('ok', 0), 'skip': s.get('skip', 0),
         'rows': ''.join(body_rows), 'ext_section': ext_section, 'cost_note': cost_note,
     }
@@ -421,12 +492,16 @@ def _finalize(job):
         except Exception as e:
             shadow_warning = '影子指标计算失败: %s' % str(e)[:200]
     with _state_lock:
+        sc = _scenario(job['rows'], fitted, idx or None)
         job['summary'] = {
             'fitted_point': fitted,
             'fitted_point_index': fitted,
             'fitted_point_price_weighted': fitted_pw,
             'fitted_point_basis': 'index_weight',
             'index_close': idx,
+            'scenario_low': (sc or {}).get('low'),
+            'scenario_base': (sc or {}).get('base'),
+            'scenario_high': (sc or {}).get('high'),
             'ok': len(ok),
             'skip': sum(1 for r in job['rows'] if r.get('status') == 'skip'),
             'total': job['total'],
@@ -540,6 +615,14 @@ def run_job(job_id):
             job['index_close'] = None
         _save(job)
         universe = dsources.peer_universe()['rows']
+        # 可比候选补齐：并集池只含 13 个指数成分，本次成分里的中小盘（如上证综指沪市小票）不在池中；
+        # 按 skill ipo_rules_checklist §4「同行业扩展」降级顺序，把本次成分并入候选池（按 secucode 去重）。
+        _seen = {r.get('secucode') for r in universe}
+        for _r in comp['rows']:
+            _sc = _r.get('secucode')
+            if _sc and _sc not in _seen:
+                universe.append(dict(_r))
+                _seen.add(_sc)
         try:
             pool_codes = set()
             for r in job['rows']:

@@ -23,13 +23,13 @@ import { ParamsCard } from './parts/ParamsCard'
 import { Hero, type SparkPoint } from './parts/Hero'
 import { IndexTiles } from './parts/IndexTiles'
 import { ConsTable } from './parts/ConsTable'
-import { TopWeightsCard, RecentRunsCard, DuoCard, CronCard, recentForIndex } from './parts/SideCards'
+import { TopWeightsCard, RecentRunsCard, CronCard, recentForIndex } from './parts/SideCards'
 import { RunBar, type LogLine, type ToastMsg } from './parts/RunBar'
 import { Results } from './parts/Results'
 import css from './ValuationPage.module.css'
 
 const STEP_NAMES = ['参数确认', '选择指数', '成分券权重', '估值日期', '并行度', '运行报告']
-const SHORT: Record<string, string> = { sh50: 'SH50', sh180: 'SH180', kc50: 'KC50', hs300: 'HS300' }
+const SHORT: Record<string, string> = { sh50: 'SH50', sh180: 'SH180', kc50: 'KC50', hs300: 'HS300', sse: 'SSE' }
 
 const msgOf = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -65,7 +65,7 @@ export function ValuationPage() {
 
   const meta = indexMeta(indexSel)
   const online = !consErr
-  const count = cons?.rows.length ?? meta.count
+  const count = cons?.rows.length ?? (meta.allMarket ? null : meta.count)
   const weightSum = params.dcf + params.comp + params.sent
   const validWeights = weightSum === 100
   const overrideErr = overrideError(params)
@@ -74,6 +74,7 @@ export function ValuationPage() {
   const pollRef = useRef<number | null>(null)
   const seenRef = useRef<Set<number>>(new Set())
   const failRef = useRef(0)
+  const firstPollRef = useRef(false)
   const jobIdRef = useRef<string | null>(null)
   const toastTimer = useRef<number | null>(null)
   const logRef = useRef<HTMLDivElement | null>(null)
@@ -113,6 +114,22 @@ export function ValuationPage() {
     }
   }
 
+  // 页面加载/切指数时若服务端有进行中任务，自动接管跟踪（刷新后进度条继续走）。
+  const attachRunning = (job: JobMeta) => {
+    stopPolling()
+    setRunning(true)
+    setTracking(true)
+    setActiveJob(null)
+    setLogs([])
+    seenRef.current = new Set()
+    failRef.current = 0
+    firstPollRef.current = true
+    jobIdRef.current = job.id
+    push(`[恢复] 检测到进行中任务 ${job.id}（${job.done}/${job.total}），继续跟踪`, 'dim')
+    void pollOnce(job.id)
+    pollRef.current = window.setInterval(() => void pollOnce(job.id), 2500)
+  }
+
   // 切指数：拉真实成分券，并载入该指数最近一次完成的跑批。
   useEffect(() => {
     let alive = true
@@ -130,6 +147,14 @@ export function ValuationPage() {
         if (!alive) return
         setHist(jobs)
         setHistErr(null)
+        const run = jobs.find(j => j.state === 'running')
+        if (run) {
+          if (run.index !== indexSel) {
+            setIndexSel(run.index)
+            return
+          }
+          attachRunning(run)
+        }
         const latest = jobs.find(j => j.index === indexSel && j.state === 'done' && j.fitted_point != null)
         if (latest) {
           try {
@@ -153,31 +178,44 @@ export function ValuationPage() {
       const st = await pollJob(jobId)
       failRef.current = 0
       setActiveJob(st)
-      for (const r of st.rows) {
-        if (seenRef.current.has(r.idx)) continue
-        if (r.status === 'ok') {
-          seenRef.current.add(r.idx)
-          push(`[完成] ${r.name} · 中枢/股 ${r.per_share?.toFixed(2) ?? '—'} · 置信度 ${r.confidence_level ?? '—'}`, 'ok')
-        } else if (r.status === 'skip') {
-          seenRef.current.add(r.idx)
-          push(`[跳过] ${r.name} · ${r.error ?? '未产出结果'}`, 'dim')
+      if (firstPollRef.current) {
+        firstPollRef.current = false
+        let synced = 0
+        for (const r of st.rows) {
+          if (r.status === 'ok' || r.status === 'skip') {
+            seenRef.current.add(r.idx)
+            synced += 1
+          }
+        }
+        if (synced > 0) push(`[恢复] 已同步 ${synced} 条已完成结果，继续跟踪新进度`, 'dim')
+      } else {
+        for (const r of st.rows) {
+          if (seenRef.current.has(r.idx)) continue
+          if (r.status === 'ok') {
+            seenRef.current.add(r.idx)
+            push(`[完成] ${r.name} · 中枢/股 ${r.per_share?.toFixed(2) ?? '—'} · 置信度 ${r.confidence_level ?? '—'}`, 'ok')
+          } else if (r.status === 'skip') {
+            seenRef.current.add(r.idx)
+            push(`[跳过] ${r.name} · ${r.error ?? '未产出结果'}`, 'dim')
+          }
         }
       }
       if (st.state === 'done') {
         stopPolling()
         setRunning(false)
         setTracking(false)
-        setActiveJob(st)
+        setActiveJob(null)
         setViewJob(st)
+        setLogs([])
         const s = st.summary
-        push(`[完成] ${st.total} 条处理完毕：估值 ${s?.ok ?? 0} 条 · 跳过 ${s?.skip ?? 0} 条`, 'ok')
-        push(`[合成] 拟合点位 ${fmtNum(s?.fitted_point)} · 指数收盘 ${fmtNum(s?.index_close)}`, 'ok')
         showToast(`跑批完成 · 拟合点位 ${fmtNum(s?.fitted_point)} · 收盘 ${fmtNum(s?.index_close)}`, 'ok')
+        window.setTimeout(() => document.getElementById('sec-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 120)
         void refreshJobs()
       } else if (st.state === 'error') {
         stopPolling()
         setRunning(false)
         setTracking(false)
+        setActiveJob(null)
         push(`[错误] 任务异常：${(st.error ?? '').split('\n')[0]}`, 'err')
         showToast('跑批任务异常，详情见日志', 'err')
         void refreshJobs()
@@ -206,12 +244,13 @@ export function ValuationPage() {
     setLogs([])
     seenRef.current = new Set()
     failRef.current = 0
+    firstPollRef.current = true
     const ov = [
       params.waccPct != null ? `WACC ${params.waccPct}%` : null,
       params.terminalGrowthPct != null ? `永续增速 ${params.terminalGrowthPct}%` : null,
     ].filter(Boolean).join(' / ')
     const modeCn = params.agentMode === 'apply' ? '开（三专家 · 回写重跑）' : params.agentMode === 'shadow' ? '开（三专家 · 只留痕）' : '关'
-    push(`[准备] ${meta.name} ${count} 条 · 并行 ${parallel} · 抽样 ${params.statN} · 舆情 ${params.sentimentMode === 'llm' ? 'LLM 语义' : '规则打分'} ≤${params.sentiment} 轮 · 多 agent 评审 ${modeCn} · 估值日期 ${fmtDateShort(date)}（参考） · 数据时点 ${cons?.as_of ?? '—'}${ov ? ` · 覆盖 ${ov}` : ''}`, 'dim')
+    push(`[准备] ${meta.name} ${count ?? '全市场'} 条 · 并行 ${parallel} · 抽样 ${params.statN} · 舆情 ${params.sentimentMode === 'llm' ? 'LLM 语义' : '规则打分'} ≤${params.sentiment} 轮 · 多 agent 评审 ${modeCn} · 估值日期 ${fmtDateShort(date)}（参考） · 数据时点 ${cons?.as_of ?? '—'}${ov ? ` · 覆盖 ${ov}` : ''}`, 'dim')
     document.getElementById('sec-run')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     try {
       const { job_id } = await runBatch({
@@ -412,7 +451,12 @@ export function ValuationPage() {
 
       <main className={css.main}>
         <Hero meta={meta} job={viewJob} spark={spark} loading={viewLoading} />
-        <div id="sec-index"><IndexTiles indexSel={indexSel} onSelect={pickIndex} hist={hist} disabled={running} /></div>
+        <div id="sec-index">
+          <IndexTiles indexSel={indexSel} onSelect={pickIndex} hist={hist} disabled={running} />
+          {indexSel === 'sse' && (
+            <p className={css.tinyNote}>上证综指按沪市 A 股全市场（主板 + 科创板，不含 B 股）拟合，全量约 2300 只、跑批耗时较长；权重由自由流通市值归一化近似。</p>
+          )}
+        </div>
         <div id="sec-run">{runBar}</div>
         <div className={css.grid}>
           <div className={`${css.col} ${css.colLeft}`}>
@@ -422,7 +466,6 @@ export function ValuationPage() {
           </div>
           <div className={`${css.col} ${css.colCenter}`} id="sec-weights">
             <ConsTable rows={cons?.rows ?? null} loading={consLoading} error={consErr} indexName={meta.name} asOf={asOf} weightComputed={cons?.weight_computed === true} />
-            <DuoCard indexName={meta.name} chenFit={viewJob?.summary?.fitted_point ?? null} />
             <CronCard />
           </div>
           <div className={`${css.col} ${css.colRight}`}>

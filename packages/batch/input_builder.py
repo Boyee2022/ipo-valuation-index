@@ -9,11 +9,13 @@
 - 可比公司：同行业优先，细行业样本不足时回退行业前缀/粗板块，按自由流通市值对数距离取前 PEER_N（5）家，
   标注「自动选取、未经人工核验」；无可比时不跳过，引擎剔除可比法并下调置信度。
 """
+import json
 import math
 
 import dsources
 import sentiment
 import sentiment_llm
+from config import OVERRIDES
 
 PEER_N = 5
 
@@ -269,10 +271,56 @@ def _driver_block(st, ind):
     }, None
 
 
+def _apply_stock_override(inp, stock):
+    """个股级覆写（~/.dsh-valuation/overrides/<code>.json）：白名单外零变化。
+    仅注入 rnpv / preferences(enable_rnpv/method_set_mode/layer0_check) / framework_check.industry_class，
+    防止人工文件覆盖行情与财务数据。"""
+    code = (stock.get('secucode') or '').replace('.', '_')
+    if not code:
+        return
+    path = OVERRIDES / ('%s.json' % code)
+    if not path.exists():
+        return
+    try:
+        ov = json.loads(path.read_text(encoding='utf-8'))
+    except Exception:
+        return
+    if isinstance(ov.get('rnpv'), dict):
+        inp['rnpv'] = ov['rnpv']
+    prefs = ov.get('preferences') or {}
+    for k in ('enable_rnpv', 'method_set_mode', 'layer0_check'):
+        if k in prefs:
+            inp['preferences'][k] = prefs[k]
+    fw = ov.get('framework_check') or {}
+    if fw.get('industry_class'):
+        inp['meta'].setdefault('framework_check', {})['industry_class'] = fw['industry_class']
+        inp['meta']['framework_check']['source'] = '个股级覆写（%s.json）' % code
+    if ov.get('note'):
+        inp['data_sources'].append({
+            'source': '个股级覆写（%s.json，人工核定）' % code,
+            'items': [ov['note']],
+        })
+
+
+def _free_cap_yi(src):
+    """统一自由流通市值单位为亿元：东财成分表 FREE_CAP 为亿元，push2 沪市快照为元（>1e6 视为元）。"""
+    cap = src.get('free_cap')
+    try:
+        cap = float(cap)
+    except (TypeError, ValueError):
+        return src
+    if cap > 1e6:
+        src = dict(src)
+        src['free_cap'] = round(cap / 1e8, 2)
+    return src
+
+
 def build_input(stock, universe, params, as_of):
     """组装单券输入。财务数据缺失抛 ValueError（跑批跳过）；无可比公司时照常出估值，由引擎剔除可比法并降级。"""
     code = stock['secucode']
     ind = (stock.get('industry') or '').strip()
+    stock = _free_cap_yi(stock)
+    universe = [_free_cap_yi(r) for r in universe]
     fin = dsources.financials(code)
     qual = dsources.quality_details(code, stock.get('industry'))
     stmt = {} if any(k in ind for k in _FIN_KEYS) else dsources.statement_drivers(code)
@@ -485,6 +533,31 @@ def build_input(stock, universe, params, as_of):
     inp['meta']['accounting_standard'] = 'CAS'
     inp['peer_screening'] = _peer_evidence(stock, universe, peers,
                                            str(max(by_year)) if by_year else None, as_of)
+    try:
+        _iv = dsources.industry_valuation()['rows'].get(ind)
+    except Exception:
+        _iv = None
+    if _iv and any(_iv.get(k) for k in ('pe', 'ps', 'pb')):
+        inp['industry_index'] = {
+            'name': ind,
+            'pe_median': _iv.get('pe'),
+            'ps_median': _iv.get('ps'),
+            'pb_median': _iv.get('pb'),
+            'as_of': _iv.get('as_of'),
+            'source': '申万二级行业整体法（东财行业估值）',
+        }
+        # v3.31.0：行业基准兜底的 PB 口径（净资产）——仅对亏损/无可比标的补取 B0（限制 F10 请求量）
+        if not any(k in ind for k in _FIN_KEYS) and (np_ <= 0 or not comparables):
+            try:
+                _be0 = dsources.book_equity(code)
+            except Exception:
+                _be0 = {}
+            if _be0.get('book_equity'):
+                inp['financials']['net_assets_fallback'] = _be0['book_equity']
+                inp['data_sources'].append({
+                    'source': '东财 F10 资产负债表（归母普通股权益，%s 年报）' % (_be0.get('year') or '最新'),
+                    'items': ['净资产 %.2f 亿元 → financials.net_assets_fallback（行业基准兜底 PB 候选口径；仅兜底触发时使用，不进入常规 PB/NAV）' % _be0['book_equity']],
+                })
     if wacc_pct is not None or tg_pct is not None:
         ov = []
         if wacc_pct is not None:
@@ -577,4 +650,5 @@ def build_input(stock, universe, params, as_of):
                 '%s %.2f' % (b['code'].split('.')[0], min(max(float(b['raw_beta']), 0.5), 2.0))
                 for b in peer_betas)],
         })
+    _apply_stock_override(inp, stock)
     return inp

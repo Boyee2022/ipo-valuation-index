@@ -32,7 +32,7 @@ export function RunBar(props: {
   onParams: () => void
 }) {
   const { running, tracking, activeJob, viewJob, logs, logRef, online, canRun, toast } = props
-  const progJob = activeJob ?? (viewJob?.state === 'running' ? viewJob : null)
+  const progJob = activeJob?.state === 'running' ? activeJob : viewJob?.state === 'running' ? viewJob : null
   const prog = progJob && progJob.total > 0 ? (progJob.done / progJob.total) * 100 : 0
   const okCount = viewJob?.summary?.ok ?? null
   return (

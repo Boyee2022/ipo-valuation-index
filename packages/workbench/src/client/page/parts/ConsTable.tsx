@@ -25,7 +25,7 @@ export function ConsTable(props: {
   return (
     <div className={css.card}>
       <div className={css.cardHd}>
-        成分券与权重（{loading ? '…' : list.length}） <span className={css.cardHdR}>{indexName} · 权重合计 {list.length > 0 ? `${sum.toFixed(2)}%` : '—'} · 前一日收盘口径</span>
+        成分券与权重（{loading ? '…' : list.length}） <span className={css.cardHdR}>{indexName} · 权重合计 {list.length > 0 ? `${sum.toFixed(2)}%` : '—'} · 与收盘同口径</span>
       </div>
       <div className={css.cardBd}>
         {loading && <p className={css.empty}>正在从批跑服务读取成分券与权重…</p>}
@@ -62,7 +62,7 @@ export function ConsTable(props: {
               </table>
             </div>
             <div className={css.consMeta}>
-              <span>东财指数成分表（{asOf || '—'}）· 权重因子每期更新 × 当日市值 → 当日权重</span>
+              <span>东财成分表 / 全A估值快照（{asOf || '—'}）· 权重按当日口径合成</span>
               <span className={css.mono}>{list.length} 条 · {sum.toFixed(2)}%</span>
             </div>
             <div className={css.indRow}>

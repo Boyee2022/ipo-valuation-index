@@ -1,4 +1,4 @@
-/** 左栏 TOP15 权重 / 最近跑批，中栏成分券 / 双模型对比，右栏参数与定时任务。 */
+/** 左栏 TOP15 权重 / 最近跑批，中栏成分券，右栏参数与定时任务。 */
 
 import { fmtNum, pctDiff, shortTime } from '../data'
 import type { RealConstituent, JobMeta } from '../api'
@@ -75,31 +75,6 @@ export function RecentRunsCard(props: {
           </div>
         )}
         <div className={css.cardFoot}>点击任意一次回看该批点位与逐券结果</div>
-      </div>
-    </div>
-  )
-}
-
-export function DuoCard(props: { indexName: string; chenFit: number | null }) {
-  const { indexName, chenFit } = props
-  return (
-    <div className={css.card}>
-      <div className={css.cardHd}>双模型对比 <span className={css.cardHdR}>陈老师 vs 石总</span></div>
-      <div className={css.cardBd}>
-        <div className={css.duo}>
-          <div className={`${css.duoRow} ${css.duoHd}`}>
-            <span className={css.duoC1}>参数</span><span className={css.duoC2}>陈老师技能</span><span className={css.duoC3}>石总模型</span>
-          </div>
-          <div className={css.duoRow}><span className={css.duoC1}>方法</span><span className={css.duoC2}>DCF+可比+舆情</span><span className={css.duoC3}>DCF+可比</span></div>
-          <div className={css.duoRow}><span className={css.duoC1}>合成</span><span className={css.duoC2}>全指标加权</span><span className={css.duoC3}>主指标</span></div>
-          <div className={css.duoRow}><span className={css.duoC1}>舆情调整</span><span className={css.duoC2}>质量得分 → 倍数</span><span className={css.duoC3}>无</span></div>
-          <div className={css.duoRow}>
-            <span className={css.duoC1}>拟合点位</span>
-            <span className={`${css.duoC2} ${css.am} ${css.mono}`}>{chenFit != null ? fmtNum(chenFit) : '—'}</span>
-            <span className={`${css.duoC3} ${css.faint}`}>— 待部署</span>
-          </div>
-        </div>
-        <div className={css.cardFoot}>{indexName} · 石总模型尚未接入批跑服务，暂不并列合成。</div>
       </div>
     </div>
   )

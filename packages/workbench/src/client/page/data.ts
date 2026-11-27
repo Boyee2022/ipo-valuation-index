@@ -30,14 +30,17 @@ export interface IndexMeta {
   name: string
   code: string
   count: number
+  /** 全市场指数：成分数不固定，瓦片显示「沪市 A 股全市场」。 */
+  allMarket?: boolean
 }
 
-/** 四个可选指数：成分与权重全部来自 Mac 批跑服务（东财成分表）。 */
+/** 五个可选指数：成分与权重全部来自 Mac 批跑服务（东财成分表 / push2 沪市全量）。 */
 export const INDEXES: IndexMeta[] = [
   { id: 'sh50', name: '上证50', code: '000016.SH', count: 50 },
   { id: 'sh180', name: '上证180', code: '000010.SH', count: 180 },
   { id: 'kc50', name: '科创50', code: '000688.SH', count: 50 },
   { id: 'hs300', name: '沪深300', code: '000300.SH', count: 300 },
+  { id: 'sse', name: '上证综指', code: '000001.SH', count: 0, allMarket: true },
 ]
 
 export function indexMeta(id: string): IndexMeta {

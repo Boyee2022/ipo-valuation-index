@@ -268,6 +268,9 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     host = _lan_host()
+    n = pipeline.reconcile_running()
+    if n:
+        print('已将 %d 个重启遗留的 running 任务标记为中断' % n)
     ThreadingHTTPServer.allow_reuse_address = True
     srv = ThreadingHTTPServer((host, PORT), Handler)
     print('估值批跑服务启动 http://%s:%d  （技能目录 %s）' % (host, PORT, str(SKILL_DIR)))

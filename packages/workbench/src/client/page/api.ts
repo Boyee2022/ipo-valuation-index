@@ -103,6 +103,7 @@ export interface JobRow {
   close: number | null
   pe: number | null
   total_shares?: number | null
+  shares?: number | null
   status: 'pending' | 'running' | 'ok' | 'skip'
   error?: string
   weighted_mid?: number
@@ -121,6 +122,9 @@ export interface JobRow {
 export interface JobSummary {
   fitted_point: number | null
   index_close: number | null
+  scenario_low?: number | null
+  scenario_base?: number | null
+  scenario_high?: number | null
   ok: number
   skip: number
   total: number
@@ -170,6 +174,9 @@ export interface JobMeta {
   components_as_of?: string | null
   fitted_point: number | null
   index_close: number | null
+  scenario_low?: number | null
+  scenario_base?: number | null
+  scenario_high?: number | null
   ok: number | null
   skip: number | null
   sentiment_mode?: 'rule' | 'llm'

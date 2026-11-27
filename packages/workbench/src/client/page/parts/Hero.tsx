@@ -18,22 +18,27 @@ export interface Scenario {
 /** 逐券情景区间（亿元）÷ 总股本 → 每股区间，再按当日权重合成指数点位。 */
 export function scenarioOf(job: JobStatus | null): Scenario | null {
   const s = job?.summary
-  if (!job || !s || s.fitted_point == null || !s.index_close) return null
+  if (!job || !s) return null
+  if (s.scenario_low != null && s.scenario_high != null && s.fitted_point != null) {
+    return { low: s.scenario_low, base: s.fitted_point, high: s.scenario_high }
+  }
+  if (s.fitted_point == null || !s.index_close) return null
   let lo = 0
   let hi = 0
-  let wp = 0
+  let wsum = 0
   for (const r of job.rows) {
-    if (r.status !== 'ok' || !r.interval || !r.total_shares || !r.close || !r.weight) continue
-    lo += r.weight * (r.interval[0] / r.total_shares)
-    hi += r.weight * (r.interval[1] / r.total_shares)
-    wp += r.weight * r.close
+    const sh = r.shares ?? r.total_shares
+    if (r.status !== 'ok' || !r.interval || !sh || !r.close || !r.weight) continue
+    lo += (r.weight * (r.interval[0] / sh)) / r.close
+    hi += (r.weight * (r.interval[1] / sh)) / r.close
+    wsum += r.weight
   }
-  if (!(wp > 0)) return null
+  if (!(wsum > 0)) return null
   const close = s.index_close
   return {
-    low: Math.min((close * lo) / wp, s.fitted_point),
+    low: Math.min((close * lo) / wsum, s.fitted_point),
     base: s.fitted_point,
-    high: Math.max((close * hi) / wp, s.fitted_point),
+    high: Math.max((close * hi) / wsum, s.fitted_point),
   }
 }
 
