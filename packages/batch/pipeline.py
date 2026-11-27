@@ -21,6 +21,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import agent_config
+import apply_view
 import dsources
 import input_builder
 import report_theme
@@ -298,6 +299,18 @@ def _worker(job_id, row, universe, params):
 
         shares = (inp.get('financials') or {}).get('total_shares_after_issue')
         per_share = round(mid / shares, 2) if mid is not None and shares else None
+        if rec is not None and rec.get('apply') and (
+                rec['apply'].get('changed') or rec['apply'].get('error')):
+            try:
+                base_out = jdir / ('%s.out.baseline.json' % stem)
+                if base_out.exists():
+                    base_data = json.loads(base_out.read_text(encoding='utf-8'))
+                    section = apply_view.render(
+                        base_data, eng, rec['apply'], shares=shares,
+                        close=row.get('close'), shadow_href='shadow.html')
+                    apply_view.inject_file(rep_f, section)
+            except Exception:
+                pass
         conf = (eng.get('confidence') or {}).get('level')
         conf_note = None
         basis = (eng.get('net_profit_basis_used') or {}).get('basis')
