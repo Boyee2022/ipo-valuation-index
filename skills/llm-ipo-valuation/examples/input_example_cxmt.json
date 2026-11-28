@@ -1,0 +1,272 @@
+{
+  "$note": "长鑫科技（CXMT）估值输入 v3.11：已上市（2026-07-27）。**新增海外 DRAM 巨头可比组**（美光/SK海力士/三星 ADR，业务最可比），与 A 股组分组呈现（engine comparable_group_gap）；净利=周期中段正常化 90 亿；增速周期中段；PEG 单列；永续增速公开锚（GDP 4.5% 上限）；β 可由 beta_estimator 公开回归。",
+  "meta": {
+    "company": "长鑫科技",
+    "code": "688825.SH",
+    "exchange": "科创板",
+    "industry": "半导体",
+    "asset_type": "growth",
+    "as_of_date": "2026-08-19",
+    "note_asset_type": "DRAM IDM 高成长周期股：DCF 适用性弱（现金流随周期剧烈波动）；2026-07-27 科创板上市（发行价 8.66 元，首日收盘约 49 元，2026E 动态 PE≈34×）"
+  },
+  "financials": {
+    "revenue_latest_ttm": 617.99,
+    "net_profit_latest_ttm": 90.0,
+    "net_margin": 0.1456,
+    "gross_margin": 0.4102,
+    "revenue_by_year": {
+      "2022": 83,
+      "2023": 142,
+      "2024": 241.76,
+      "2025": 617.99
+    },
+    "growth_forecast": {
+      "2026": 0.6,
+      "2027": 0.3,
+      "2028": 0.15
+    },
+    "terminal_growth": 0.04,
+    "wacc": 0.11,
+    "wacc_params": {
+      "enabled": true,
+      "rf": null,
+      "erp": null,
+      "beta": 1.35,
+      "unlevered_beta": null,
+      "comparable_betas": null,
+      "industry_beta": 1.3,
+      "d_e_ratio": 1.36,
+      "tax_rate": 0.15,
+      "cost_of_debt": 0.035,
+      "note": "DRAM 高β周期股；d_e_ratio=1.36 对应 2025-06 资产负债率 57.65%；rf/erp 缺省用公开参考"
+    },
+    "ocf_to_net_profit": 2.0,
+    "capex_to_revenue": 0.35,
+    "net_cash": 0,
+    "data_as_of": "2026-08-19",
+    "note_ocf": "2025 OCF 高（折旧大），OCF/净利 6.5 反映重资产特征；CapEx/营收 0.35（扩产期，参考晶圆制造同行）",
+    "note_fcff": "DRAM IDM 重资产：DCF 用净利×FCF比率（三层校准），未启用 fcff_mode（CapEx 分年数据不全）",
+    "issue_shares": 34.0,
+    "total_shares_after_issue": 350.0,
+    "note_ipo": "股本为估算（发行价 8.66 元 × 发行约 34 亿股 ≈ 募资 295 亿；发行后总股本估算 350 亿股），实际以上市公告为准"
+  },
+  "comparables": [
+    {
+      "name": "兆易创新",
+      "code": "603986.SH",
+      "pe": 34.87,
+      "pb": 7.42,
+      "growth_pct": 40,
+      "as_of": "2026-08-19",
+      "note": "NOR+利基DRAM Fabless，2026-08-19 行情",
+      "exchange": "CN",
+      "currency": "CNY",
+      "standard": "CAS"
+    },
+    {
+      "name": "澜起科技",
+      "code": "688008.SH",
+      "pe": 94.64,
+      "pb": 12.01,
+      "growth_pct": 50,
+      "as_of": "2026-08-19",
+      "note": "内存接口芯片（高毛利），2026-08-19 行情",
+      "exchange": "CN",
+      "currency": "CNY",
+      "standard": "CAS"
+    },
+    {
+      "name": "佰维存储",
+      "code": "688525.SH",
+      "pe": 27.37,
+      "pb": 12.61,
+      "growth_pct": 60,
+      "as_of": "2026-08-19",
+      "note": "存储模组+封测，2026-08-19 行情",
+      "exchange": "CN",
+      "currency": "CNY",
+      "standard": "CAS"
+    },
+    {
+      "name": "北京君正",
+      "code": "300223.SZ",
+      "pe": 105.98,
+      "pb": 5.19,
+      "growth_pct": 35,
+      "as_of": "2026-08-19",
+      "note": "车规存储+计算芯片，2026-08-19 行情",
+      "exchange": "CN",
+      "currency": "CNY",
+      "standard": "CAS"
+    },
+    {
+      "name": "江波龙",
+      "code": "301308.SZ",
+      "pe": 13.44,
+      "pb": 7.24,
+      "growth_pct": 55,
+      "as_of": "2026-08-19",
+      "note": "存储模组龙头，2026-08-19 行情",
+      "exchange": "CN",
+      "currency": "CNY",
+      "standard": "CAS"
+    },
+    {
+      "name": "美光科技",
+      "code": "MU.US",
+      "exchange": "US",
+      "currency": "USD",
+      "standard": "GAAP",
+      "pe": 21.26,
+      "pb": 10.09,
+      "growth_pct": 45,
+      "as_of": "2026-08-18",
+      "note": "DRAM IDM 全球第三（美国，HBM3e 满载）；2026E 动态 PE 8-11×；TTM 受周期盈利放大影响"
+    },
+    {
+      "name": "SK海力士",
+      "code": "HXSCL.US",
+      "exchange": "US",
+      "currency": "USD",
+      "standard": "IFRS",
+      "pe": 10.57,
+      "pb": 8.5,
+      "growth_pct": 60,
+      "as_of": "2026-08-18",
+      "note": "DRAM IDM 全球第二（韩国，HBM 全球第一），ADR 口径；2026E 动态 PE 5-6×"
+    },
+    {
+      "name": "三星电子",
+      "code": "SSNLF.US",
+      "exchange": "US",
+      "currency": "USD",
+      "standard": "IFRS",
+      "pe": 9.56,
+      "pb": 3.9,
+      "growth_pct": 25,
+      "as_of": "2026-08-18",
+      "note": "全球 DRAM 龙头（集团含手机/代工，估值被低毛利业务拖累）；2026E 动态 PE 5-8×"
+    }
+  ],
+  "industry_index": {
+    "name": "半导体（存储）板块",
+    "pe_median": 55,
+    "pb_median": 6,
+    "index_growth_pct": 45,
+    "index_long_term_growth": 8,
+    "source": "公开板块估值（估算参考）",
+    "as_of": "2026-08-19",
+    "note": "存储板块整体估值；与可比法交叉验证（周期股行业指标法仅作检验）"
+  },
+  "sentiment": {
+    "sector_heat": "high",
+    "company_news_sentiment": "positive",
+    "sentiment_adjustment_pct": null,
+    "events": [
+      {
+        "type": "行业景气",
+        "title": "DRAM 供需紧张涨价潮持续（AI 需求+原厂扩产有限）",
+        "date": "2026-08",
+        "impact_direction": "positive",
+        "importance": "high",
+        "impact_target": "growth",
+        "impact_pct": 0.1,
+        "source": "公开行业报道"
+      },
+      {
+        "type": "政策",
+        "title": "国产存储自主可控、大基金支持",
+        "date": "2026-08",
+        "impact_direction": "positive",
+        "importance": "medium",
+        "impact_target": "multiple",
+        "impact_pct": 0.05,
+        "source": "政策公开信息"
+      },
+      {
+        "type": "公司",
+        "title": "科创板 IPO 过会并提交注册",
+        "date": "2026-05",
+        "impact_direction": "positive",
+        "importance": "medium",
+        "impact_target": "multiple",
+        "impact_pct": 0.05,
+        "source": "上交所公告"
+      }
+    ],
+    "risks": [
+      {
+        "type": "周期回落",
+        "severity": "high",
+        "impact_target": "wacc",
+        "description": "DRAM 周期见顶回落风险（2027-2028 新产能释放后价格承压）"
+      },
+      {
+        "type": "竞争",
+        "severity": "medium",
+        "impact_target": "margin",
+        "description": "三星/SK海力士/美光扩产与技术压制"
+      }
+    ],
+    "policy": [
+      {
+        "policy": "国产存储自主可控",
+        "direction": "利好",
+        "impact_target": "multiple",
+        "impact_pct": 0.05
+      }
+    ],
+    "investor_orientation": {
+      "lean": "乐观",
+      "basis": "存储涨价+国产替代双主线",
+      "horizon": "中短期"
+    },
+    "evidence": "DRAM 涨价潮/IPO 过会（公开检索 2026-08-19）"
+  },
+  "preferences": {
+    "weights": {
+      "dcf": 0.25,
+      "comparable": 0.55,
+      "sentiment": 0.2
+    },
+    "scenario_weights": {
+      "bear": 0.25,
+      "base": 0.5,
+      "bull": 0.25
+    },
+    "exclude_outliers": true,
+    "adaptive_scenarios": true,
+    "use_mc_calibration": true,
+    "enable_peg_in_synthesis": false,
+    "anchor_update": {
+      "enabled": true,
+      "anchor_value": 3000.0,
+      "anchor_type": "external",
+      "sigma_pct": 0.25,
+      "note": "外部锚=发行市值约 3000 亿（发行价 8.66 元×总股本估算 346 亿股）；上市首日收盘 49 元对应更高市值——两档价格信号均可参照"
+    },
+    "note_weights": "周期股：DCF 权重 0.25；PEG 单列不参与（周期股增速峰值不可外推，PEG 参考性弱）"
+  },
+  "data_sources": [
+    {
+      "item": "2025 年报财务（营收 617.99 亿/归母 18.75 亿/扣非 53.16 亿/毛利率 41.02%）",
+      "source": "招股书/证券时报（公开检索）",
+      "as_of": "2026-08-19"
+    },
+    {
+      "item": "2026Q1 业绩（营收 508 亿 +719%/净利 330 亿/OCF 425.66 亿）",
+      "source": "招股书（公开检索）",
+      "as_of": "2026-08-19"
+    },
+    {
+      "item": "IPO 安排（科创板 688825.SH，募资 295 亿，2026-05-27 过会）",
+      "source": "上交所/证券时报",
+      "as_of": "2026-08-19"
+    },
+    {
+      "item": "可比公司行情（PE/PB）",
+      "source": "公开行情 2026-08-19",
+      "as_of": "2026-08-19"
+    }
+  ]
+}

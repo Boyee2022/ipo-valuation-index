@@ -1,0 +1,72 @@
+{
+  "$note": "复用起点：替换 meta/financials/comparables/fundraising/sentiment 字段即可对新公司估值。金额=亿元，比率=小数，股票=亿股。sentiment.sentiment_adjustment_pct=null 表示由引擎自动生成（推荐）。示例：芯曜微电（AI 芯片设计，科创板拟 IPO）。",
+  "meta": {
+    "company": "芯曜微电",
+    "ticker": "拟IPO",
+    "industry": "AI芯片设计（Fabless）",
+    "exchange": "科创板",
+    "one_line_input": "某AI芯片设计公司，近三年营收复合增长30%，净利率20%，拟科创板IPO，请估值",
+    "as_of_date": "2026-08-14",
+    "base_case_id": ""
+  },
+  "financials": {
+    "revenue_latest_ttm": 12.5,
+    "revenue_by_year": { "2023": 7.4, "2024": 9.6, "2025": 12.5 },
+    "net_profit_latest_ttm": 2.5,
+    "net_margin": 0.2,
+    "gross_margin": 0.58,
+    "cagr_3y": 0.3,
+    "ebitda_ttm": 3.2,
+    "r_and_d_ratio": 0.18,
+    "ocf_to_net_profit": 0.9,
+    "goodwill_ratio": 0.02,
+    "net_cash": 1.8,
+    "growth_forecast": { "2026": 0.35, "2027": 0.3, "2028": 0.25 },
+    "terminal_growth": 0.06,
+    "wacc": 0.11,
+    "total_shares_after_issue": 2.4,
+    "issue_shares": 0.36,
+    "loss_making": false,
+    "receivables_to_revenue": 0.25,
+    "inventory_to_revenue": 0.15,
+    "gross_margin_trend_pp": 0,
+    "nonrecurring_ratio": 0,
+    "ff_factor_adjust": null
+  },
+  "segment_benchmark": {
+    "median_ps": 8.5,
+    "median_pe": 38.0,
+    "note": "AI芯片设计环节估值中枢（可比口径，来源：行业统计，2026-08）"
+  },
+  "comparables": [
+    { "name": "芯原股份", "code": "688521.SH", "mktcap": 420, "net_profit": 3.0, "revenue": 28, "pe": 120, "ps": 14, "ev_ebitda": 55, "growth_pct": 30, "note": "IP授权+芯片定制，2026-08行情" },
+    { "name": "澜起科技", "code": "688008.SH", "mktcap": 980, "net_profit": 18, "revenue": 45, "pe": 55, "ps": 21, "ev_ebitda": 32, "growth_pct": 25, "note": "内存接口芯片，2026-08行情" },
+    { "name": "海光信息", "code": "688041.SH", "mktcap": 2200, "net_profit": 30, "revenue": 90, "pe": 75, "ps": 23, "ev_ebitda": 36, "growth_pct": 35, "note": "CPU/DCU，2026-08行情" },
+    { "name": "龙芯中科", "code": "688047.SH", "mktcap": 600, "net_profit": 2.5, "revenue": 16, "pe": 95, "ps": 28, "ev_ebitda": 45, "growth_pct": 28, "note": "自主CPU，2026-08行情" }
+  ],
+  "fundraising": {
+    "planned_raise": 11.0,
+    "projects": [
+      { "name": "先进制程AI芯片研发", "amount": 6.0, "target_revenue_add": 5.0, "target_profit_add": 1.0, "target_year": 2028 },
+      { "name": "车规级芯片产线", "amount": 3.0, "target_revenue_add": 2.5, "target_profit_add": 0.4, "target_year": 2029 },
+      { "name": "补充流动资金", "amount": 2.0, "target_revenue_add": 0.5, "target_profit_add": 0.2, "target_year": 2027 }
+    ],
+    "post_ipo_years_revenue_add": 8.0,
+    "post_ipo_years_profit_add": 1.6
+  },
+  "sentiment": {
+    "sector_heat": "high",
+    "company_news_sentiment": "neutral",
+    "sentiment_adjustment_pct": null,
+    "evidence": "AI芯片国产替代主题热度高；公司近期无重大负面舆情（公开检索，2026-08，未验证）"
+  },
+  "preferences": {
+    "weights": { "dcf": 0.3, "comparable": 0.5, "sentiment": 0.2 },
+    "scenario_weights": { "bear": 0.25, "base": 0.5, "bull": 0.25 },
+    "exclude_outliers": true
+  },
+  "data_sources": [
+    { "source": "招股书/审计报告/用户提供", "items": ["财务数据"] },
+    { "source": "WebSearch/公开行情", "items": ["可比公司行情", "行业数据", "舆情"] }
+  ]
+}

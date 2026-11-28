@@ -1,0 +1,722 @@
+{
+  "meta": {
+    "company": "芯曜微电",
+    "ticker": "拟IPO",
+    "industry": "AI芯片设计（Fabless）",
+    "exchange": "科创板",
+    "one_line_input": "某AI芯片设计公司，近三年营收复合增长30%，净利率20%，拟科创板IPO，请估值",
+    "as_of_date": "2026-08-14",
+    "base_case_id": ""
+  },
+  "weights": {
+    "dcf": 0.3,
+    "comparable": 0.5,
+    "sentiment": 0.2
+  },
+  "scenario_weights": {
+    "bear": 0.25,
+    "base": 0.5,
+    "bull": 0.25
+  },
+  "quality_scorecard": {
+    "score": 64.5,
+    "adjustment_pct": 0.0113,
+    "detail": [
+      {
+        "indicator": "ocf_to_net_profit",
+        "value": 0.9,
+        "weight": 0.3,
+        "points": 10
+      },
+      {
+        "indicator": "gross_margin_trend_pp",
+        "value": 0,
+        "weight": 0.2,
+        "points": 0
+      },
+      {
+        "indicator": "receivables_to_revenue",
+        "value": 0.25,
+        "weight": 0.2,
+        "points": 0
+      },
+      {
+        "indicator": "goodwill_ratio",
+        "value": 0.02,
+        "weight": 0.15,
+        "points": 5
+      },
+      {
+        "indicator": "nonrecurring_ratio",
+        "value": 0,
+        "weight": 0.15,
+        "points": 5
+      }
+    ],
+    "components_score": 4.5
+  },
+  "scenarios": {
+    "bear": {
+      "name": "bear",
+      "params": {
+        "growth_adj_pp": -10,
+        "margin_adj_pp": -3,
+        "multiple_factor": 0.8,
+        "wacc_adj_pp": 1,
+        "sentiment_factor": -0.05
+      },
+      "comparable": {
+        "pe": {
+          "samples": [
+            120,
+            55,
+            75,
+            95
+          ],
+          "excluded": [],
+          "median": 85.0,
+          "mean": 86.25,
+          "value_median": 180.62,
+          "value_mean": 183.28
+        },
+        "ps": {
+          "samples": [
+            14,
+            21,
+            23,
+            28
+          ],
+          "excluded": [],
+          "median": 22.0,
+          "mean": 21.5,
+          "value_median": 275.0,
+          "value_mean": 268.75
+        },
+        "ev_ebitda": {
+          "samples": [
+            55,
+            32,
+            36,
+            45
+          ],
+          "excluded": [],
+          "median": 40.5,
+          "mean": 42,
+          "value_median": 131.4
+        },
+        "peg": {
+          "samples": [
+            4.0,
+            2.2,
+            2.142857142857143,
+            3.392857142857143
+          ],
+          "excluded": [],
+          "median": 2.7964285714285717,
+          "value": 148.56
+        },
+        "synthesis": {
+          "method_values": [
+            180.62,
+            275.0,
+            131.4,
+            148.56
+          ],
+          "base_value": 183.9,
+          "range": [
+            131.4,
+            275.0
+          ]
+        }
+      },
+      "dcf": {
+        "wacc": 0.12,
+        "terminal_growth": 0.06,
+        "fcf0": 2.3906,
+        "growth_seq": [
+          0.25,
+          0.2,
+          0.15,
+          0.105,
+          0.0825
+        ],
+        "pv_sum": 14.16,
+        "terminal_value_pv": 49.45,
+        "equity_value": 65.41,
+        "detail": {
+          "pv_detail": [
+            {
+              "t": 1,
+              "growth": 0.25,
+              "fcf": 2.9883,
+              "pv": 2.6681
+            },
+            {
+              "t": 2,
+              "growth": 0.2,
+              "fcf": 3.5859,
+              "pv": 2.8587
+            },
+            {
+              "t": 3,
+              "growth": 0.15,
+              "fcf": 4.1238,
+              "pv": 2.9353
+            },
+            {
+              "t": 4,
+              "growth": 0.105,
+              "fcf": 4.5568,
+              "pv": 2.8959
+            },
+            {
+              "t": 5,
+              "growth": 0.0825,
+              "fcf": 4.9328,
+              "pv": 2.799
+            }
+          ],
+          "terminal_value": 87.1456,
+          "terminal_value_pv": 49.4487
+        },
+        "tv_share": 0.777
+      },
+      "adjustments": {
+        "quality": {
+          "adjustment_pct": 0.0113,
+          "score": 64.5,
+          "indicators": [
+            {
+              "indicator": "ocf_to_net_profit",
+              "value": 0.9,
+              "weight": 0.3,
+              "points": 10
+            },
+            {
+              "indicator": "gross_margin_trend_pp",
+              "value": 0,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "receivables_to_revenue",
+              "value": 0.25,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "goodwill_ratio",
+              "value": 0.02,
+              "weight": 0.15,
+              "points": 5
+            },
+            {
+              "indicator": "nonrecurring_ratio",
+              "value": 0,
+              "weight": 0.15,
+              "points": 5
+            }
+          ]
+        },
+        "goodwill": {
+          "adjustment_pct": 0.0,
+          "reason": "无显著商誉风险"
+        },
+        "sentiment": {
+          "adjustment_pct": 0.0,
+          "reason": "板块+5% + 个股+0% + 情景-5%；窗口30天"
+        },
+        "ff_calibration": {
+          "enabled": true,
+          "note": "未做因子校准（未提供 ff_factor_adjust / segment_median），置信度−1档",
+          "segment": {
+            "median_ps": 8.5,
+            "median_pe": 38.0,
+            "note": "AI芯片设计环节估值中枢（可比口径，来源：行业统计，2026-08）"
+          },
+          "segment_implied": [
+            143.44,
+            128.25
+          ],
+          "segment_note": "环节估值中枢隐含值（与可比法并列对比）"
+        },
+        "total_market_adjust": 0.0113
+      },
+      "comparable_raw": 183.9,
+      "comparable_adjusted": 185.98,
+      "dcf_value": 65.41,
+      "value": 149.81
+    },
+    "base": {
+      "name": "base",
+      "params": {
+        "growth_adj_pp": 0,
+        "margin_adj_pp": 0,
+        "multiple_factor": 1.0,
+        "wacc_adj_pp": 0,
+        "sentiment_factor": 0.0
+      },
+      "comparable": {
+        "pe": {
+          "samples": [
+            120,
+            55,
+            75,
+            95
+          ],
+          "excluded": [],
+          "median": 85.0,
+          "mean": 86.25,
+          "value_median": 286.88,
+          "value_mean": 291.09
+        },
+        "ps": {
+          "samples": [
+            14,
+            21,
+            23,
+            28
+          ],
+          "excluded": [],
+          "median": 22.0,
+          "mean": 21.5,
+          "value_median": 371.25,
+          "value_mean": 362.81
+        },
+        "ev_ebitda": {
+          "samples": [
+            55,
+            32,
+            36,
+            45
+          ],
+          "excluded": [],
+          "median": 40.5,
+          "mean": 42,
+          "value_median": 176.76
+        },
+        "peg": {
+          "samples": [
+            4.0,
+            2.2,
+            2.142857142857143,
+            3.392857142857143
+          ],
+          "excluded": [],
+          "median": 2.7964285714285717,
+          "value": 330.33
+        },
+        "synthesis": {
+          "method_values": [
+            286.88,
+            371.25,
+            176.76,
+            330.33
+          ],
+          "base_value": 291.31,
+          "range": [
+            176.76,
+            371.25
+          ]
+        }
+      },
+      "dcf": {
+        "wacc": 0.11,
+        "terminal_growth": 0.06,
+        "fcf0": 3.0375,
+        "growth_seq": [
+          0.35,
+          0.3,
+          0.25,
+          0.155,
+          0.1075
+        ],
+        "pv_sum": 23.02,
+        "terminal_value_pv": 107.24,
+        "equity_value": 132.06,
+        "detail": {
+          "pv_detail": [
+            {
+              "t": 1,
+              "growth": 0.35,
+              "fcf": 4.1006,
+              "pv": 3.6943
+            },
+            {
+              "t": 2,
+              "growth": 0.3,
+              "fcf": 5.3308,
+              "pv": 4.3266
+            },
+            {
+              "t": 3,
+              "growth": 0.25,
+              "fcf": 6.6635,
+              "pv": 4.8723
+            },
+            {
+              "t": 4,
+              "growth": 0.155,
+              "fcf": 7.6964,
+              "pv": 5.0698
+            },
+            {
+              "t": 5,
+              "growth": 0.1075,
+              "fcf": 8.5237,
+              "pv": 5.0584
+            }
+          ],
+          "terminal_value": 180.7028,
+          "terminal_value_pv": 107.2383
+        },
+        "tv_share": 0.823
+      },
+      "adjustments": {
+        "quality": {
+          "adjustment_pct": 0.0113,
+          "score": 64.5,
+          "indicators": [
+            {
+              "indicator": "ocf_to_net_profit",
+              "value": 0.9,
+              "weight": 0.3,
+              "points": 10
+            },
+            {
+              "indicator": "gross_margin_trend_pp",
+              "value": 0,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "receivables_to_revenue",
+              "value": 0.25,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "goodwill_ratio",
+              "value": 0.02,
+              "weight": 0.15,
+              "points": 5
+            },
+            {
+              "indicator": "nonrecurring_ratio",
+              "value": 0,
+              "weight": 0.15,
+              "points": 5
+            }
+          ]
+        },
+        "goodwill": {
+          "adjustment_pct": 0.0,
+          "reason": "无显著商誉风险"
+        },
+        "sentiment": {
+          "adjustment_pct": 0.05,
+          "reason": "板块+5% + 个股+0% + 情景+0%；窗口30天"
+        },
+        "ff_calibration": {
+          "enabled": true,
+          "note": "未做因子校准（未提供 ff_factor_adjust / segment_median），置信度−1档",
+          "segment": {
+            "median_ps": 8.5,
+            "median_pe": 38.0,
+            "note": "AI芯片设计环节估值中枢（可比口径，来源：行业统计，2026-08）"
+          },
+          "segment_implied": [
+            143.44,
+            128.25
+          ],
+          "segment_note": "环节估值中枢隐含值（与可比法并列对比）"
+        },
+        "total_market_adjust": 0.0613
+      },
+      "comparable_raw": 291.31,
+      "comparable_adjusted": 309.17,
+      "dcf_value": 132.06,
+      "value": 256.04
+    },
+    "bull": {
+      "name": "bull",
+      "params": {
+        "growth_adj_pp": 10,
+        "margin_adj_pp": 3,
+        "multiple_factor": 1.2,
+        "wacc_adj_pp": -1,
+        "sentiment_factor": 0.05
+      },
+      "comparable": {
+        "pe": {
+          "samples": [
+            120,
+            55,
+            75,
+            95
+          ],
+          "excluded": [],
+          "median": 85.0,
+          "mean": 86.25,
+          "value_median": 425.21,
+          "value_mean": 431.47
+        },
+        "ps": {
+          "samples": [
+            14,
+            21,
+            23,
+            28
+          ],
+          "excluded": [],
+          "median": 22.0,
+          "mean": 21.5,
+          "value_median": 478.5,
+          "value_mean": 467.62
+        },
+        "ev_ebitda": {
+          "samples": [
+            55,
+            32,
+            36,
+            45
+          ],
+          "excluded": [],
+          "median": 40.5,
+          "mean": 42,
+          "value_median": 227.3
+        },
+        "peg": {
+          "samples": [
+            4.0,
+            2.2,
+            2.142857142857143,
+            3.392857142857143
+          ],
+          "excluded": [],
+          "median": 2.7964285714285717,
+          "value": 629.51
+        },
+        "synthesis": {
+          "method_values": [
+            425.21,
+            478.5,
+            227.3,
+            629.51
+          ],
+          "base_value": 440.13,
+          "range": [
+            227.3,
+            629.51
+          ]
+        }
+      },
+      "dcf": {
+        "wacc": 0.1,
+        "terminal_growth": 0.06,
+        "fcf0": 3.7519,
+        "growth_seq": [
+          0.45,
+          0.4,
+          0.35,
+          0.205,
+          0.1325
+        ],
+        "pv_sum": 36.14,
+        "terminal_value_pv": 230.88,
+        "equity_value": 268.82,
+        "detail": {
+          "pv_detail": [
+            {
+              "t": 1,
+              "growth": 0.45,
+              "fcf": 5.4402,
+              "pv": 4.9457
+            },
+            {
+              "t": 2,
+              "growth": 0.4,
+              "fcf": 7.6163,
+              "pv": 6.2945
+            },
+            {
+              "t": 3,
+              "growth": 0.35,
+              "fcf": 10.282,
+              "pv": 7.725
+            },
+            {
+              "t": 4,
+              "growth": 0.205,
+              "fcf": 12.3898,
+              "pv": 8.4624
+            },
+            {
+              "t": 5,
+              "growth": 0.1325,
+              "fcf": 14.0315,
+              "pv": 8.7124
+            }
+          ],
+          "terminal_value": 371.8342,
+          "terminal_value_pv": 230.8798
+        },
+        "tv_share": 0.865
+      },
+      "adjustments": {
+        "quality": {
+          "adjustment_pct": 0.0113,
+          "score": 64.5,
+          "indicators": [
+            {
+              "indicator": "ocf_to_net_profit",
+              "value": 0.9,
+              "weight": 0.3,
+              "points": 10
+            },
+            {
+              "indicator": "gross_margin_trend_pp",
+              "value": 0,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "receivables_to_revenue",
+              "value": 0.25,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "goodwill_ratio",
+              "value": 0.02,
+              "weight": 0.15,
+              "points": 5
+            },
+            {
+              "indicator": "nonrecurring_ratio",
+              "value": 0,
+              "weight": 0.15,
+              "points": 5
+            }
+          ]
+        },
+        "goodwill": {
+          "adjustment_pct": 0.0,
+          "reason": "无显著商誉风险"
+        },
+        "sentiment": {
+          "adjustment_pct": 0.1,
+          "reason": "板块+5% + 个股+0% + 情景+5%；窗口30天"
+        },
+        "ff_calibration": {
+          "enabled": true,
+          "note": "未做因子校准（未提供 ff_factor_adjust / segment_median），置信度−1档",
+          "segment": {
+            "median_ps": 8.5,
+            "median_pe": 38.0,
+            "note": "AI芯片设计环节估值中枢（可比口径，来源：行业统计，2026-08）"
+          },
+          "segment_implied": [
+            143.44,
+            128.25
+          ],
+          "segment_note": "环节估值中枢隐含值（与可比法并列对比）"
+        },
+        "total_market_adjust": 0.1113
+      },
+      "comparable_raw": 440.13,
+      "comparable_adjusted": 489.12,
+      "dcf_value": 268.82,
+      "value": 423.03
+    }
+  },
+  "synthesis": {
+    "bear_value": 149.81,
+    "base_value": 256.04,
+    "bull_value": 423.03,
+    "weighted_mid": 271.23,
+    "interval": [
+      149.81,
+      423.03
+    ],
+    "interval_mid": 286.42,
+    "method_cv": 0.401,
+    "dcf_tv_share_base": 0.823,
+    "dcf_vs_comparable_gap": 2.21
+  },
+  "confidence": {
+    "score": 100.0,
+    "level": "高",
+    "data_completeness": 1.0,
+    "quality_score": 64.5,
+    "ff_calibrated": true
+  },
+  "sensitivity": {
+    "growth_pe_matrix": {
+      "-20%": {
+        "-20%": 217.6,
+        "-10%": 244.8,
+        "+0%": 272.0,
+        "+10%": 299.2,
+        "+20%": 326.4
+      },
+      "-10%": {
+        "-20%": 223.55,
+        "-10%": 251.49,
+        "+0%": 279.44,
+        "+10%": 307.38,
+        "+20%": 335.32
+      },
+      "+0%": {
+        "-20%": 229.5,
+        "-10%": 258.19,
+        "+0%": 286.88,
+        "+10%": 315.56,
+        "+20%": 344.25
+      },
+      "+10%": {
+        "-20%": 235.45,
+        "-10%": 264.88,
+        "+0%": 294.31,
+        "+10%": 323.74,
+        "+20%": 353.18
+      },
+      "+20%": {
+        "-20%": 241.4,
+        "-10%": 271.57,
+        "+0%": 301.75,
+        "+10%": 331.93,
+        "+20%": 362.1
+      }
+    },
+    "wacc_sensitivity": {
+      "-1%": 165.74,
+      "+0%": 132.06,
+      "+1%": 109.63
+    },
+    "note": "矩阵=TTM营收×(1+g1×(1+Δg))×净利率×(可比PE中位数×(1+Δ倍数))，PE口径"
+  },
+  "ipo_check": {
+    "price_per_share": 113.01,
+    "diluted_eps": 1.0417,
+    "issue_pe": 108.5,
+    "comparable_pe_median": 85.0,
+    "pe_deviation": 0.2764,
+    "pe_status": "提示（偏离+27.6%，建议补充论证）",
+    "issue_ps": 21.7,
+    "comparable_ps_median": 22.0,
+    "ps_deviation": -0.0137,
+    "ps_status": "正常✅（偏离-1.4%）",
+    "raise_amount": 40.68,
+    "planned_raise": 11.0,
+    "raise_deviation": 2.6982,
+    "raise_status": "超募⚠️",
+    "project_increment_value": 312.0,
+    "project_target_year": "达产后",
+    "float_ratio": 0.15,
+    "liquidity_discount": -0.05,
+    "net_cash": 1.8
+  },
+  "warnings": [],
+  "engine_version": "2.1.0"
+}

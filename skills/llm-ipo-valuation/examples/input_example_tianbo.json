@@ -1,0 +1,359 @@
+{
+  "$schema_note": "天博智能（603448.SH）估值输入。上市公司（主板 IPO 招股中）→ asset_type=mature（成熟制造）。数据来源：招股书/2025年报（公开检索，2026-08-19 基准）；估算字段已在 note 标注。单位：金额=亿元、比率=小数、股票=亿股。",
+  "meta": {
+    "company": "天博智能",
+    "ticker": "603448.SH",
+    "industry": "汽车热管理零部件（调温器/智能水阀/温度传感器/AVAS 声学）",
+    "exchange": "上交所主板",
+    "one_line_input": "天博智能（603448）汽车热管理系统零部件龙头，2025年营收19.61亿元（+15.8%），归母净利3.51亿元，拟主板IPO发行3000万股募资20.57亿元，请估值",
+    "as_of_date": "2026-08-19",
+    "base_case_id": "",
+    "asset_type": "mature",
+    "note_asset_type": "成熟期重资产制造（主板）：主方法 EV/EBITDA、PE、PB + DCF；NAV 作下限参考"
+  },
+  "financials": {
+    "revenue_latest_ttm": 19.61,
+    "revenue_by_year": {
+      "2023": 12.7,
+      "2024": 16.93,
+      "2025": 19.61
+    },
+    "net_profit_latest_ttm": 3.51,
+    "net_margin": 0.179,
+    "gross_margin": 0.2923,
+    "cagr_3y": 0.243,
+    "ebitda_ttm": 5.0,
+    "r_and_d_ratio": 0.0406,
+    "ocf_to_net_profit": 0.64,
+    "goodwill_ratio": 0.0,
+    "net_cash": 3.0,
+    "growth_forecast": {
+      "2026": 0.0,
+      "2027": 0.1,
+      "2028": 0.12
+    },
+    "terminal_growth": 0.03,
+    "wacc": 0.09,
+    "total_shares_after_issue": 1.2,
+    "issue_shares": 0.3,
+    "loss_making": false,
+    "receivables_to_revenue": 0.29,
+    "inventory_to_revenue": 0.19,
+    "gross_margin_trend_pp": -0.5,
+    "nonrecurring_ratio": 0.05,
+    "ff_factor_adjust": null,
+    "wacc_params": {
+      "enabled": true,
+      "rf": 0.02,
+      "erp": 0.06,
+      "beta": 1.1,
+      "unlevered_beta": null,
+      "comparable_betas": null,
+      "industry_beta": null,
+      "d_e_ratio": 0.1,
+      "tax_rate": 0.15,
+      "cost_of_debt": 0.035,
+      "note": "CAPM 分解：ke=0.02+1.1×0.06=8.6%，WACC≈8.1% vs 显式 9%（制造业成熟期含规模溢价，偏差<1pp）"
+    },
+    "capex_to_revenue": 0.08,
+    "note_capex": "募投前资本开支/营收约 8%（扩产项目投产后将上升至 10%+，募投新增折旧最高 1.65 亿/年）",
+    "fcf_by_year": null,
+    "ocf_by_year": null,
+    "net_assets": 17.48,
+    "note_net_assets": "2025 末归母净资产 17.48 亿元（总资产 25.02 亿、母资产负债率 22.85%）"
+  },
+  "segment_benchmark": {
+    "required": false,
+    "median_ps": null,
+    "median_pe": null,
+    "note": "汽车热管理零部件环节中枢（未单列，以可比公司中位近似）"
+  },
+  "comparables": [
+    {
+      "name": "三花智控",
+      "code": "002050.SZ",
+      "mktcap": 1916,
+      "net_profit": 48,
+      "revenue": 198,
+      "pe": 57.62,
+      "ps": 9.7,
+      "ev_ebitda": null,
+      "pb": 7.36,
+      "net_margin": 0.24,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": 1.15,
+      "capex_to_rev": 0.08,
+      "d_e_ratio": 0.2,
+      "growth_pct": 20,
+      "note": "PE/PB 为 2025-12-31 行情（TTM）；PS 按市值/2025 营收估算；热管理龙头（含家电业务）"
+    },
+    {
+      "name": "银轮股份",
+      "code": "002126.SZ",
+      "mktcap": 337,
+      "net_profit": 9.2,
+      "revenue": 135,
+      "pe": 37.47,
+      "ps": 2.5,
+      "ev_ebitda": null,
+      "pb": 4.73,
+      "net_margin": 0.07,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": 1.1,
+      "capex_to_rev": 0.06,
+      "d_e_ratio": 0.4,
+      "growth_pct": 15,
+      "note": "PE/PB 为 2025-12-31 行情；热交换器/热管理（净利率低因规模口径）"
+    },
+    {
+      "name": "腾龙股份",
+      "code": "603158.SH",
+      "mktcap": 38,
+      "net_profit": 1.1,
+      "revenue": 35,
+      "pe": 33.3,
+      "ps": 1.1,
+      "ev_ebitda": null,
+      "pb": 2.24,
+      "net_margin": 0.03,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": 1.2,
+      "capex_to_rev": 0.05,
+      "d_e_ratio": 0.3,
+      "growth_pct": 10,
+      "note": "PE/PB 为 2025-12-31 行情；热交换系统管路"
+    },
+    {
+      "name": "飞龙股份",
+      "code": "002536.SZ",
+      "mktcap": 125,
+      "net_profit": 3.0,
+      "revenue": 42,
+      "pe": 48.81,
+      "ps": 3.0,
+      "ev_ebitda": null,
+      "pb": 4.94,
+      "net_margin": 0.07,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": 1.1,
+      "capex_to_rev": 0.06,
+      "d_e_ratio": 0.3,
+      "growth_pct": 15,
+      "note": "PE/PB 为 2025-12-31 行情；水泵/热管理（2025 股价大涨 157%，弹性高）"
+    }
+  ],
+  "transactions": [],
+  "recent_financing": {
+    "required": false,
+    "enabled": false,
+    "note": "上市公司招股阶段，无一级市场融资锚（首发定价即发行价）"
+  },
+  "industry_index": {
+    "required": false,
+    "name": "汽车零部件/热管理板块（可比中位近似）",
+    "pe_median": 43.1,
+    "ps_median": 2.75,
+    "pb_median": 4.84,
+    "index_growth_pct": 12,
+    "index_long_term_growth": 5,
+    "source": "Wind 汽车热管理板块指数 02GN2146 + 可比公司中位（2025-12-31），2026-08",
+    "as_of": "2026-08-19",
+    "note": "行业指数参照（口径：可比公司中位近似；2025 板块指数涨 56%）"
+  },
+  "fundraising": {
+    "required": false,
+    "planned_raise": 20.57,
+    "projects": [
+      {
+        "name": "智能热管理部件及系统制造建设项目",
+        "amount": 9.0,
+        "target_revenue_add": 8.0,
+        "target_profit_add": 1.2,
+        "target_year": 2029
+      },
+      {
+        "name": "汽车热管理系统及核心元器件生产基地扩产技改",
+        "amount": 7.0,
+        "target_revenue_add": 6.0,
+        "target_profit_add": 1.0,
+        "target_year": 2029
+      },
+      {
+        "name": "天博研发中心建设项目",
+        "amount": 2.6,
+        "target_revenue_add": 0.0,
+        "target_profit_add": 0.0,
+        "target_year": 2029
+      },
+      {
+        "name": "信息化中心升级建设项目",
+        "amount": 2.0,
+        "target_revenue_add": 0.0,
+        "target_profit_add": 0.0,
+        "target_year": 2029
+      }
+    ],
+    "post_ipo_years_revenue_add": 14.0,
+    "post_ipo_years_profit_add": 2.2,
+    "note": "募投新增折旧摊销最高 1.65 亿/年（占 2025 营业利润 39.36%），投产前短期压制利润"
+  },
+  "sentiment": {
+    "required": false,
+    "sector_heat": "neutral",
+    "company_news_sentiment": "neutral",
+    "sentiment_adjustment_pct": null,
+    "evidence": "IPO 注册获批（2026-07-13）+ 8-18 启动招股；上市前大额分红争议（报告期分红 5.94 亿/占比 75.58%）；2026Q1 业绩下滑（营收 -6.42%、扣非 -14.42%）",
+    "events": [
+      {
+        "type": "ipo",
+        "title": "主板 IPO 注册获批并于 8-18 启动招股、8-21 询价",
+        "date": "2026-08-18",
+        "impact_direction": "positive",
+        "importance": "high",
+        "impact_target": "multiple",
+        "impact_pct": 6,
+        "source": "证券日报"
+      },
+      {
+        "type": "业绩",
+        "title": "2026Q1 营收 4.07 亿（-6.42%）、扣非净利（-14.42%），H1 预计 -8.74%~+4.30%",
+        "date": "2026-06-01",
+        "impact_direction": "negative",
+        "importance": "high",
+        "impact_target": "growth",
+        "impact_pct": -4,
+        "source": "招股书"
+      },
+      {
+        "type": "荣誉",
+        "title": "车用智能调温器入选国家级制造业单项冠军（2025-12）",
+        "date": "2025-12-01",
+        "impact_direction": "positive",
+        "importance": "medium",
+        "impact_target": "multiple",
+        "impact_pct": 3,
+        "source": "招股书"
+      },
+      {
+        "type": "第二曲线",
+        "title": "智能水阀切入储能/AI 数据中心服务器热管理，已与知名企业合作",
+        "date": "2026-01-01",
+        "impact_direction": "positive",
+        "importance": "medium",
+        "impact_target": "growth",
+        "impact_pct": 3,
+        "source": "每日经济新闻"
+      }
+    ],
+    "risks": [
+      {
+        "type": "客户替代",
+        "description": "比亚迪智能水阀销售收入 -92.91%（自产替代），第一大客户依赖存在被替代风险",
+        "severity": "high",
+        "impact_target": "margin"
+      },
+      {
+        "type": "客户集中",
+        "description": "前五大客户占比 42.89% 逐年上升，主机厂年降压力（综合年降约 7%）",
+        "severity": "medium",
+        "impact_target": "margin"
+      },
+      {
+        "type": "治理",
+        "description": "实控人父子控制 95.57% 表决权；报告期大额分红 5.94 亿引监管关注",
+        "severity": "high",
+        "impact_target": "wacc"
+      },
+      {
+        "type": "募投折旧",
+        "description": "募投新增折旧摊销最高 1.65 亿/年（占 2025 营业利润 39.36%），投产前短期压制利润",
+        "severity": "medium",
+        "impact_target": "margin"
+      },
+      {
+        "type": "诉讼",
+        "description": "作为被告未决诉讼 1,061.91 万元；参股馨联动力股权回购担保仲裁",
+        "severity": "low",
+        "impact_target": "multiple"
+      }
+    ],
+    "policy": [
+      {
+        "policy": "汽车智能化/网联化/电动化四化趋势",
+        "direction": "利好",
+        "impact_target": "growth",
+        "impact_pct": 5,
+        "source": "行业趋势"
+      },
+      {
+        "policy": "监管严查上市前突击分红（负面清单管理）",
+        "direction": "利空",
+        "impact_target": "multiple",
+        "impact_pct": -2,
+        "source": "证监会 2024-03 文件"
+      },
+      {
+        "policy": "AI 数据中心/储能热管理需求提升",
+        "direction": "利好",
+        "impact_target": "growth",
+        "impact_pct": 3,
+        "source": "行业趋势"
+      }
+    ],
+    "investor_orientation": {
+      "lean": "中性",
+      "basis": "IPO 在即+单项冠军+第二曲线 vs 业绩下滑+分红争议+客户替代风险",
+      "horizon": "12个月"
+    },
+    "note": "舆情结构化：事件/政策聚合为 impact_map（假设层）；risks 高严重度映射 Bear 情景 WACC/净利率调整"
+  },
+  "preferences": {
+    "weights": {
+      "dcf": 0.3,
+      "comparable": 0.5,
+      "sentiment": 0.2
+    },
+    "scenario_weights": {
+      "bear": 0.25,
+      "base": 0.5,
+      "bull": 0.25
+    },
+    "exclude_outliers": true,
+    "use_mc_calibration": false,
+    "growth_weights": {
+      "self": 0.4,
+      "comparable": 0.4,
+      "industry": 0.2,
+      "note": "增长三角校准权重：自身历史 CAGR 24.3% / 可比增速中位 15% / 行业增速 12%"
+    }
+  },
+  "data_sources": [
+    {
+      "source": "招股书（上会稿）/2025年报/证券日报",
+      "items": [
+        "财务数据",
+        "发行安排",
+        "募投"
+      ]
+    },
+    {
+      "source": "Wind/公开检索（PE/PB 为 2025-12-31 行情；PS/EBITDA/净现金为估算）",
+      "items": [
+        "可比公司估值",
+        "行业数据",
+        "舆情"
+      ]
+    }
+  ],
+  "nav": {
+    "enabled": true,
+    "net_assets": 17.48,
+    "adjustments": 0.0,
+    "liquidation_scenario": false,
+    "note": "净资产法：成熟制造下限参考（NAV/股 14.57 元）"
+  }
+}

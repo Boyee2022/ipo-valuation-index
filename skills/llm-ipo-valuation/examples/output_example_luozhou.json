@@ -1,0 +1,1139 @@
+{
+  "meta": {
+    "company": "洛轴股份",
+    "ticker": "301699.SZ",
+    "industry": "轴承制造（通用设备 C34：风电/轨交/航空航天/新能源汽车轴承）",
+    "exchange": "创业板",
+    "one_line_input": "洛轴股份（301699）中国轴承行业规模最大的综合性制造企业之一，2025年营收60.34亿元（+29%），归母净利5.29亿元（+111%），拟创业板IPO发行1.24亿股募资18亿元，请估值",
+    "as_of_date": "2026-08-19",
+    "base_case_id": "",
+    "asset_type": "mature",
+    "note_asset_type": "成熟期重资产制造（创业板）：主方法 EV/EBITDA、PE、PB + DCF；NAV 作下限参考"
+  },
+  "weights": {
+    "dcf": 0.3,
+    "comparable": 0.5,
+    "sentiment": 0.2
+  },
+  "scenario_weights": {
+    "bear": 0.25,
+    "base": 0.5,
+    "bull": 0.25
+  },
+  "quality_scorecard": {
+    "score": 62.0,
+    "adjustment_pct": 0.005,
+    "detail": [
+      {
+        "indicator": "ocf_to_net_profit",
+        "value": 0.65,
+        "weight": 0.3,
+        "points": 5
+      },
+      {
+        "indicator": "gross_margin_trend_pp",
+        "value": -0.5,
+        "weight": 0.2,
+        "points": 0
+      },
+      {
+        "indicator": "receivables_to_revenue",
+        "value": 0.41,
+        "weight": 0.2,
+        "points": -5
+      },
+      {
+        "indicator": "goodwill_ratio",
+        "value": 0.0,
+        "weight": 0.15,
+        "points": 5
+      },
+      {
+        "indicator": "nonrecurring_ratio",
+        "value": 0.04,
+        "weight": 0.15,
+        "points": 5
+      }
+    ],
+    "components_score": 2.0
+  },
+  "scenarios": {
+    "bear": {
+      "name": "bear",
+      "params": {
+        "growth_adj_pp": 3.1999999999999993,
+        "margin_adj_pp": -3.0,
+        "multiple_factor": 0.8496000000000001,
+        "wacc_adj_pp": 1.0,
+        "sentiment_factor": -0.05
+      },
+      "comparable": {
+        "pe": {
+          "samples": [
+            22.38,
+            38.02,
+            82.28,
+            84.67,
+            279.71
+          ],
+          "excluded": [],
+          "median": 82.28,
+          "mean": 101.41199999999999,
+          "value_median": 272.05,
+          "value_mean": 335.31
+        },
+        "ps": {
+          "samples": [
+            3.5,
+            4.0,
+            7.0,
+            4.5,
+            6.5
+          ],
+          "excluded": [],
+          "median": 4.5,
+          "mean": 5.1,
+          "value_median": 256.53,
+          "value_mean": 290.73
+        },
+        "pb": {
+          "samples": [
+            2.5,
+            2.04,
+            5.35,
+            3.87,
+            8.59
+          ],
+          "excluded": [],
+          "median": 3.87,
+          "mean": 4.47,
+          "value_median": 139.74,
+          "value_mean": 161.4
+        },
+        "peg": {
+          "samples": [
+            1.119,
+            1.9010000000000002,
+            5.485333333333333,
+            5.644666666666667,
+            11.1884
+          ],
+          "excluded": [],
+          "median": 5.485333333333333,
+          "value": 203.13
+        },
+        "metrics": {
+          "pe": {
+            "median": 82.28,
+            "mean": 101.412,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.9113
+          },
+          "ps": {
+            "median": 4.5,
+            "mean": 5.1,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.2731
+          },
+          "ev_ebitda": {
+            "median": null,
+            "mean": null,
+            "n": 0,
+            "missing": 5,
+            "cv": null
+          },
+          "pb": {
+            "median": 3.87,
+            "mean": 4.47,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.5284
+          },
+          "net_margin": {
+            "median": 0.09,
+            "mean": 0.096,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.677
+          },
+          "roe": {
+            "median": null,
+            "mean": null,
+            "n": 0,
+            "missing": 5,
+            "cv": null
+          },
+          "ev_sales": {
+            "median": null,
+            "mean": null,
+            "n": 0,
+            "missing": 5,
+            "cv": null
+          },
+          "growth_pct": {
+            "median": 20,
+            "mean": 19,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.1969
+          }
+        },
+        "synthesis": {
+          "method_values": [
+            272.05,
+            256.53,
+            139.74,
+            203.13
+          ],
+          "base_value": 217.86,
+          "range": [
+            139.74,
+            272.05
+          ],
+          "peg_value": 203.13
+        }
+      },
+      "dcf": {
+        "wacc": 0.1,
+        "terminal_growth": 0.03,
+        "fcf0": 0.5503,
+        "growth_seq": [
+          0.112,
+          0.152,
+          0.152,
+          0.091,
+          0.0605
+        ],
+        "pv_sum": 2.94,
+        "terminal_value_pv": 8.58,
+        "equity_value": 11.52,
+        "detail": {
+          "pv_detail": [
+            {
+              "t": 1,
+              "growth": 0.112,
+              "fcf": 0.6119,
+              "pv": 0.5563
+            },
+            {
+              "t": 2,
+              "growth": 0.152,
+              "fcf": 0.7049,
+              "pv": 0.5826
+            },
+            {
+              "t": 3,
+              "growth": 0.152,
+              "fcf": 0.8121,
+              "pv": 0.6101
+            },
+            {
+              "t": 4,
+              "growth": 0.091,
+              "fcf": 0.886,
+              "pv": 0.6051
+            },
+            {
+              "t": 5,
+              "growth": 0.0605,
+              "fcf": 0.9396,
+              "pv": 0.5834
+            }
+          ],
+          "terminal_value": 13.8252,
+          "terminal_value_pv": 8.5844
+        },
+        "tv_share": 0.745
+      },
+      "adjustments": {
+        "quality": {
+          "adjustment_pct": 0.005,
+          "score": 62.0,
+          "indicators": [
+            {
+              "indicator": "ocf_to_net_profit",
+              "value": 0.65,
+              "weight": 0.3,
+              "points": 5
+            },
+            {
+              "indicator": "gross_margin_trend_pp",
+              "value": -0.5,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "receivables_to_revenue",
+              "value": 0.41,
+              "weight": 0.2,
+              "points": -5
+            },
+            {
+              "indicator": "goodwill_ratio",
+              "value": 0.0,
+              "weight": 0.15,
+              "points": 5
+            },
+            {
+              "indicator": "nonrecurring_ratio",
+              "value": 0.04,
+              "weight": 0.15,
+              "points": 5
+            }
+          ]
+        },
+        "goodwill": {
+          "adjustment_pct": 0.0,
+          "reason": "无显著商誉风险"
+        },
+        "sentiment": {
+          "adjustment_pct": -0.020000000000000004,
+          "reason": "板块+0% + 个股+3% + 情景-5%；窗口30天"
+        },
+        "ff_calibration": {
+          "enabled": false,
+          "note": "未做因子校准（未提供 ff_factor_adjust / segment_median），置信度−1档"
+        },
+        "total_market_adjust": -0.015
+      },
+      "comparable_raw": 217.86,
+      "comparable_adjusted": 214.59,
+      "dcf_value": 11.52,
+      "value": 153.67
+    },
+    "base": {
+      "name": "base",
+      "params": {
+        "growth_adj_pp": 13.2,
+        "margin_adj_pp": 0.0,
+        "multiple_factor": 1.062,
+        "wacc_adj_pp": 0.0,
+        "sentiment_factor": 0.0
+      },
+      "comparable": {
+        "pe": {
+          "samples": [
+            22.38,
+            38.02,
+            82.28,
+            84.67,
+            279.71
+          ],
+          "excluded": [],
+          "median": 82.28,
+          "mean": 101.41199999999999,
+          "value_median": 562.35,
+          "value_mean": 693.11
+        },
+        "ps": {
+          "samples": [
+            3.5,
+            4.0,
+            7.0,
+            4.5,
+            6.5
+          ],
+          "excluded": [],
+          "median": 4.5,
+          "mean": 5.1,
+          "value_median": 349.5,
+          "value_mean": 396.1
+        },
+        "pb": {
+          "samples": [
+            2.5,
+            2.04,
+            5.35,
+            3.87,
+            8.59
+          ],
+          "excluded": [],
+          "median": 3.87,
+          "mean": 4.47,
+          "value_median": 174.67,
+          "value_mean": 201.75
+        },
+        "peg": {
+          "samples": [
+            1.119,
+            1.9010000000000002,
+            5.485333333333333,
+            5.644666666666667,
+            11.1884
+          ],
+          "excluded": [],
+          "median": 5.485333333333333,
+          "value": 794.79
+        },
+        "metrics": {
+          "pe": {
+            "median": 82.28,
+            "mean": 101.412,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.9113
+          },
+          "ps": {
+            "median": 4.5,
+            "mean": 5.1,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.2731
+          },
+          "ev_ebitda": {
+            "median": null,
+            "mean": null,
+            "n": 0,
+            "missing": 5,
+            "cv": null
+          },
+          "pb": {
+            "median": 3.87,
+            "mean": 4.47,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.5284
+          },
+          "net_margin": {
+            "median": 0.09,
+            "mean": 0.096,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.677
+          },
+          "roe": {
+            "median": null,
+            "mean": null,
+            "n": 0,
+            "missing": 5,
+            "cv": null
+          },
+          "ev_sales": {
+            "median": null,
+            "mean": null,
+            "n": 0,
+            "missing": 5,
+            "cv": null
+          },
+          "growth_pct": {
+            "median": 20,
+            "mean": 19,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.1969
+          }
+        },
+        "synthesis": {
+          "method_values": [
+            562.35,
+            349.5,
+            174.67,
+            794.79
+          ],
+          "base_value": 470.33,
+          "range": [
+            174.67,
+            794.79
+          ],
+          "peg_value": 794.79
+        }
+      },
+      "dcf": {
+        "wacc": 0.09,
+        "terminal_growth": 0.03,
+        "fcf0": 0.91,
+        "growth_seq": [
+          0.212,
+          0.252,
+          0.252,
+          0.141,
+          0.0855
+        ],
+        "pv_sum": 6.3,
+        "terminal_value_pv": 23.89,
+        "equity_value": 30.19,
+        "detail": {
+          "pv_detail": [
+            {
+              "t": 1,
+              "growth": 0.212,
+              "fcf": 1.1029,
+              "pv": 1.0118
+            },
+            {
+              "t": 2,
+              "growth": 0.252,
+              "fcf": 1.3809,
+              "pv": 1.1622
+            },
+            {
+              "t": 3,
+              "growth": 0.252,
+              "fcf": 1.7288,
+              "pv": 1.335
+            },
+            {
+              "t": 4,
+              "growth": 0.141,
+              "fcf": 1.9726,
+              "pv": 1.3974
+            },
+            {
+              "t": 5,
+              "growth": 0.0855,
+              "fcf": 2.1412,
+              "pv": 1.3917
+            }
+          ],
+          "terminal_value": 36.7581,
+          "terminal_value_pv": 23.8902
+        },
+        "tv_share": 0.791
+      },
+      "adjustments": {
+        "quality": {
+          "adjustment_pct": 0.005,
+          "score": 62.0,
+          "indicators": [
+            {
+              "indicator": "ocf_to_net_profit",
+              "value": 0.65,
+              "weight": 0.3,
+              "points": 5
+            },
+            {
+              "indicator": "gross_margin_trend_pp",
+              "value": -0.5,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "receivables_to_revenue",
+              "value": 0.41,
+              "weight": 0.2,
+              "points": -5
+            },
+            {
+              "indicator": "goodwill_ratio",
+              "value": 0.0,
+              "weight": 0.15,
+              "points": 5
+            },
+            {
+              "indicator": "nonrecurring_ratio",
+              "value": 0.04,
+              "weight": 0.15,
+              "points": 5
+            }
+          ]
+        },
+        "goodwill": {
+          "adjustment_pct": 0.0,
+          "reason": "无显著商誉风险"
+        },
+        "sentiment": {
+          "adjustment_pct": 0.03,
+          "reason": "板块+0% + 个股+3% + 情景+0%；窗口30天"
+        },
+        "ff_calibration": {
+          "enabled": false,
+          "note": "未做因子校准（未提供 ff_factor_adjust / segment_median），置信度−1档"
+        },
+        "total_market_adjust": 0.035
+      },
+      "comparable_raw": 470.33,
+      "comparable_adjusted": 486.79,
+      "dcf_value": 30.19,
+      "value": 349.81
+    },
+    "bull": {
+      "name": "bull",
+      "params": {
+        "growth_adj_pp": 23.2,
+        "margin_adj_pp": 3.0,
+        "multiple_factor": 1.2744,
+        "wacc_adj_pp": -1.0,
+        "sentiment_factor": 0.05
+      },
+      "comparable": {
+        "pe": {
+          "samples": [
+            22.38,
+            38.02,
+            82.28,
+            84.67,
+            279.71
+          ],
+          "excluded": [],
+          "median": 82.28,
+          "mean": 101.41199999999999,
+          "value_median": 979.54,
+          "value_mean": 1207.3
+        },
+        "ps": {
+          "samples": [
+            3.5,
+            4.0,
+            7.0,
+            4.5,
+            6.5
+          ],
+          "excluded": [],
+          "median": 4.5,
+          "mean": 5.1,
+          "value_median": 454.0,
+          "value_mean": 514.54
+        },
+        "pb": {
+          "samples": [
+            2.5,
+            2.04,
+            5.35,
+            3.87,
+            8.59
+          ],
+          "excluded": [],
+          "median": 3.87,
+          "mean": 4.47,
+          "value_median": 209.61,
+          "value_mean": 242.1
+        },
+        "peg": {
+          "samples": [
+            1.119,
+            1.9010000000000002,
+            5.485333333333333,
+            5.644666666666667,
+            11.1884
+          ],
+          "excluded": [],
+          "median": 5.485333333333333,
+          "value": 2037.44
+        },
+        "metrics": {
+          "pe": {
+            "median": 82.28,
+            "mean": 101.412,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.9113
+          },
+          "ps": {
+            "median": 4.5,
+            "mean": 5.1,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.2731
+          },
+          "ev_ebitda": {
+            "median": null,
+            "mean": null,
+            "n": 0,
+            "missing": 5,
+            "cv": null
+          },
+          "pb": {
+            "median": 3.87,
+            "mean": 4.47,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.5284
+          },
+          "net_margin": {
+            "median": 0.09,
+            "mean": 0.096,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.677
+          },
+          "roe": {
+            "median": null,
+            "mean": null,
+            "n": 0,
+            "missing": 5,
+            "cv": null
+          },
+          "ev_sales": {
+            "median": null,
+            "mean": null,
+            "n": 0,
+            "missing": 5,
+            "cv": null
+          },
+          "growth_pct": {
+            "median": 20,
+            "mean": 19,
+            "n": 5,
+            "missing": 0,
+            "cv": 0.1969
+          }
+        },
+        "synthesis": {
+          "method_values": [
+            979.54,
+            454.0,
+            209.61,
+            2037.44
+          ],
+          "base_value": 920.15,
+          "range": [
+            209.61,
+            2037.44
+          ],
+          "peg_value": 2037.44
+        }
+      },
+      "dcf": {
+        "wacc": 0.08,
+        "terminal_growth": 0.03,
+        "fcf0": 1.3209,
+        "growth_seq": [
+          0.312,
+          0.352,
+          0.352,
+          0.191,
+          0.1105
+        ],
+        "pv_sum": 11.75,
+        "terminal_value_pv": 58.74,
+        "equity_value": 70.49,
+        "detail": {
+          "pv_detail": [
+            {
+              "t": 1,
+              "growth": 0.312,
+              "fcf": 1.733,
+              "pv": 1.6047
+            },
+            {
+              "t": 2,
+              "growth": 0.352,
+              "fcf": 2.343,
+              "pv": 2.0088
+            },
+            {
+              "t": 3,
+              "growth": 0.352,
+              "fcf": 3.1678,
+              "pv": 2.5147
+            },
+            {
+              "t": 4,
+              "growth": 0.191,
+              "fcf": 3.7728,
+              "pv": 2.7732
+            },
+            {
+              "t": 5,
+              "growth": 0.1105,
+              "fcf": 4.1897,
+              "pv": 2.8515
+            }
+          ],
+          "terminal_value": 86.3088,
+          "terminal_value_pv": 58.7404
+        },
+        "tv_share": 0.833
+      },
+      "adjustments": {
+        "quality": {
+          "adjustment_pct": 0.005,
+          "score": 62.0,
+          "indicators": [
+            {
+              "indicator": "ocf_to_net_profit",
+              "value": 0.65,
+              "weight": 0.3,
+              "points": 5
+            },
+            {
+              "indicator": "gross_margin_trend_pp",
+              "value": -0.5,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "receivables_to_revenue",
+              "value": 0.41,
+              "weight": 0.2,
+              "points": -5
+            },
+            {
+              "indicator": "goodwill_ratio",
+              "value": 0.0,
+              "weight": 0.15,
+              "points": 5
+            },
+            {
+              "indicator": "nonrecurring_ratio",
+              "value": 0.04,
+              "weight": 0.15,
+              "points": 5
+            }
+          ]
+        },
+        "goodwill": {
+          "adjustment_pct": 0.0,
+          "reason": "无显著商誉风险"
+        },
+        "sentiment": {
+          "adjustment_pct": 0.08,
+          "reason": "板块+0% + 个股+3% + 情景+5%；窗口30天"
+        },
+        "ff_calibration": {
+          "enabled": false,
+          "note": "未做因子校准（未提供 ff_factor_adjust / segment_median），置信度−1档"
+        },
+        "total_market_adjust": 0.085
+      },
+      "comparable_raw": 920.15,
+      "comparable_adjusted": 998.36,
+      "dcf_value": 70.49,
+      "value": 720.0
+    }
+  },
+  "synthesis": {
+    "bear_value": 153.67,
+    "base_value": 349.81,
+    "bull_value": 720.0,
+    "weighted_mid": 393.32,
+    "interval": [
+      153.67,
+      720.0
+    ],
+    "interval_mid": 436.83,
+    "method_cv": 0.883,
+    "dcf_tv_share_base": 0.791,
+    "dcf_vs_comparable_gap": 15.58,
+    "comparable_metrics": {
+      "pe": {
+        "median": 82.28,
+        "mean": 101.412,
+        "n": 5,
+        "missing": 0,
+        "cv": 0.9113
+      },
+      "ps": {
+        "median": 4.5,
+        "mean": 5.1,
+        "n": 5,
+        "missing": 0,
+        "cv": 0.2731
+      },
+      "ev_ebitda": {
+        "median": null,
+        "mean": null,
+        "n": 0,
+        "missing": 5,
+        "cv": null
+      },
+      "pb": {
+        "median": 3.87,
+        "mean": 4.47,
+        "n": 5,
+        "missing": 0,
+        "cv": 0.5284
+      },
+      "net_margin": {
+        "median": 0.09,
+        "mean": 0.096,
+        "n": 5,
+        "missing": 0,
+        "cv": 0.677
+      },
+      "roe": {
+        "median": null,
+        "mean": null,
+        "n": 0,
+        "missing": 5,
+        "cv": null
+      },
+      "ev_sales": {
+        "median": null,
+        "mean": null,
+        "n": 0,
+        "missing": 5,
+        "cv": null
+      },
+      "growth_pct": {
+        "median": 20,
+        "mean": 19,
+        "n": 5,
+        "missing": 0,
+        "cv": 0.1969
+      }
+    }
+  },
+  "confidence": {
+    "score": 91.2,
+    "level": "高",
+    "data_completeness": 1.0,
+    "quality_score": 62.0,
+    "ff_calibrated": false,
+    "methods_available": [
+      "comparable",
+      "dcf",
+      "pb",
+      "wacc_model",
+      "cashflow_statistics",
+      "growth_triangulation",
+      "industry_index",
+      "sentiment_structured"
+    ]
+  },
+  "sensitivity": {
+    "growth_pe_matrix": {
+      "-20%": {
+        "-20%": 371.89,
+        "-10%": 418.38,
+        "+0%": 464.86,
+        "+10%": 511.35,
+        "+20%": 557.83
+      },
+      "-10%": {
+        "-20%": 374.69,
+        "-10%": 421.52,
+        "+0%": 468.36,
+        "+10%": 515.19,
+        "+20%": 562.03
+      },
+      "+0%": {
+        "-20%": 377.48,
+        "-10%": 424.67,
+        "+0%": 471.85,
+        "+10%": 519.04,
+        "+20%": 566.22
+      },
+      "+10%": {
+        "-20%": 380.28,
+        "-10%": 427.81,
+        "+0%": 475.35,
+        "+10%": 522.88,
+        "+20%": 570.42
+      },
+      "+20%": {
+        "-20%": 383.07,
+        "-10%": 430.96,
+        "+0%": 478.84,
+        "+10%": 526.73,
+        "+20%": 574.61
+      }
+    },
+    "wacc_sensitivity": {
+      "-1%": 36.5,
+      "+0%": 30.19,
+      "+1%": 25.68
+    },
+    "note": "矩阵=TTM营收×(1+g1×(1+Δg))×净利率×(可比PE中位数×(1+Δ倍数))，PE口径"
+  },
+  "ipo_check": {
+    "price_per_share": 54.33,
+    "diluted_eps": 0.7307,
+    "issue_pe": 74.4,
+    "comparable_pe_median": 82.28,
+    "pe_deviation": -0.0964,
+    "pe_status": "正常✅（偏离-9.6%）",
+    "issue_ps": 6.5,
+    "comparable_ps_median": 4.5,
+    "ps_deviation": 0.4485,
+    "ps_status": "预警⚠️（偏离+44.9%）",
+    "raise_amount": 67.37,
+    "planned_raise": 18.0,
+    "raise_deviation": 2.7428,
+    "raise_status": "超募⚠️",
+    "project_increment_value": 172.92,
+    "project_target_year": "达产后",
+    "float_ratio": 0.1713,
+    "liquidity_discount": -0.05,
+    "net_cash": 0.0
+  },
+  "warnings": [
+    "显式 WACC 与 CAPM 模型值偏差 +1.47pp，请核实。",
+    "FCF 比率仅 0.14（资本开支强度高），DCF 对增速与再投资假设敏感。",
+    "可比法与行业指数隐含值偏差 -46%，建议审查可比选择。",
+    "各方法离散度过高(CV=88%)：市场口径与 DCF 分歧大，差值来自情绪/成长预期溢价。"
+  ],
+  "engine_version": "2.4.0",
+  "assumptions_summary": {
+    "dcf": {
+      "wacc": 0.09,
+      "wacc_source": "CAPM 模型",
+      "beta_source": "用户给定β",
+      "terminal_growth": 0.03,
+      "tg_source": "用户显式",
+      "fcf_ratio": 0.1414,
+      "fcf_source": "三层校准",
+      "growth_source": "用户显式",
+      "implied_growth": 0.1662,
+      "implied_terminal_growth": 0.044
+    },
+    "market": {
+      "multiple_medians": {
+        "pe": 82.28,
+        "ps": 4.5,
+        "pb": 3.87
+      },
+      "liquidity_discount": null,
+      "industry_index_pe": 60.0
+    },
+    "note": "关键假设汇总（assumptions_summary）：与报告'关键假设'章节一一对应；source 标注来源，便于审计"
+  },
+  "wacc_model": {
+    "enabled": true,
+    "method": "capm",
+    "rf": 0.02,
+    "erp": 0.06,
+    "beta": 1.3,
+    "beta_source": "用户给定β",
+    "d_e_ratio": 0.5,
+    "d_e_source": "用户给定",
+    "tax_rate": 0.15,
+    "cost_of_equity": 0.098,
+    "cost_of_debt_after_tax": 0.0298,
+    "equity_weight": 0.6667,
+    "debt_weight": 0.3333,
+    "wacc_model": 0.0752,
+    "wacc_used": 0.09,
+    "deviation_pp": 1.47,
+    "note": "显式 wacc 优先，模型作校验"
+  },
+  "cashflow_statistics": {
+    "enabled": true,
+    "series_used": "营收",
+    "n": 3,
+    "mean_growth": 0.1717,
+    "geometric_growth": 0.1656,
+    "std_growth": 0.1683,
+    "cv": 0.9802,
+    "ols_slope": 0.238,
+    "r_squared": 1.0,
+    "trend_label": "上行",
+    "note": "基于营收序列（3 年）"
+  },
+  "growth_triangulation": {
+    "enabled": true,
+    "self_cagr": 0.1656,
+    "comparable_median_growth": 20,
+    "industry_growth": 10,
+    "implied_growth": 0.1662,
+    "implied_terminal_growth": 0.044,
+    "growth_weights_used": {
+      "self": 0.4,
+      "comparable": 0.4,
+      "industry": 0.2
+    },
+    "note": "用户显式 growth_forecast/terminal_growth 优先，三角值作参照；未显式时引擎采用三角值"
+  },
+  "industry_index": {
+    "enabled": true,
+    "name": "轴承/通用设备行业（可比中位近似）",
+    "implied_values": {
+      "pe": 318.6,
+      "ps": 271.53,
+      "pb": 165.75
+    },
+    "base_value": 251.96,
+    "vs_comparable_deviation": -0.4643,
+    "note": "行业指数仅作交叉验证/降级基准，不并入综合权重"
+  },
+  "sentiment_structure": {
+    "enabled": true,
+    "impact_map": {
+      "growth_adj_pp": 13.2,
+      "margin_adj_pp": 0.0,
+      "wacc_adj_pp": 0.0,
+      "multiple_factor": 1.062,
+      "terminal_growth_adj_pp": 0.0,
+      "evidence": {
+        "growth": [
+          "高铁轴承国产化：250/350km 牵引电机轴承完成装车考核，轴箱轴承研发中",
+          "2026H1 营收 30.61 亿（+8.52%）、扣非净利 2.68 亿（+6.25%），增速较 2025 放缓",
+          "工业强基工程/高端轴承国产替代（中国制造2025）",
+          "高铁/风电/新能源汽车/机器人产业政策"
+        ],
+        "multiple": [
+          "创业板 IPO 注册获批并 8-18 启动招股、8-20 询价、8-26 申购",
+          "募投布局滚珠丝杠、机器人轴承，五洲新春为股东兼可比（8.5%）",
+          "通用设备行业平均市盈率指引（创业板询价参考）"
+        ]
+      },
+      "note": "假设层调整（v2.2.0），与 sentiment_adjust 市场口径修正分层；用户显式参数优先"
+    },
+    "risks_summary": [
+      {
+        "type": "现金流",
+        "description": "OCF 波动大（2023 为负、2025 -49% 至 2.47 亿），OCF/净利仅 0.47，盈利现金含量弱",
+        "severity": "high",
+        "impact_target": "margin"
+      },
+      {
+        "type": "存货",
+        "description": "存货 21.17 亿占净资产 86.5%（跌价准备 1.84 亿），备货与跌价风险",
+        "severity": "medium",
+        "impact_target": "margin"
+      },
+      {
+        "type": "应收",
+        "description": "应收账款（1 年内 24.8 亿）占营收 41%，占压营运资金",
+        "severity": "medium",
+        "impact_target": "margin"
+      },
+      {
+        "type": "客户集中",
+        "description": "国铁/中车/金风/远景/比亚迪等大客户依赖，轨交风电招标周期影响",
+        "severity": "medium",
+        "impact_target": "growth"
+      }
+    ],
+    "orientation": {
+      "lean": "偏乐观",
+      "basis": "高铁轴承国产化主线+机器人轴承布局+风电龙头地位 vs 业绩增速放缓+现金流弱",
+      "horizon": "12个月"
+    },
+    "note": "舆情结构化（v3.3）"
+  },
+  "fcf_ratio": {
+    "enabled": true,
+    "used": 0.1414,
+    "l1_self": -0.0318,
+    "l2_comparable": 0.0909,
+    "l3_fallback": 0.65,
+    "ocf_ratio": 0.65,
+    "capex_to_revenue": 0.06,
+    "comparable_capex_to_rev": 0.08,
+    "capex_to_net_profit": 0.6818,
+    "note": "FCF/净利 = OCF/净利 − CapEx/净利；三层加权（L1 0.5/L2 0.3/L3 0.2），缺失项重归一化"
+  },
+  "nav_valuation": {
+    "enabled": true,
+    "adjusted_nav": 42.5,
+    "nav_per_share": 5.87,
+    "liquidation_scenario": false,
+    "note": "净资产法：重资产/控股平台主方法候选；清算场景作估值下限参考（不强制改综合值）"
+  },
+  "asset_adapter": {
+    "enabled": true,
+    "asset_type": "mature",
+    "recognized": true,
+    "dcf_applicable": true,
+    "primary_methods": [
+      "pe",
+      "ev_ebitda",
+      "dcf"
+    ],
+    "warnings": [],
+    "note": "成熟期：PE/EV-EBITDA 与 DCF 并用（中证协：DCF 适用成熟期/现金流稳定）"
+  },
+  "comparable_set_usage": {
+    "n_comparables": 5,
+    "multiple_medians": {
+      "pe": 82.28,
+      "ps": 4.5,
+      "pb": 3.87
+    },
+    "fcf_ratio_source": "三层校准（L1 自身 / L2 可比 / L3 兜底）",
+    "growth_source": "三角校准（自身+可比+行业）"
+  }
+}

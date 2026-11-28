@@ -1,0 +1,361 @@
+{
+  "$schema_note": "行业参数底座（v3.16.0 / Layer 2）。用途：① 作为参数解析的第 4 档来源（用户显式 > 公司历史 > 可比中位 > 行业基准 > 全局默认）；② 作为校验锚（WACC 区间 / 稳态净利率 / ROIC 守恒 / 倍数中枢偏离）。数值口径对齐 Damodaran 行业库 + A 股实际，标注来源与更新日期，可审计、可覆盖。",
+  "meta": {
+    "version": "1.0.4",
+    "updated": "2026-10-27",
+    "source": "Damodaran 行业数据（NYU Stern, 2026-01）+ A 股行业实际倍数（中证/申万，2026-09）",
+    "units": "比率=小数；倍数=倍；金额类字段不使用",
+    "note": "行业类名按 meta.industry / meta.target_profile.segment 关键词匹配，未命中回落 default；v3.21.0 新增「家用电器」类目（原白电回落「消费」类，g_lt 3%/pe 22× 与白电实际不符）"
+  },
+  "industries": {
+    "机器人": {
+      "aliases": [
+        "机器人",
+        "人形",
+        "具身",
+        "robot",
+        "humanoid"
+      ],
+      "beta_u": 1.3,
+      "wacc_range": [
+        0.1,
+        0.14
+      ],
+      "kd": 0.03,
+      "tax_rate": 0.15,
+      "g_lt": 0.06,
+      "ebit_margin_steady": 0.18,
+      "roic": 0.12,
+      "nwc_to_rev": 0.2,
+      "capex_to_rev": 0.08,
+      "pe_med": 60,
+      "ps_med": 15,
+      "ev_ebitda_med": 40,
+      "tg_cap": 0.05,
+      "half_life": 3.0,
+      "note": "高性能通用机器人：高成长、盈利刚转正、资本开支中等、主题溢价大（可比 PS 中枢显著高于工业机械）"
+    },
+    "半导体": {
+      "aliases": [
+        "半导体",
+        "芯片",
+        "集成电路",
+        "晶圆",
+        "存储",
+        "semiconductor"
+      ],
+      "beta_u": 1.35,
+      "wacc_range": [
+        0.09,
+        0.13
+      ],
+      "kd": 0.038,
+      "tax_rate": 0.15,
+      "g_lt": 0.035,
+      "ebit_margin_steady": 0.18,
+      "roic": 0.12,
+      "nwc_to_rev": 0.15,
+      "capex_to_rev": 0.25,
+      "pe_med": 45,
+      "ps_med": 8,
+      "ev_ebitda_med": 15,
+      "tg_cap": 0.04,
+      "half_life": 3.0,
+      "note": "半导体制造：资本密集（capex/营收 高）、周期性强、β 高"
+    },
+    "软件": {
+      "aliases": [
+        "软件",
+        "saas",
+        "云",
+        "信息化",
+        "software"
+      ],
+      "beta_u": 1.1,
+      "wacc_range": [
+        0.09,
+        0.12
+      ],
+      "kd": 0.035,
+      "tax_rate": 0.15,
+      "g_lt": 0.04,
+      "ebit_margin_steady": 0.2,
+      "roic": 0.15,
+      "nwc_to_rev": 0.05,
+      "capex_to_rev": 0.05,
+      "pe_med": 40,
+      "ps_med": 6,
+      "ev_ebitda_med": 20,
+      "tg_cap": 0.045,
+      "half_life": 5.0,
+      "note": "软件/SaaS：轻资产、NWC 占用低、增长持续期长（half_life 较大）"
+    },
+    "医药": {
+      "aliases": [
+        "医药",
+        "生物",
+        "创新药",
+        "医疗",
+        "pharma",
+        "biotech"
+      ],
+      "beta_u": 0.95,
+      "wacc_range": [
+        0.08,
+        0.12
+      ],
+      "kd": 0.035,
+      "tax_rate": 0.15,
+      "g_lt": 0.03,
+      "ebit_margin_steady": 0.22,
+      "roic": 0.12,
+      "nwc_to_rev": 0.12,
+      "capex_to_rev": 0.1,
+      "pe_med": 35,
+      "ps_med": 8,
+      "ev_ebitda_med": 20,
+      "tg_cap": 0.035,
+      "half_life": 4.0,
+      "note": "医药/生物：β 偏低、管线型须走 rNPV（Layer 0 路由）",
+      "rnpv_discount": 0.12,
+      "rnpv_pos_note": "rNPV 风险调整折现率（v3.19.0）：管线型医药缺省 12%；PoS 表见引擎 RNPV_POS_TABLE（preclinical 0.10/phase1 0.20/phase2 0.35/phase3 0.60/nda 0.80/approved 1.00）"
+    },
+    "机械制造": {
+      "aliases": [
+        "机械制造",
+        "机械",
+        "装备制造",
+        "工程机械",
+        "设备制造",
+        "装备",
+        "设备",
+        "machinery"
+      ],
+      "beta_u": 1.05,
+      "wacc_range": [
+        0.08,
+        0.11
+      ],
+      "kd": 0.035,
+      "tax_rate": 0.15,
+      "g_lt": 0.03,
+      "ebit_margin_steady": 0.12,
+      "roic": 0.1,
+      "nwc_to_rev": 0.25,
+      "capex_to_rev": 0.06,
+      "pe_med": 25,
+      "ps_med": 3,
+      "ev_ebitda_med": 14,
+      "tg_cap": 0.03,
+      "half_life": 4.0,
+      "note": "通用机械制造：NWC 占用高、倍数中枢低"
+    },
+    "消费": {
+      "aliases": [
+        "消费",
+        "食品",
+        "饮料",
+        "白酒",
+        "酿酒",
+        "酒类",
+        "家电",
+        "零售",
+        "consumer"
+      ],
+      "beta_u": 0.8,
+      "wacc_range": [
+        0.07,
+        0.1
+      ],
+      "kd": 0.033,
+      "tax_rate": 0.15,
+      "g_lt": 0.03,
+      "ebit_margin_steady": 0.15,
+      "roic": 0.15,
+      "nwc_to_rev": 0.1,
+      "capex_to_rev": 0.05,
+      "pe_med": 22,
+      "ps_med": 2.5,
+      "ev_ebitda_med": 14,
+      "tg_cap": 0.03,
+      "half_life": 5.0,
+      "note": "消费：β 低、现金流稳、成熟期为主"
+    },
+    "金融": {
+      "aliases": [
+        "银行",
+        "保险",
+        "证券",
+        "券商",
+        "金融",
+        "bank",
+        "insurance"
+      ],
+      "beta_u": 0.9,
+      "wacc_range": [
+        0.08,
+        0.12
+      ],
+      "kd": 0.03,
+      "tax_rate": 0.25,
+      "g_lt": 0.03,
+      "ebit_margin_steady": null,
+      "roic": null,
+      "nwc_to_rev": null,
+      "capex_to_rev": null,
+      "pe_med": 8,
+      "ps_med": 2,
+      "ev_ebitda_med": null,
+      "tg_cap": 0.03,
+      "half_life": 5.0,
+      "roe_steady": 0.11,
+      "ke": 0.1,
+      "payout_ratio": 0.3,
+      "persistence_omega": 0.7,
+      "p_b_med": 1.0,
+      "note": "金融业：DCF 前提失效（Layer 0 判否）→ 走 RIM/DDM；本行参数仅供校验参照。v3.17.0 补金融专属参数：roe_steady=0.11（稳态 ROE 锚）、ke=0.10（股权成本，取 wacc_range 中值）、payout_ratio=0.30（分红率，DDM 用）、persistence_omega=0.70（RIM 剩余收益持续因子，金融业高持续）、p_b_med=1.0（PB 中位参照；保险/券商差异大，仅作锚）"
+    },
+    "电力设备": {
+      "aliases": [
+        "电力设备",
+        "电气",
+        "电源",
+        "光伏",
+        "储能",
+        "electrical"
+      ],
+      "beta_u": 1.0,
+      "wacc_range": [
+        0.08,
+        0.11
+      ],
+      "kd": 0.035,
+      "tax_rate": 0.15,
+      "g_lt": 0.035,
+      "ebit_margin_steady": 0.12,
+      "roic": 0.1,
+      "nwc_to_rev": 0.18,
+      "capex_to_rev": 0.1,
+      "pe_med": 22,
+      "ps_med": 2.5,
+      "ev_ebitda_med": 13,
+      "tg_cap": 0.035,
+      "half_life": 4.0,
+      "note": "电力设备：成长性中等、资本开支偏高"
+    },
+    "汽车": {
+      "aliases": [
+        "新能源汽车",
+        "汽车制造",
+        "汽车零部件",
+        "乘用车",
+        "商用车",
+        "整车",
+        "汽车",
+        "automobile",
+        "automotive"
+      ],
+      "beta_u": 1.05,
+      "wacc_range": [
+        0.08,
+        0.11
+      ],
+      "kd": 0.035,
+      "tax_rate": 0.15,
+      "g_lt": 0.03,
+      "ebit_margin_steady": 0.06,
+      "roic": 0.1,
+      "nwc_to_rev": 0.22,
+      "capex_to_rev": 0.1,
+      "pe_med": 16.6,
+      "ps_med": 0.5,
+      "ev_ebitda_med": 10,
+      "tg_cap": 0.03,
+      "half_life": 4.0,
+      "note": "汽车整车/零部件：EBIT 率薄、NWC 占用高（存货+应收）、新能源转型期资本开支上行；A 股整车 PE 中位 ~16.6、PS 中位 ~0.5（v1.0.2 新增，1.0.1 缺该类目致比亚迪回落 default 并被次要业务别名「储能/光伏」误判为电力设备）"
+    },
+    "公用事业": {
+      "aliases": [
+        "电力生产",
+        "水力发电",
+        "水电",
+        "发电",
+        "公用事业",
+        "电力、热力",
+        "核电",
+        "供电",
+        "utility",
+        "power generation"
+      ],
+      "beta_u": 0.5,
+      "wacc_range": [
+        0.055,
+        0.075
+      ],
+      "kd": 0.028,
+      "tax_rate": 0.15,
+      "g_lt": 0.02,
+      "ebit_margin_steady": 0.45,
+      "roic": 0.085,
+      "nwc_to_rev": 0.1,
+      "capex_to_rev": 0.18,
+      "pe_med": 18,
+      "ps_med": 6,
+      "ev_ebitda_med": 12.5,
+      "tg_cap": 0.03,
+      "half_life": 6.0,
+      "note": "发电侧公用事业（水电/核电/火电/新能源运营）：重资产、准监管定价、现金流高度稳定可预测；NAV/DCF 双视角，β 低、WACC 低、永续增速低、现金流持续期长（half_life 大）。与「电力设备」（制造业）严格区分。v1.0.3 新增——原表无发电侧类目，长江电力（水力发电）曾回落 default；显式不含裸「电力」（避免与「电力设备」争抢，最长命中优先规则已保证「电力设备/电力装备」串归其本类）"
+    },
+    "default": {
+      "aliases": [],
+      "beta_u": 1.0,
+      "wacc_range": [
+        0.08,
+        0.13
+      ],
+      "kd": 0.035,
+      "tax_rate": 0.15,
+      "g_lt": 0.03,
+      "ebit_margin_steady": 0.12,
+      "roic": 0.1,
+      "nwc_to_rev": 0.15,
+      "capex_to_rev": 0.08,
+      "pe_med": 25,
+      "ps_med": 3,
+      "ev_ebitda_med": 15,
+      "tg_cap": 0.035,
+      "half_life": 4.0,
+      "note": "全局兜底行业基准：未命中任何行业关键词时启用"
+    },
+    "家用电器": {
+      "aliases": [
+        "家用电器",
+        "白色家电",
+        "白电",
+        "空调整机",
+        "空调",
+        "厨电",
+        "小家电",
+        "黑色家电"
+      ],
+      "beta_u": 1.0,
+      "wacc_range": [
+        0.07,
+        0.09
+      ],
+      "kd": 0.032,
+      "tax_rate": 0.15,
+      "g_lt": 0.02,
+      "ebit_margin_steady": 0.09,
+      "roic": 0.12,
+      "nwc_to_rev": -0.02,
+      "capex_to_rev": 0.03,
+      "pe_med": 14,
+      "ps_med": 1.1,
+      "ev_ebitda_med": 8,
+      "tg_cap": 0.02,
+      "half_life": 4.0,
+      "note": "家用电器（v3.21.0 新增）：成熟白电，现金流稳、负营运资本占用（渠道占款），g_lt 2% 对齐长期通胀锚而非消费板块 3%"
+    }
+  }
+}

@@ -1,0 +1,1099 @@
+{
+  "meta": {
+    "company": "宇树科技",
+    "ticker": "688836.SH",
+    "industry": "人形机器人/四足机器人（整机，具身智能）",
+    "exchange": "科创板",
+    "one_line_input": "全球四足机器人与人形机器人龙头宇树科技，2025年营收17.08亿元（+335%），扣非净利6亿元（+674%），拟科创板IPO募资42亿元，请估值",
+    "as_of_date": "2026-08-14",
+    "base_case_id": ""
+  },
+  "weights": {
+    "dcf": 0.3,
+    "comparable": 0.5,
+    "sentiment": 0.2
+  },
+  "scenario_weights": {
+    "bear": 0.25,
+    "base": 0.5,
+    "bull": 0.25
+  },
+  "quality_scorecard": {
+    "score": 65.5,
+    "adjustment_pct": 0.0138,
+    "detail": [
+      {
+        "indicator": "ocf_to_net_profit",
+        "value": 1.12,
+        "weight": 0.3,
+        "points": 10
+      },
+      {
+        "indicator": "gross_margin_trend_pp",
+        "value": 3,
+        "weight": 0.2,
+        "points": 5
+      },
+      {
+        "indicator": "receivables_to_revenue",
+        "value": 0.3,
+        "weight": 0.2,
+        "points": 0
+      },
+      {
+        "indicator": "goodwill_ratio",
+        "value": 0.0,
+        "weight": 0.15,
+        "points": 5
+      },
+      {
+        "indicator": "nonrecurring_ratio",
+        "value": 0.03,
+        "weight": 0.15,
+        "points": 5
+      }
+    ],
+    "components_score": 5.5
+  },
+  "scenarios": {
+    "bear": {
+      "name": "bear",
+      "params": {
+        "growth_adj_pp": 5.0,
+        "margin_adj_pp": -6.0,
+        "multiple_factor": 0.8640000000000001,
+        "wacc_adj_pp": 1.5,
+        "sentiment_factor": -0.05
+      },
+      "comparable": {
+        "pe": {
+          "samples": [
+            95,
+            80,
+            60
+          ],
+          "excluded": [],
+          "median": 80,
+          "mean": 78.33333333333333,
+          "value_median": 564.9,
+          "value_mean": 553.13
+        },
+        "ps": {
+          "samples": [
+            30,
+            25,
+            10,
+            6
+          ],
+          "excluded": [],
+          "median": 17.5,
+          "mean": 17.75,
+          "value_median": 426.11,
+          "value_mean": 432.2
+        },
+        "ev_ebitda": {
+          "samples": [
+            55,
+            45,
+            25
+          ],
+          "excluded": [],
+          "median": 45,
+          "mean": 41.666666666666664,
+          "value_median": 476.89
+        },
+        "pb": {
+          "samples": [
+            8,
+            12,
+            7,
+            5
+          ],
+          "excluded": [],
+          "median": 7.5,
+          "mean": 8,
+          "value_median": 194.4,
+          "value_mean": 207.36
+        },
+        "peg": {
+          "samples": [
+            2.375,
+            2.6666666666666665,
+            3.0
+          ],
+          "excluded": [],
+          "median": 2.6666666666666665,
+          "value": 1223.96
+        },
+        "metrics": {
+          "pe": {
+            "median": 80,
+            "mean": 78.3333,
+            "n": 3,
+            "missing": 1,
+            "cv": 0.183
+          },
+          "ps": {
+            "median": 17.5,
+            "mean": 17.75,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5639
+          },
+          "ev_ebitda": {
+            "median": 45,
+            "mean": 41.6667,
+            "n": 3,
+            "missing": 1,
+            "cv": 0.2993
+          },
+          "pb": {
+            "median": 7.5,
+            "mean": 8,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.3187
+          },
+          "net_margin": {
+            "median": 0.105,
+            "mean": 0.115,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.7184
+          },
+          "roe": {
+            "median": 0.07,
+            "mean": 0.0625,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5352
+          },
+          "ev_sales": {
+            "median": 17.5,
+            "mean": 17.75,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5639
+          },
+          "growth_pct": {
+            "median": 35.0,
+            "mean": 42.5,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5359
+          }
+        },
+        "synthesis": {
+          "method_values": [
+            564.9,
+            426.11,
+            476.89,
+            194.4,
+            1223.96
+          ],
+          "base_value": 577.25,
+          "range": [
+            194.4,
+            1223.96
+          ]
+        }
+      },
+      "dcf": {
+        "wacc": 0.135,
+        "terminal_growth": 0.06,
+        "fcf0": 9.1535,
+        "growth_seq": [
+          0.65,
+          0.55,
+          0.45,
+          0.255,
+          0.1575
+        ],
+        "pv_sum": 106.54,
+        "terminal_value_pv": 370.0,
+        "equity_value": 491.54,
+        "detail": {
+          "pv_detail": [
+            {
+              "t": 1,
+              "growth": 0.65,
+              "fcf": 15.1033,
+              "pv": 13.3069
+            },
+            {
+              "t": 2,
+              "growth": 0.55,
+              "fcf": 23.4101,
+              "pv": 18.1724
+            },
+            {
+              "t": 3,
+              "growth": 0.45,
+              "fcf": 33.9447,
+              "pv": 23.2158
+            },
+            {
+              "t": 4,
+              "growth": 0.255,
+              "fcf": 42.6005,
+              "pv": 25.6703
+            },
+            {
+              "t": 5,
+              "growth": 0.1575,
+              "fcf": 49.3101,
+              "pv": 26.1792
+            }
+          ],
+          "terminal_value": 696.9166,
+          "terminal_value_pv": 369.9998
+        },
+        "tv_share": 0.776
+      },
+      "adjustments": {
+        "quality": {
+          "adjustment_pct": 0.0138,
+          "score": 65.5,
+          "indicators": [
+            {
+              "indicator": "ocf_to_net_profit",
+              "value": 1.12,
+              "weight": 0.3,
+              "points": 10
+            },
+            {
+              "indicator": "gross_margin_trend_pp",
+              "value": 3,
+              "weight": 0.2,
+              "points": 5
+            },
+            {
+              "indicator": "receivables_to_revenue",
+              "value": 0.3,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "goodwill_ratio",
+              "value": 0.0,
+              "weight": 0.15,
+              "points": 5
+            },
+            {
+              "indicator": "nonrecurring_ratio",
+              "value": 0.03,
+              "weight": 0.15,
+              "points": 5
+            }
+          ]
+        },
+        "goodwill": {
+          "adjustment_pct": 0.0,
+          "reason": "无显著商誉风险"
+        },
+        "sentiment": {
+          "adjustment_pct": 0.03,
+          "reason": "板块+5% + 个股+3% + 情景-5%；窗口30天"
+        },
+        "ff_calibration": {
+          "enabled": true,
+          "note": "未做因子校准（未提供 ff_factor_adjust / segment_median），置信度−1档",
+          "segment": {
+            "median_ps": 18.0,
+            "median_pe": null,
+            "note": "人形机器人整机环节 PS 中位（海外 Figure 等龙头 100 倍 PS 为极端参考，取国内一二级市场可比口径）"
+          },
+          "segment_implied": [
+            491.9
+          ],
+          "segment_note": "环节估值中枢隐含值（与可比法并列对比）"
+        },
+        "total_market_adjust": 0.0438
+      },
+      "comparable_raw": 577.25,
+      "comparable_adjusted": 602.53,
+      "dcf_value": 491.54,
+      "value": 569.24
+    },
+    "base": {
+      "name": "base",
+      "params": {
+        "growth_adj_pp": 15.0,
+        "margin_adj_pp": -3.0,
+        "multiple_factor": 1.08,
+        "wacc_adj_pp": 0.0,
+        "sentiment_factor": 0.0
+      },
+      "comparable": {
+        "pe": {
+          "samples": [
+            95,
+            80,
+            60
+          ],
+          "excluded": [],
+          "median": 80,
+          "mean": 78.33333333333333,
+          "value_median": 826.4,
+          "value_mean": 809.18
+        },
+        "ps": {
+          "samples": [
+            30,
+            25,
+            10,
+            6
+          ],
+          "excluded": [],
+          "median": 17.5,
+          "mean": 17.75,
+          "value_median": 564.92,
+          "value_mean": 572.99
+        },
+        "ev_ebitda": {
+          "samples": [
+            55,
+            45,
+            25
+          ],
+          "excluded": [],
+          "median": 45,
+          "mean": 41.666666666666664,
+          "value_median": 627.36
+        },
+        "pb": {
+          "samples": [
+            8,
+            12,
+            7,
+            5
+          ],
+          "excluded": [],
+          "median": 7.5,
+          "mean": 8,
+          "value_median": 243.0,
+          "value_mean": 259.2
+        },
+        "peg": {
+          "samples": [
+            2.375,
+            2.6666666666666665,
+            3.0
+          ],
+          "excluded": [],
+          "median": 2.6666666666666665,
+          "value": 2066.0
+        },
+        "metrics": {
+          "pe": {
+            "median": 80,
+            "mean": 78.3333,
+            "n": 3,
+            "missing": 1,
+            "cv": 0.183
+          },
+          "ps": {
+            "median": 17.5,
+            "mean": 17.75,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5639
+          },
+          "ev_ebitda": {
+            "median": 45,
+            "mean": 41.6667,
+            "n": 3,
+            "missing": 1,
+            "cv": 0.2993
+          },
+          "pb": {
+            "median": 7.5,
+            "mean": 8,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.3187
+          },
+          "net_margin": {
+            "median": 0.105,
+            "mean": 0.115,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.7184
+          },
+          "roe": {
+            "median": 0.07,
+            "mean": 0.0625,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5352
+          },
+          "ev_sales": {
+            "median": 17.5,
+            "mean": 17.75,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5639
+          },
+          "growth_pct": {
+            "median": 35.0,
+            "mean": 42.5,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5359
+          }
+        },
+        "synthesis": {
+          "method_values": [
+            826.4,
+            564.92,
+            627.36,
+            243.0,
+            2066.0
+          ],
+          "base_value": 865.54,
+          "range": [
+            243.0,
+            2066.0
+          ]
+        }
+      },
+      "dcf": {
+        "wacc": 0.12,
+        "terminal_growth": 0.06,
+        "fcf0": 10.7126,
+        "growth_seq": [
+          0.75,
+          0.65,
+          0.55,
+          0.305,
+          0.1825
+        ],
+        "pv_sum": 157.27,
+        "terminal_value_pv": 741.69,
+        "equity_value": 913.96,
+        "detail": {
+          "pv_detail": [
+            {
+              "t": 1,
+              "growth": 0.75,
+              "fcf": 18.747,
+              "pv": 16.7384
+            },
+            {
+              "t": 2,
+              "growth": 0.65,
+              "fcf": 30.9326,
+              "pv": 24.6592
+            },
+            {
+              "t": 3,
+              "growth": 0.55,
+              "fcf": 47.9455,
+              "pv": 34.1266
+            },
+            {
+              "t": 4,
+              "growth": 0.305,
+              "fcf": 62.5688,
+              "pv": 39.7636
+            },
+            {
+              "t": 5,
+              "growth": 0.1825,
+              "fcf": 73.9877,
+              "pv": 41.9826
+            }
+          ],
+          "terminal_value": 1307.1153,
+          "terminal_value_pv": 741.6923
+        },
+        "tv_share": 0.825
+      },
+      "adjustments": {
+        "quality": {
+          "adjustment_pct": 0.0138,
+          "score": 65.5,
+          "indicators": [
+            {
+              "indicator": "ocf_to_net_profit",
+              "value": 1.12,
+              "weight": 0.3,
+              "points": 10
+            },
+            {
+              "indicator": "gross_margin_trend_pp",
+              "value": 3,
+              "weight": 0.2,
+              "points": 5
+            },
+            {
+              "indicator": "receivables_to_revenue",
+              "value": 0.3,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "goodwill_ratio",
+              "value": 0.0,
+              "weight": 0.15,
+              "points": 5
+            },
+            {
+              "indicator": "nonrecurring_ratio",
+              "value": 0.03,
+              "weight": 0.15,
+              "points": 5
+            }
+          ]
+        },
+        "goodwill": {
+          "adjustment_pct": 0.0,
+          "reason": "无显著商誉风险"
+        },
+        "sentiment": {
+          "adjustment_pct": 0.08,
+          "reason": "板块+5% + 个股+3% + 情景+0%；窗口30天"
+        },
+        "ff_calibration": {
+          "enabled": true,
+          "note": "未做因子校准（未提供 ff_factor_adjust / segment_median），置信度−1档",
+          "segment": {
+            "median_ps": 18.0,
+            "median_pe": null,
+            "note": "人形机器人整机环节 PS 中位（海外 Figure 等龙头 100 倍 PS 为极端参考，取国内一二级市场可比口径）"
+          },
+          "segment_implied": [
+            491.9
+          ],
+          "segment_note": "环节估值中枢隐含值（与可比法并列对比）"
+        },
+        "total_market_adjust": 0.0938
+      },
+      "comparable_raw": 865.54,
+      "comparable_adjusted": 946.73,
+      "dcf_value": 913.96,
+      "value": 936.9
+    },
+    "bull": {
+      "name": "bull",
+      "params": {
+        "growth_adj_pp": 25.0,
+        "margin_adj_pp": 0.0,
+        "multiple_factor": 1.296,
+        "wacc_adj_pp": -1.0,
+        "sentiment_factor": 0.05
+      },
+      "comparable": {
+        "pe": {
+          "samples": [
+            95,
+            80,
+            60
+          ],
+          "excluded": [],
+          "median": 80,
+          "mean": 78.33333333333333,
+          "value_median": 1146.63,
+          "value_mean": 1122.74
+        },
+        "ps": {
+          "samples": [
+            30,
+            25,
+            10,
+            6
+          ],
+          "excluded": [],
+          "median": 17.5,
+          "mean": 17.75,
+          "value_median": 716.64,
+          "value_mean": 726.88
+        },
+        "ev_ebitda": {
+          "samples": [
+            55,
+            45,
+            25
+          ],
+          "excluded": [],
+          "median": 45,
+          "mean": 41.666666666666664,
+          "value_median": 791.82
+        },
+        "pb": {
+          "samples": [
+            8,
+            12,
+            7,
+            5
+          ],
+          "excluded": [],
+          "median": 7.5,
+          "mean": 8,
+          "value_median": 291.6,
+          "value_mean": 311.04
+        },
+        "peg": {
+          "samples": [
+            2.375,
+            2.6666666666666665,
+            3.0
+          ],
+          "excluded": [],
+          "median": 2.6666666666666665,
+          "value": 3248.78
+        },
+        "metrics": {
+          "pe": {
+            "median": 80,
+            "mean": 78.3333,
+            "n": 3,
+            "missing": 1,
+            "cv": 0.183
+          },
+          "ps": {
+            "median": 17.5,
+            "mean": 17.75,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5639
+          },
+          "ev_ebitda": {
+            "median": 45,
+            "mean": 41.6667,
+            "n": 3,
+            "missing": 1,
+            "cv": 0.2993
+          },
+          "pb": {
+            "median": 7.5,
+            "mean": 8,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.3187
+          },
+          "net_margin": {
+            "median": 0.105,
+            "mean": 0.115,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.7184
+          },
+          "roe": {
+            "median": 0.07,
+            "mean": 0.0625,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5352
+          },
+          "ev_sales": {
+            "median": 17.5,
+            "mean": 17.75,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5639
+          },
+          "growth_pct": {
+            "median": 35.0,
+            "mean": 42.5,
+            "n": 4,
+            "missing": 0,
+            "cv": 0.5359
+          }
+        },
+        "synthesis": {
+          "method_values": [
+            1146.63,
+            716.64,
+            791.82,
+            291.6,
+            3248.78
+          ],
+          "base_value": 1239.09,
+          "range": [
+            291.6,
+            3248.78
+          ]
+        }
+      },
+      "dcf": {
+        "wacc": 0.11,
+        "terminal_growth": 0.06,
+        "fcf0": 12.3864,
+        "growth_seq": [
+          0.85,
+          0.75,
+          0.65,
+          0.355,
+          0.2075
+        ],
+        "pv_sum": 224.88,
+        "terminal_value_pv": 1362.03,
+        "equity_value": 1601.91,
+        "detail": {
+          "pv_detail": [
+            {
+              "t": 1,
+              "growth": 0.85,
+              "fcf": 22.9149,
+              "pv": 20.644
+            },
+            {
+              "t": 2,
+              "growth": 0.75,
+              "fcf": 40.101,
+              "pv": 32.5469
+            },
+            {
+              "t": 3,
+              "growth": 0.65,
+              "fcf": 66.1667,
+              "pv": 48.3805
+            },
+            {
+              "t": 4,
+              "growth": 0.355,
+              "fcf": 89.6559,
+              "pv": 59.0591
+            },
+            {
+              "t": 5,
+              "growth": 0.2075,
+              "fcf": 108.2595,
+              "pv": 64.2467
+            }
+          ],
+          "terminal_value": 2295.1003,
+          "terminal_value_pv": 1362.0303
+        },
+        "tv_share": 0.858
+      },
+      "adjustments": {
+        "quality": {
+          "adjustment_pct": 0.0138,
+          "score": 65.5,
+          "indicators": [
+            {
+              "indicator": "ocf_to_net_profit",
+              "value": 1.12,
+              "weight": 0.3,
+              "points": 10
+            },
+            {
+              "indicator": "gross_margin_trend_pp",
+              "value": 3,
+              "weight": 0.2,
+              "points": 5
+            },
+            {
+              "indicator": "receivables_to_revenue",
+              "value": 0.3,
+              "weight": 0.2,
+              "points": 0
+            },
+            {
+              "indicator": "goodwill_ratio",
+              "value": 0.0,
+              "weight": 0.15,
+              "points": 5
+            },
+            {
+              "indicator": "nonrecurring_ratio",
+              "value": 0.03,
+              "weight": 0.15,
+              "points": 5
+            }
+          ]
+        },
+        "goodwill": {
+          "adjustment_pct": 0.0,
+          "reason": "无显著商誉风险"
+        },
+        "sentiment": {
+          "adjustment_pct": 0.1,
+          "reason": "板块+5% + 个股+3% + 情景+5%；窗口30天"
+        },
+        "ff_calibration": {
+          "enabled": true,
+          "note": "未做因子校准（未提供 ff_factor_adjust / segment_median），置信度−1档",
+          "segment": {
+            "median_ps": 18.0,
+            "median_pe": null,
+            "note": "人形机器人整机环节 PS 中位（海外 Figure 等龙头 100 倍 PS 为极端参考，取国内一二级市场可比口径）"
+          },
+          "segment_implied": [
+            491.9
+          ],
+          "segment_note": "环节估值中枢隐含值（与可比法并列对比）"
+        },
+        "total_market_adjust": 0.1138
+      },
+      "comparable_raw": 1239.09,
+      "comparable_adjusted": 1380.1,
+      "dcf_value": 1601.91,
+      "value": 1446.64
+    }
+  },
+  "synthesis": {
+    "bear_value": 569.24,
+    "base_value": 936.9,
+    "bull_value": 1446.64,
+    "weighted_mid": 972.42,
+    "interval": [
+      569.24,
+      1446.64
+    ],
+    "interval_mid": 1007.94,
+    "method_cv": 0.018,
+    "dcf_tv_share_base": 0.825,
+    "dcf_vs_comparable_gap": 0.95,
+    "comparable_metrics": {
+      "pe": {
+        "median": 80,
+        "mean": 78.3333,
+        "n": 3,
+        "missing": 1,
+        "cv": 0.183
+      },
+      "ps": {
+        "median": 17.5,
+        "mean": 17.75,
+        "n": 4,
+        "missing": 0,
+        "cv": 0.5639
+      },
+      "ev_ebitda": {
+        "median": 45,
+        "mean": 41.6667,
+        "n": 3,
+        "missing": 1,
+        "cv": 0.2993
+      },
+      "pb": {
+        "median": 7.5,
+        "mean": 8,
+        "n": 4,
+        "missing": 0,
+        "cv": 0.3187
+      },
+      "net_margin": {
+        "median": 0.105,
+        "mean": 0.115,
+        "n": 4,
+        "missing": 0,
+        "cv": 0.7184
+      },
+      "roe": {
+        "median": 0.07,
+        "mean": 0.0625,
+        "n": 4,
+        "missing": 0,
+        "cv": 0.5352
+      },
+      "ev_sales": {
+        "median": 17.5,
+        "mean": 17.75,
+        "n": 4,
+        "missing": 0,
+        "cv": 0.5639
+      },
+      "growth_pct": {
+        "median": 35.0,
+        "mean": 42.5,
+        "n": 4,
+        "missing": 0,
+        "cv": 0.5359
+      }
+    }
+  },
+  "confidence": {
+    "score": 100.0,
+    "level": "高",
+    "data_completeness": 1.0,
+    "quality_score": 65.5,
+    "ff_calibrated": true,
+    "methods_available": [
+      "comparable",
+      "dcf",
+      "pb",
+      "wacc_model",
+      "cashflow_statistics",
+      "growth_triangulation",
+      "industry_index",
+      "sentiment_structured"
+    ]
+  },
+  "sensitivity": {
+    "growth_pe_matrix": {
+      "-20%": {
+        "-20%": 566.24,
+        "-10%": 637.02,
+        "+0%": 707.8,
+        "+10%": 778.57,
+        "+20%": 849.35
+      },
+      "-10%": {
+        "-20%": 589.19,
+        "-10%": 662.84,
+        "+0%": 736.49,
+        "+10%": 810.14,
+        "+20%": 883.79
+      },
+      "+0%": {
+        "-20%": 612.15,
+        "-10%": 688.67,
+        "+0%": 765.18,
+        "+10%": 841.7,
+        "+20%": 918.22
+      },
+      "+10%": {
+        "-20%": 635.1,
+        "-10%": 714.49,
+        "+0%": 793.88,
+        "+10%": 873.27,
+        "+20%": 952.65
+      },
+      "+20%": {
+        "-20%": 658.06,
+        "-10%": 740.32,
+        "+0%": 822.57,
+        "+10%": 904.83,
+        "+20%": 987.09
+      }
+    },
+    "wacc_sensitivity": {
+      "-1%": 1108.03,
+      "+0%": 913.96,
+      "+1%": 775.68
+    },
+    "note": "矩阵=TTM营收×(1+g1×(1+Δg))×净利率×(可比PE中位数×(1+Δ倍数))，PE口径"
+  },
+  "ipo_check": {
+    "price_per_share": 231.53,
+    "diluted_eps": 1.4286,
+    "issue_pe": 162.1,
+    "comparable_pe_median": 80,
+    "pe_deviation": 1.0259,
+    "pe_status": "预警⚠️（偏离+102.6%，需补充估值论证）",
+    "issue_ps": 56.9,
+    "comparable_ps_median": 17.5,
+    "ps_deviation": 2.2533,
+    "ps_status": "预警⚠️（偏离+225.3%）",
+    "raise_amount": 138.92,
+    "planned_raise": 42.02,
+    "raise_deviation": 2.306,
+    "raise_status": "超募⚠️",
+    "project_increment_value": 1005.0,
+    "project_target_year": "达产后",
+    "float_ratio": 0.1429,
+    "liquidity_discount": -0.05,
+    "net_cash": 15.0
+  },
+  "warnings": [
+    "显式 WACC 与 CAPM 模型值偏差 +1.36pp，请核实。",
+    "预测增速与三角参照偏离（60% vs 三角 95%），需补充依据。",
+    "Bear 情景：存在高严重度 WACC 相关风险，WACC 额外 +0.5pp（保守处理）。",
+    "可比法与行业指数隐含值偏差 -71%，建议审查可比选择。"
+  ],
+  "engine_version": "2.2.0",
+  "wacc_model": {
+    "enabled": true,
+    "method": "capm",
+    "rf": 0.02,
+    "erp": 0.06,
+    "beta": 1.5,
+    "beta_source": "用户给定β",
+    "d_e_ratio": 0.05,
+    "tax_rate": 0.15,
+    "cost_of_equity": 0.11,
+    "cost_of_debt_after_tax": 0.034,
+    "equity_weight": 0.9524,
+    "debt_weight": 0.0476,
+    "wacc_model": 0.1064,
+    "wacc_used": 0.12,
+    "deviation_pp": 1.36,
+    "note": "显式 wacc 优先，模型作校验"
+  },
+  "cashflow_statistics": {
+    "enabled": true,
+    "series_used": "OCF",
+    "n": 3,
+    "mean_growth": 2.1778,
+    "geometric_growth": 1.7325,
+    "std_growth": 2.2942,
+    "cv": 1.0534,
+    "ols_slope": 3.2444,
+    "r_squared": 1.0,
+    "trend_label": "上行",
+    "note": "基于OCF序列（3 年）"
+  },
+  "growth_triangulation": {
+    "enabled": true,
+    "self_cagr": 1.7325,
+    "comparable_median_growth": 35.0,
+    "industry_growth": 60,
+    "implied_growth": 0.953,
+    "implied_terminal_growth": 0.074,
+    "growth_weights_used": {
+      "self": 0.4,
+      "comparable": 0.4,
+      "industry": 0.2
+    },
+    "note": "用户显式 growth_forecast/terminal_growth 优先，三角值作参照；未显式时引擎采用三角值"
+  },
+  "industry_index": {
+    "enabled": true,
+    "name": "人形机器人板块（申万/Wind）",
+    "implied_values": {
+      "pe": 358.68,
+      "ps": 256.2,
+      "pb": 150.0
+    },
+    "base_value": 254.96,
+    "vs_comparable_deviation": -0.7054,
+    "note": "行业指数仅作交叉验证/降级基准，不并入综合权重"
+  },
+  "sentiment_structure": {
+    "enabled": true,
+    "impact_map": {
+      "growth_adj_pp": 15.0,
+      "margin_adj_pp": -3.0,
+      "wacc_adj_pp": 0.0,
+      "multiple_factor": 1.08,
+      "terminal_growth_adj_pp": 0.0,
+      "evidence": {
+        "growth": [
+          "2025 年人形机器人出货 5500 台全球第一（份额 32.4%）",
+          "工信部《人形机器人与具身智能标准体系（2026版）》发布"
+        ],
+        "margin": [
+          "人形机器人单价从 2023 年 59 万元降至 2025 年 16.7 万元"
+        ],
+        "multiple": [
+          "科创板 IPO 受理拟募 42 亿元，发行估值约 420 亿"
+        ]
+      },
+      "note": "假设层调整（v2.2.0），与 sentiment_adjust 市场口径修正分层；用户显式参数优先"
+    },
+    "risks_summary": [
+      {
+        "type": "商业化不及预期",
+        "description": "人形机器人量产进度与场景落地不及预期，行业 2026 年 10 万台目标存在不确定性",
+        "severity": "high",
+        "impact_target": "wacc"
+      },
+      {
+        "type": "竞争加剧",
+        "description": "智元/银河通用等对手融资与出货快速追赶，价格战侵蚀利润率",
+        "severity": "medium",
+        "impact_target": "margin"
+      }
+    ],
+    "orientation": {
+      "lean": "乐观",
+      "basis": "AI 大模型+人形机器人放量+国产替代；一二级市场百亿级融资密集",
+      "horizon": "12个月"
+    },
+    "note": "舆情结构化（v3.3）"
+  }
+}

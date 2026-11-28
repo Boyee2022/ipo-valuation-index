@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
-"""批跑服务配置。无密钥：仅访问公开行情与披露接口；技能目录在仓库外（陈老师成果不公开）。"""
+"""批跑服务配置。无密钥：仅访问公开行情与披露接口。
+
+技能包随仓库交付（skills/llm-ipo-valuation）；可用 VALUATION_SKILL_DIR 指向外部覆盖。
+"""
 import os
 from pathlib import Path
 
@@ -15,9 +18,12 @@ REPORTS_DIR = Path(os.environ.get(
     str(Path.home() / '.dsh-valuation' / 'valuation-reports'),
 ))
 
+# 技能包：仓库内优先（随包交付、可版本化）；外部部署仍可用 VALUATION_SKILL_DIR 覆盖。
+_REPO_SKILL = REPO / 'skills' / 'llm-ipo-valuation'
+_LEGACY_SKILL = Path.home() / '.dsh-valuation' / 'agents' / 'skills' / 'llm-ipo-valuation'
 SKILL_DIR = Path(os.environ.get(
     'VALUATION_SKILL_DIR',
-    str(Path.home() / '.dsh-valuation' / 'agents' / 'skills' / 'llm-ipo-valuation'),
+    str(_REPO_SKILL if _REPO_SKILL.exists() else _LEGACY_SKILL),
 ))
 
 # 个股级输入覆写（人工核定的 rNPV 管线参数等）：<code>.json（secucode 点换下划线）；缺省不影响任何股票。

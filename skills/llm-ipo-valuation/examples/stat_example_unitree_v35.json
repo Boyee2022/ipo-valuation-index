@@ -1,0 +1,228 @@
+{
+  "meta": {
+    "case": "unitree",
+    "as_of": "2026-08-14",
+    "engine_version": "2.4.0",
+    "stat_version": "3.2.0",
+    "seed": 42,
+    "n": 3000,
+    "calibration_file": "calibration_params.json"
+  },
+  "base_mid": 777.16,
+  "monte_carlo": {
+    "n_success": 3000,
+    "n_total": 3000,
+    "success_rate": 1.0,
+    "mean": 992.89,
+    "std": 900.35,
+    "p5": 428.89,
+    "p25": 587.87,
+    "p50": 775.42,
+    "p75": 1099.9,
+    "p95": 2086.76,
+    "ci90": [
+      428.89,
+      2086.76
+    ],
+    "histogram": {
+      "edges": [
+        242.8,
+        1371.7,
+        2500.7,
+        3629.6,
+        4758.6,
+        5887.5,
+        7016.5,
+        8145.5,
+        9274.4,
+        10403.4,
+        11532.3,
+        12661.3,
+        13790.2,
+        14919.2,
+        16048.2,
+        17177.1,
+        18306.1,
+        19435.0,
+        20564.0,
+        21692.9,
+        22821.9
+      ],
+      "counts": [
+        2544,
+        355,
+        57,
+        21,
+        9,
+        7,
+        1,
+        1,
+        0,
+        1,
+        2,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  },
+  "elasticity": {
+    "wacc": {
+      "value_1sigma_up": 730.12,
+      "value_1sigma_dn": 859.16,
+      "base_value": 777.16,
+      "delta_pct_1sigma": -6.05,
+      "delta_pct_minus_1sigma": 10.55,
+      "signed_delta_pct": -16.6,
+      "direction_flag": "正常"
+    },
+    "net_margin": {
+      "value_1sigma_up": 857.14,
+      "value_1sigma_dn": 697.29,
+      "base_value": 777.16,
+      "delta_pct_1sigma": 10.29,
+      "delta_pct_minus_1sigma": -10.28,
+      "signed_delta_pct": 20.57,
+      "direction_flag": "正常"
+    },
+    "terminal_growth": {
+      "value_1sigma_up": 819.21,
+      "value_1sigma_dn": 747.92,
+      "base_value": 777.16,
+      "delta_pct_1sigma": 5.41,
+      "delta_pct_minus_1sigma": -3.76,
+      "signed_delta_pct": 9.17,
+      "direction_flag": "正常"
+    },
+    "growth_forecast": {
+      "value_1sigma_up": 1544.61,
+      "value_1sigma_dn": 510.29,
+      "base_value": 777.16,
+      "delta_pct_1sigma": 98.75,
+      "delta_pct_minus_1sigma": -34.34,
+      "signed_delta_pct": 133.09,
+      "direction_flag": "正常"
+    },
+    "comparable_multiples": {
+      "value_1sigma_up": 948.45,
+      "value_1sigma_dn": 647.71,
+      "base_value": 777.16,
+      "delta_pct_1sigma": 22.04,
+      "delta_pct_minus_1sigma": -16.66,
+      "signed_delta_pct": 38.7,
+      "direction_flag": "正常"
+    },
+    "sentiment": {
+      "value_1sigma_up": 788.06,
+      "value_1sigma_dn": 762.31,
+      "base_value": 777.16,
+      "delta_pct_1sigma": 1.4,
+      "delta_pct_minus_1sigma": -1.91,
+      "signed_delta_pct": 3.31,
+      "direction_flag": "正常"
+    },
+    "quality_indicators": {
+      "value_1sigma_up": 754.47,
+      "value_1sigma_dn": 755.45,
+      "base_value": 777.16,
+      "delta_pct_1sigma": -2.92,
+      "delta_pct_minus_1sigma": -2.79,
+      "signed_delta_pct": -0.13,
+      "direction_flag": "异常"
+    }
+  },
+  "correlation": {
+    "wacc": {
+      "spearman_r": -0.229,
+      "n": 3000
+    },
+    "net_margin": {
+      "spearman_r": 0.182,
+      "n": 3000
+    },
+    "terminal_growth": {
+      "spearman_r": 0.106,
+      "n": 3000
+    },
+    "growth_mult": {
+      "spearman_r": 0.87,
+      "n": 3000
+    },
+    "multiple_mult": {
+      "spearman_r": 0.243,
+      "n": 3000
+    },
+    "sentiment": {
+      "spearman_r": 0.009,
+      "n": 3000
+    }
+  },
+  "robustness": {
+    "weights": {
+      "default": {
+        "weights": {
+          "dcf": 0.3,
+          "comparable": 0.5,
+          "sentiment": 0.2
+        },
+        "mid": 777.16,
+        "delta_pct_vs_default": 0.0
+      },
+      "comparable_heavy": {
+        "weights": {
+          "dcf": 0.15,
+          "comparable": 0.7,
+          "sentiment": 0.15
+        },
+        "mid": 790.53,
+        "delta_pct_vs_default": 1.72
+      },
+      "dcf_heavy": {
+        "weights": {
+          "dcf": 0.5,
+          "comparable": 0.3,
+          "sentiment": 0.2
+        },
+        "mid": 759.35,
+        "delta_pct_vs_default": -2.29
+      }
+    },
+    "comparable_exclusion": {
+      "excluded": "优必选",
+      "key": "ps",
+      "value": 30,
+      "mid": 744.27,
+      "delta_pct_vs_default": -4.23
+    }
+  },
+  "adjusted_interval": {
+    "raw_interval": [
+      458.04,
+      1151.06
+    ],
+    "raw_mid": 777.16,
+    "mc_ci90": [
+      428.89,
+      2086.76
+    ],
+    "mc_p50": 775.42,
+    "synthesis_interval": [
+      458.04,
+      1151.06
+    ],
+    "synthesis_mid": 776.29,
+    "note": "synthesis_interval=原始情景区间∩MC 90%区间；synthesis_mid=MC中位数与原始中枢均值（稳健口径）"
+  },
+  "validation_passed": true,
+  "validation_status": "通过",
+  "elasticity_issues": [
+    "quality_indicators: +1σ 方向异常（期望升，实际 -2.92%）",
+    "quality_indicators: ±1σ 同号非单调（-2.92%/-2.79%），检查 clamp 是否作用于乘子"
+  ]
+}

@@ -1,0 +1,569 @@
+{
+  "$schema_note": "IPO智能估值输入模板。'required: true' 为必填（一句话估值时会自动解析或一次问清）；其余可选，缺失时使用引擎默认值并在报告中标注'假设值'。字段单位：金额=亿元(人民币)，比率=小数(0.30=30%)，股票=亿股。sentiment.sentiment_adjustment_pct 为 null 表示由引擎自动生成（板块热度+个股舆情+情景因子；v3.15.0 起与盈利质量彻底解耦，不再含交叉验证规则）；显式填数值时引擎优先采用用户配置。v3.3 新增：financials.wacc_params（CAPM 分解）/ fcf_by_year·ocf_by_year / net_assets；顶层 industry_index；sentiment 结构化；preferences.growth_weights / use_mc_calibration。v3.4 新增：financials.capex_to_revenue（FCF 比率校准）、comparables 的 ocf_ratio/capex_to_rev/d_e_ratio（可比集一致性）、wacc_params.industry_beta（β 降级链兜底）、顶层 transactions[]（可比交易锚）与 recent_financing（最近融资价格锚）。v3.5 新增：recent_financing.exclusions[]（融资价格法 9 项排除检查）、顶层 repurchase（回购价格法）/ liquidity（流动性折扣）/ nav（净资产法）、meta.asset_type（资产类型适配）、PEG 单列展示。v3.6 新增：wacc_params.rf/erp/beta 缺省时启用公开参考值（rf 10Y 国债/ERP Damodaran/行业β表）；comparables.as_of（数据时点，混合 >30 天警示）；financials.data_as_of（数据时效 >180 天警示）；preferences.enable_peg_in_synthesis（缺省 true 保持 PEG 参与综合，false 仅单列）。v3.7 新增：financials.fcff_mode + ebit/d_a/capex/delta_wc/capex_by_year（FCFF 报表级口径）；preferences.adaptive_scenarios（情景档位自适应）。v3.8 统计层：cross_corr_growth（MC 增速×倍数尾部联动，calibration 配置）、流动性折扣 σ 入 MC（liquidity.enabled 时）。v3.9 新增：preferences.anchor_update（贝叶斯锚定）；PEG 条件化建议；ocf/fcf 采集强化。v3.11 新增：comparables.exchange/currency/standard（海外可比分组：全球化行业须含海外龙头，engine 输出 comparable_group_gap 估值差%）；preferences.terminal_growth_source（永续增速公开锚：行业长期受 GDP 4.5% 上限约束、10Y 国债+通胀 3.9% 保底）；wacc_params.comparable_betas 支持 beta_estimator.py 公开回归结果。v3.12 新增（三步数据源优先级优化）：financials.net_profit_basis（净利披露档：annual/quarterly×4/semiannual×2/consensus/normalized，公开披露与市场预期最高优先级，可由 fetch_data.py --financials/--consensus 自动拉取）；financials.ocf_latest/capex_latest（披露现金流，FCF 披露档 P0）；financials.fcf_ratio（显式 FCF/净利，v2.8.1 引擎已支持、本模板补齐）；comparables.source/priority（可比来源档位：research_report>public_info>auto>user>none，参与 S3.3 来源评分）。以上全部可选：不提供或为空 → 对应功能不激活，行为与 v3.4 一致。v3.13 新增：comparables.segment/mode/scale/growth_stage（S3.2 四维匹配，驱动可比三档分类 最可比/较可比/一般可比）；comparables.comparability（显式档位覆盖）；meta.target_profile（目标公司四维画像）；preferences.tier_min_samples（最可比档最少样本数，逐级回退阈值）。以上全部可选：不提供 → 整体按最可比（旧输入零变化）。 ｜ v3.21.0：新增顶层 dcf_growth 块（12 项增速参数开关，全部 opt-in）与 financials.terminal_growth_rationale。",
+  "meta": {
+    "required": true,
+    "company": "公司名称（示例：某生物医药公司 / 芯曜微电）",
+    "ticker": "股票代码（未上市填'拟IPO'）",
+    "industry": "行业类型（如：生物医药/创新药、AI芯片设计、半导体设备、新能源电池……）",
+    "exchange": "拟上市板块（科创板/创业板/主板/北交所；未指明时按规则推断）",
+    "one_line_input": "触发估值的一句话（原文保留，供报告引用）",
+    "as_of_date": "估值基准日（YYYY-MM-DD）",
+    "base_case_id": "增量重估时引用上一案例ID（首次留空）",
+    "asset_type": null,
+    "note_asset_type": "资产类型（v3.5，可选）：startup(初创/未盈利) / growth(成长期) / mature(成熟期) / private(非上市)；引擎输出方法适用性建议（DCF 适用性、主方法），仅提示不强制",
+    "lifecycle_stage": null,
+    "note_lifecycle_stage": "生命周期阶段（v3.16.0 Layer 1，可选）：startup/growth/mature/decline；显式提供时优先于客观判别（classify_lifecycle）。与 asset_type 解耦——asset_type 混入上市状态语义，本字段专表生命周期；两者不一致时引擎留痕标记",
+    "framework_check": {
+      "industry_class": null,
+      "interest_is_operating": null,
+      "regulated_capital": null,
+      "fcff_history": null,
+      "note": "Layer 0 前提判别入参（v3.16.0，可选）：industry_class(general/financial/resource/reit_utility/pipeline_pharma/holdco，缺省由 industry 关键词推断) / interest_is_operating(利息是否计入营业成本) / regulated_capital(是否受资本充足率监管) / fcff_history(历史 FCFF 序列，用于负值占比判别)。仅在 preferences.layer0_check=true 时参与判别"
+    },
+    "target_profile": {
+      "segment": null,
+      "mode": null,
+      "scale": null,
+      "growth_stage": null,
+      "note": "目标公司四维画像（v3.13，可选）：segment(产业链环节，如 humanoid_robot 人形机器人整机 / component 核心零部件) / mode(商业模式，如 product_hardware 产品硬件 / component_supplier 零部件供应 / integrated_solution 整体方案) / scale(规模档，如 mega 千亿级 / large 百亿级 / mid 十亿级 / small 亿级以下) / growth_stage(成长阶段，如 high_growth 高成长 / mature 成熟)。提供时引擎按四维匹配将可比公司自动分为最可比(4维全中)/较可比(中2-3维)/一般可比(中0-1维)；缺省 → 整体按最可比（旧输入零变化）"
+    }
+  },
+  "financials": {
+    "required": true,
+    "revenue_latest_ttm": 12.5,
+    "revenue_by_year": {
+      "2023": 7.4,
+      "2024": 9.6,
+      "2025": 12.5
+    },
+    "net_profit_latest_ttm": 2.5,
+    "net_margin": 0.2,
+    "gross_margin": 0.58,
+    "net_profit_basis": {
+      "annual_net_profit": null,
+      "quarterly_net_profit": null,
+      "semiannual_net_profit": null,
+      "consensus_net_profit": null,
+      "normalized_net_profit": null,
+      "annualized_source": null,
+      "as_of": null,
+      "note": "净利披露档（v3.12，最高优先级）：公开披露/市场预期的归母净利（亿元），可由 fetch_data.py --financials/--consensus 自动拉取。优先级链：normalized(仅 preferences.enable_normalized=true 显式启用时覆盖) > annual(年度归母净利) > quarterly×4(季度归母净利×4) > semiannual×2(半年度归母净利×2) > consensus(市场一致预期，视为前向利润) > 现行 rev×net_margin 兜底。annualized_source 注明数据来源（fetch/annual/semiannual/quarterly/consensus）；as_of 为数据日期"
+    },
+    "ocf_latest": null,
+    "capex_latest": null,
+    "note_ocf_capex": "披露现金流档（v3.12，FCF 披露档 P0）：ocf_latest=最新报告期经营现金流净额（亿元）、capex_latest=同期资本开支（可由 fetch_data.py capex_implied=OCF−FCFF 填充）；两者齐备且净利披露档可用时 FCF/净利=(OCF−CapEx)/披露净利，为最高优先级（高于显式 fcf_ratio 与三层校准）",
+    "fcf_ratio": null,
+    "note_fcf_ratio": "显式 FCF/净利（v2.8.1，可选）：用户显式指定时覆盖三层校准（L1 自身 OCF/净利−CapEx/净利｜L2 可比中位｜L3 兜底），优先级低于 v3.12 披露现金流档",
+    "cagr_3y": 0.3,
+    "ebitda_ttm": 3.2,
+    "r_and_d_ratio": 0.18,
+    "ocf_to_net_profit": 0.9,
+    "goodwill_ratio": 0.02,
+    "net_cash": 1.8,
+    "growth_forecast": {
+      "2026": 0.35,
+      "2027": 0.3,
+      "2028": 0.25
+    },
+    "terminal_growth": 0.02,
+    "$note_terminal_growth": "永续增速。合理区间 [通胀锚 2%, 长期名义 GDP 4.5%]；超过 GDP 上限须填 terminal_growth_rationale，否则 cva_2pct 口径会告警",
+    "terminal_growth_rationale": null,
+    "$note_terminal_growth_rationale": "永续增速超出 GDP 上限时的依据（在手订单/产能/政策/行业长期增速来源）",
+    "wacc": 0.11,
+    "total_shares_after_issue": 2.4,
+    "issue_shares": 0.36,
+    "loss_making": false,
+    "receivables_to_revenue": 0.25,
+    "inventory_to_revenue": 0.15,
+    "gross_margin_trend_pp": 0,
+    "nonrecurring_ratio": 0,
+    "ff_factor_adjust": null,
+    "wacc_params": {
+      "enabled": false,
+      "rf": 0.02,
+      "erp": 0.06,
+      "beta": 1.2,
+      "unlevered_beta": null,
+      "comparable_betas": null,
+      "industry_beta": null,
+      "d_e_ratio": null,
+      "tax_rate": 0.15,
+      "cost_of_debt": 0.035,
+      "note": "CAPM 分解（v3.3，v3.4 β降级链，v3.6 公开参考值）。显式 wacc 优先，模型作校验；β 优先级：beta > unlevered_beta(再杠杆) > comparable_betas均值(再杠杆) > industry_beta > 行业β参考表；rf/erp 缺省时用公开参考（10Y 国债 1.9% / Damodaran 中国 ERP 5.5%）；d_e_ratio 缺省时取可比集中位；缺省 enabled=false 不激活"
+    },
+    "capex_to_revenue": null,
+    "roic": null,
+    "note_roic": "投入资本回报率（v3.16.0 Layer 1，可选）：P0 价值驱动式现金流（FCFF_t = NOPAT_t×(1−g_t/ROIC)）所需；缺省时回落 assets/industry_params.json 的行业 ROIC 基准",
+    "fcff_mode": false,
+    "ebit": null,
+    "d_a": null,
+    "margin_history": null,
+    "note_margin_history": "D5 利润率历史（按年升序，小数，≥3 期）：净利率或 EBIT 利润率，用于利润率情景步长 σ clamp[1,3]pp",
+    "non_recurring_ratio": null,
+    "note_non_recurring_ratio": "D8 非经常性损益占净利比例：>15% 时提示开启 enable_normalized 或改用扣非口径（纯诊断）",
+    "capex": null,
+    "delta_wc": null,
+    "capex_by_year": null,
+    "note_fcff": "FCFF 报表级口径（v3.7 B1，可选）：fcff_mode=true 且 ebit/capex 齐备时激活，FCFF=EBIT×(1−t)+D&A−CapEx−ΔWC（税率先用 wacc_params.tax_rate，缺省 15%）；capex_by_year 为分年资本开支 {年: 亿元}（与募投产能节奏挂钩），缺省按基年 capex 外推；缺省 fcff_mode=false → 保持净利×FCF比率口径（零变化）",
+    "note_capex": "资本开支/营收比率（v3.4，FCF 比率三层校准用）；提供时 FCF 口径 = OCF/净利 − CapEx/净利，替代'净利×OCF/净利'近似",
+    "fcf_by_year": null,
+    "ocf_by_year": null,
+    "net_assets": null,
+    "note_net_assets": "净资产（亿元），PB 估值法用；缺省时 PB 法不激活",
+    "data_as_of": null,
+    "note_data_as_of": "财务数据日期（v3.6，可选）：YYYY-MM-DD；距估值基准日 >180 天触发数据时效警示（中证协第六条从严）",
+    "note_ocf": "经营现金流序列（v3.9 B2b 强化，可选）：{年: 亿元}，优先采集 3-5 年（现金流量表，审计口径）；用于 cashflow_statistics 现金流口径统计（替代营收近似）；缺失时引擎用营收序列近似并显式标注\"营收近似\"",
+    "note_fcf": "自由现金流序列（可选）：{年: 亿元}，优先采集 3-5 年；缺失时同 ocf 处理"
+  },
+  "segment_benchmark": {
+    "required": false,
+    "median_ps": null,
+    "median_pe": null,
+    "note": "产业链环节估值中枢（如AI芯片设计环节PS中位），提供时引擎输出环节隐含估值并列对比（S4.3因子校准层）"
+  },
+  "comparables": [
+    {
+      "name": "可比公司A",
+      "code": "688000.SH",
+      "mktcap": 800,
+      "net_profit": 22,
+      "revenue": 90,
+      "pe": 36,
+      "ps": 8.9,
+      "ev_ebitda": 18,
+      "pb": null,
+      "net_margin": null,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": null,
+      "capex_to_rev": null,
+      "d_e_ratio": null,
+      "growth_pct": 25,
+      "note": "数据来源与日期；缺失字段引擎自动按可用方法处理；指标口径统一（归母）：PE 用归母净利、PB 用归母净资产、EV/EBITDA 分子分母同口径。v3.4 可比集一致性：ocf_ratio（OCF/净利）、capex_to_rev（资本开支/营收）、d_e_ratio（资本结构）用于 DCF 参数校准（FCF 比率 L2 层 / WACC β 与 D/E）；as_of（v3.6）：数据时点 YYYY-MM-DD，多可比混合日期差>30 天引擎警示；exchange（v3.11）：CN/HK/US/KR，海外可比纳入分组统计（全球化行业须含海外龙头）；source/priority（v3.12）：来源档位 research_report(研报)>public_info(公开信息)>auto(自动抓取)>user(用户指定)>none(未注明)，参与 S3.3 来源评分（+10/+5/+3/0/−10），研报/公开信息选取为最高优先级档",
+      "as_of": null,
+      "exchange": "CN",
+      "currency": "CNY",
+      "standard": "CAS",
+      "source": "none",
+      "priority": 5,
+      "segment": null,
+      "mode": null,
+      "scale": null,
+      "growth_stage": null,
+      "comparability": null,
+      "note_dim": "S3.2 四维匹配字段（v3.13，可选）：segment/mode/scale/growth_stage 与 meta.target_profile 同名维度比对；comparability 为显式档位覆盖（most/fair/general），填了则绕过自动推断直接归入该档。维度取值见 meta.target_profile.note 枚举建议",
+      "legal_entity_id": null,
+      "note_legal_entity_id": "v3.20.0 P0-3 去重键：同一发行人的 A/H/ADR 多股类须填同一值（如 000333），引擎只按一个经营实体统计；缺省回退 code 去交易所后缀",
+      "listing_date": null,
+      "note_listing_date": "v3.20.0 P1-4 上市日期（YYYY-MM-DD）：距估值基准日 <12 个月判为次新并剔除（PE 含炒新溢价）；12~24 个月进观察区，须做含/剔双口径",
+      "financial_period_end": null,
+      "note_financial_period_end": "v3.20.0 P0-4 财务期末（YYYY-MM-DD）：须不晚于信息可得性截点，晚于截点=用基准日后数据回填，判 violation",
+      "included": true,
+      "note_included": "v3.20.0 P0-1 是否进入最终样本；false 者须在 peer_screening.rejected 记剔除理由",
+      "reason": null,
+      "note_reason": "v3.20.0 P0-1 纳入理由（一句话：业务/产品/规模的相似点）",
+      "incomparable": null,
+      "note_incomparable": "v3.20.0 P0-1 主要不可比因素（一句话：差异点，供报告『例外与处置』表引用）",
+      "note_standard": "v3.20.0 P1-1 会计准则（CAS/HKFRS/IFRS/USGAAP，支持中文别名）：与标的 meta.accounting_standard 不同者标记需调节，不直接进 P/E 统计"
+    }
+  ],
+  "transactions": [
+    {
+      "name": "可比交易A（融资/并购）",
+      "date": "YYYY-MM-DD",
+      "type": "融资",
+      "post_money": null,
+      "revenue": null,
+      "ebitda": null,
+      "ev_sales": null,
+      "ev_ebitda": null,
+      "note": "可比交易（v3.4，无可比公司时的市场法替代②）：一级市场融资/并购案例倍数（EV/Sales、EV/EBITDA），与行业指数并列输出交易锚；交易距估值日>12个月自动时间衰减；不并入综合权重"
+    }
+  ],
+  "recent_financing": {
+    "required": false,
+    "enabled": false,
+    "round": "C轮",
+    "financing_date": "YYYY-MM-DD",
+    "post_money": null,
+    "note": "最近融资价格法（v3.5 完整版，中证协指引第八条）：exclusions[] 任一 present=true → 融资价格法不适用（引擎输出逐项命中表，锚失效）；全 false → 通过 9 项排除检查并沿用时间衰减估值（≤12月1.0/12-24月线性至0.7/>24月0.7）；缺省不提供 exclusions → 简化版行为（v3.4 零变化）。不并入综合权重",
+    "exclusions": [
+      {
+        "code": "E1",
+        "type": "新老投资权利义务不同",
+        "present": false,
+        "note": "核查结果/依据（如优先清算/回购承诺差异）"
+      },
+      {
+        "code": "E2",
+        "type": "回报担保",
+        "present": false,
+        "note": ""
+      },
+      {
+        "code": "E3",
+        "type": "不成比例稀释",
+        "present": false,
+        "note": ""
+      },
+      {
+        "code": "E4",
+        "type": "价格明显低于公允",
+        "present": false,
+        "note": "强迫交易/救援措施/员工激励/显失公允关联交易"
+      },
+      {
+        "code": "E5",
+        "type": "特定协同/非现金投入",
+        "present": false,
+        "note": ""
+      },
+      {
+        "code": "E6",
+        "type": "轮次间隔短价格波动大/同业破发",
+        "present": false,
+        "note": ""
+      },
+      {
+        "code": "E7",
+        "type": "融资金额过低/发行对象有限",
+        "present": false,
+        "note": ""
+      },
+      {
+        "code": "E8",
+        "type": "宏观政策市场重大变化",
+        "present": false,
+        "note": ""
+      },
+      {
+        "code": "E9",
+        "type": "企业自身重大事件",
+        "present": false,
+        "note": "主业变化/业绩偏离/欺诈诉讼/资不抵债/管理层变动/技术壁垒突破"
+      }
+    ]
+  },
+  "industry_index": {
+    "required": false,
+    "name": "申万XX指数",
+    "pe_median": null,
+    "ps_median": null,
+    "pb_median": null,
+    "index_growth_pct": null,
+    "index_long_term_growth": null,
+    "source": "数据来源与日期",
+    "as_of": "YYYY-MM-DD",
+    "note": "行业指数可比信息（v3.3）：与可比法交叉验证（偏差>30% 提示），可比<3家时作为降级基准；index_growth_pct 与 index_long_term_growth 均为百分数（25=25%，8=8%），后者用于永续增长率三角校准；对应中证协'行业指标法仅用于检验'定位"
+  },
+  "repurchase": {
+    "required": false,
+    "enabled": false,
+    "trigger_condition": "触发条件（如 IPO 未成功/未按期上市触发回购）",
+    "repurchase_price": null,
+    "shares": null,
+    "investor_repurchase_likelihood": 1.0,
+    "redemption_yield": null,
+    "note": "回购价格法（v3.5，中证协 2025 新增）：回购价值=repurchase_price(元/股)×shares(亿股)（单位自动换算亿元）；与主估值孰高，likelihood∈[0,1] 为回购实现概率加权；作锚/下限校验，不并入综合权重"
+  },
+  "liquidity": {
+    "required": false,
+    "enabled": false,
+    "method": "put_option",
+    "holding_period_years": 2.0,
+    "volatility": 0.4,
+    "discount_pct": null,
+    "weight": 0.5,
+    "note": "非上市股权流动性折扣（v3.5，中证协第二十/二十一条）：method∈put_option(看跌期权 discount=2N(v√T/2)−1，σ=预期波动率、T=估值日至可退出年数) | empirical(经验值 10%-50%) | blend(按 weight 混合)；只作用于市场法（可比乘数），DCF 不折；与 ipo_check.float_ratio 分层不叠加；缺省 enabled=false 不激活"
+  },
+  "nav": {
+    "required": false,
+    "enabled": false,
+    "net_assets": null,
+    "adjustments": null,
+    "liquidation_scenario": false,
+    "weight": null,
+    "note": "净资产法（v3.5，中证协成本法）：net_assets 可复用 financials.net_assets；adjustments 为资产重估调整（亿元，正负均可）；liquidation_scenario=true 时作估值下限提示；重资产/控股平台主方法候选；不并入综合权重"
+  },
+  "fundraising": {
+    "required": false,
+    "planned_raise": 11.0,
+    "projects": [
+      {
+        "name": "先进制程AI芯片研发",
+        "amount": 6.0,
+        "target_revenue_add": 5.0,
+        "target_profit_add": 1.0,
+        "target_year": 2028
+      }
+    ],
+    "post_ipo_years_revenue_add": 8.0,
+    "post_ipo_years_profit_add": 1.6
+  },
+  "sentiment": {
+    "required": false,
+    "sector_heat": "high",
+    "company_news_sentiment": "neutral",
+    "sentiment_adjustment_pct": null,
+    "evidence": "舆情来源摘要（用于溯源）",
+    "events": [
+      {
+        "type": "政策利好/技术突破/业绩超预期/监管/诉讼/减持/订单等",
+        "title": "事件标题（用于报告溯源）",
+        "date": "YYYY-MM-DD",
+        "impact_direction": "positive",
+        "importance": "high",
+        "impact_target": "growth",
+        "impact_pct": 8,
+        "source": "来源"
+      }
+    ],
+    "risks": [
+      {
+        "type": "风险类型（客户集中/技术迭代/政策/贸易等）",
+        "description": "风险描述",
+        "severity": "high",
+        "impact_target": "margin"
+      }
+    ],
+    "policy": [
+      {
+        "policy": "政策名称",
+        "direction": "利好",
+        "impact_target": "multiple",
+        "impact_pct": 10,
+        "source": "来源"
+      }
+    ],
+    "investor_orientation": {
+      "lean": "乐观",
+      "basis": "情绪倾向依据（AI 算力需求+国产替代等）",
+      "horizon": "12个月"
+    },
+    "note": "舆情结构化（v3.3）：events/policy 聚合为'舆情→假设影响映射'（impact_map，假设层调整，与 sentiment_adjustment_pct 市场口径修正分层）；impact_target ∈ growth|margin|wacc|multiple|terminal；importance ∈ high|medium|low"
+  },
+  "dcf_growth": {
+    "$note": "v3.21.0 成熟期「显式期增速 + 永续增速」参数体系（12 项开关，全部 opt-in）。缺省值即 legacy 行为，输出与 v3.20.0 逐位一致；逐项开启后报告 §6.2／§7.3.4 会同步披露取值链与档位。放在顶层而非 preferences，因为这是 **DCF 建模口径**（不是用户偏好），需在报告关键假设章逐项溯源",
+    "terminal_growth_guard": "off",
+    "$note_terminal_growth_guard": "A1 终值前提守卫。off=不压值但违规时终值置 0（fail-closed，不产出负终值）；clamp=压到 WACC−1pp 并留痕。`g < WACC` 是 Gordon 终值成立的必要条件，wacc≤tg 时原实现会崩溃或得负终值",
+    "terminal_growth_default": "legacy_6pct",
+    "$note_terminal_growth_default": "A2 永续增速缺省值。legacy_6pct=6%（旧行为）；cva_2pct=2%（对齐 CVA 与通胀锚，并把输入上限由 10% 收到 GDP 4.5%）",
+    "terminal_growth_basis": "legacy",
+    "$note_terminal_growth_basis": "A3/A4 取值链。legacy=三角校准值直接当 tg（旧行为）；chain=「用户显式 > 行业 g_lt > 通胀锚 2%」逐级回落，三角值降为校验参照（|偏差|>1pp 才告警）",
+    "terminal_growth_scenario_mode": "flat",
+    "$note_terminal_growth_scenario_mode": "A5 永续增速是否随情景移动。flat=三情景同一 tg（旧行为）；stepped=按 scenario_tg_adj_pp 分档，bull 侧受 GDP 上限约束，并消费 sentiment.impact_map.terminal_growth_adj_pp",
+    "scenario_tg_adj_pp": {
+      "bear": -0.5,
+      "base": 0.0,
+      "bull": 0.5
+    },
+    "$note_scenario_tg_adj_pp": "A5 三情景 tg 调整（单位：百分点 pp）。仅 stepped 模式生效；对齐 CVA 敏感性 g 轴 0.5pp 步长",
+    "tv_share_guard": false,
+    "$note_tv_share_guard": "A6 终值占比四档门禁：<40% 过低／40–75% 区间内／75–85% 偏高／>85% 极端（error 级告警 + 置信度封顶「中」）。只告警不阻断——IPO 技能必须持续产出区间",
+    "implied_tg_market": false,
+    "$note_implied_tg_market": "A7 市场隐含永续增速反解：由「市值 − 净现金 − 显式期现值」反解 g*，用于判断分歧是否真的在永续假设上（g*<−5% → 分歧在现金流路径，调 tg 无论如何都压不到市价）",
+    "growth_path_mode": "legacy_truncate",
+    "$note_growth_path_mode": "B1 用户增速路径。legacy_truncate=只取前 3 年（旧行为）；user_full=用满用户给定路径（7 年即 7 年），不足 5 年才线性补齐",
+    "growth_history_shape": "off",
+    "$note_growth_history_shape": "B2 历史增速形态判定。off=不判；advisory=只产出形态与 metrics、不改数值（改数须业务驱动证据，引擎不代拟）",
+    "scenario_step_mode": "fixed",
+    "$note_scenario_step_mode": "B4 情景增速步长。fixed=±10pp（旧行为）；cva_sigma=clamp(近三年增速 σ, 2pp, 5pp)，避免 bear 首年增速突破历史极值",
+    "growth_terminal_mode": "asymptotic",
+    "growth_shape_mode": "legacy",
+    "$note_growth_shape_mode": "v3.29.0 增长函数形态族。legacy=旧五形态（缺省，逐位零回归）；plc6=六阶段：g_t=tg+(g1−tg)·E(t)，E(1)=1/E(n)=0 由构造保证（真 S 曲线，不再需要 forced 补丁）。plc6 优先于 growth_model 状态空间模型，二者同时声明会挂 warning 并只执行 plc6",
+    "$note_growth_terminal_mode": "B5 末段增速是否强制落在 tg。asymptotic=按形态渐近（旧行为，永不到达）；forced=等差插值，末点 ≡ tg（成熟期建议 forced）",
+    "lifecycle_mature_n_mode": "table",
+    "$note_lifecycle_mature_n_mode": "B3/v3.27.0 成熟期显式期长度。table=取四阶段表值 6 年（缺省，与 growth 8 年构成 10/8/6/4 单调序列）；legacy_4=4 年（v3.21.0 前旧行为，终值占比锁在 80%+）；cva_7=7 年（B3 试点口径）。★v3.27.0 已把表值由 10/6/4/5 重标定为 10/8/6/4，修复「成长期 6 < 成熟期 7」的倒挂",
+    "require_explicit_wacc_with_cva_tg": false,
+    "$note_require_explicit_wacc_with_cva_tg": "修复⑤（v3.22.0）：开启 cva_2pct 永续增速时强制校验 WACC 是否显式/已模型化。只把 tg 从 6% 改 2%、WACC 仍是 11% 时，终值倍数 (1+g)/(WACC−g) 由 21.20× 掉到 11.33×（−46.6%），用户以为只动了永续假设、实际砍掉近一半终值"
+  },
+  "dcf_cost": {
+    "$note": "v3.22.0 估值缺陷修复六项（全部 opt-in）。缺省值即 v3.21.0 行为，输出逐位一致。这六项都是「会让估值系统性偏离且不报错」的类型——错在数上、不在接口上，所以用建模口径块显式承载，便于报告逐项披露",
+    "wacc_default_mode": "legacy_11pct",
+    "$note_wacc_default_mode": "修复①：未填 financials.wacc 时的缺省。legacy_11pct=硬编码 11%（旧行为，rf 1.9% 时代已偏高，DCF 被系统性低估三成以上）；capm_auto=按 rf + β×ERP + 债务成本动态构造，输出 wacc_default 块留痕",
+    "erp_default_mode": "auto",
+    "$note_erp_default_mode": "ERP 缺省口径。auto=capm_auto 时取 CVA 8.04%（CCPFC2026 隐含 ERP）、否则沿用 Damodaran 5.5%；legacy_5p5／cva_8p04 可显式锁定",
+    "cashflow_fallback_mode": "silent",
+    "$note_cashflow_fallback_mode": "修复②：cashflow_model=p0_value_driver 缺 ebit/roic 时的处置。silent=仅留痕（旧行为，用户以为用了守恒律口径、实际跑比率法）；error=留痕 + warnings + 置信度封顶「中」",
+    "method_drop_mode": "zero_silent",
+    "$note_method_drop_mode": "修复③：可比法 synthesis.base_value 为空时的权重处置。zero_silent=权重照占、取值按 0（旧行为，综合值静默缩水一半）；renormalize=从综合式剔除并按剩余权重再归一，输出 method_drop 块",
+    "fcff_suggest": false,
+    "$note_fcff_suggest": "修复④：资本开支/营收 >8% 且未启用 fcff_mode 时主动提示开启报表级 FCFF——「净利×FCF 比率」不含再投资约束，重资产标的 FCFF 系统性偏高",
+    "point_estimate_guard": false,
+    "$note_point_estimate_guard": "修复⑥：A6 extreme 档（终值占比 >85%）禁出单点估值，synthesis.point_estimate=null 并给出抑制理由；情景区间与 MC 90% 区间仍然有效",
+    "discount_timing": "year_end",
+    "$note_discount_timing": "D1 折现时点。year_end=年末（旧行为）；mid_year=年中——显式期按 (t−0.5)、终值按 (n−0.5) 折现，WACC 8.8% 时现值约 +4.4%（现金流按年中发生，年末口径系统性偏低）",
+    "size_premium_mode": "off",
+    "$note_size_premium_mode": "D2 规模溢价。cva_deciles=按 financials.market_cap（或 meta.market_cap）查 CVA CCPFC2026 十分位：组1 0.33% … 组10 11.14%，≤24.41 亿用 10w/10x/10y/10z 细分（最高 18.29%）；β 调整后口径直接加在 CAPM ke 上，显式 wacc 仍优先",
+    "capex_check": false,
+    "$note_capex_check": "D3 Capex/D&A 量级勾稽。拦截「capex 异常偏低」——格力案例 capex 误填 7.30 亿（应 125.31 亿）时比值 0.15，8% 营收阈值完全拦不住，而开 fcff_mode 后估值跳升 46.6%",
+    "capex_da_band": [
+      0.5,
+      10.0
+    ],
+    "$note_capex_da_band": "D3 合理带 [下限, 上限]；白电约 1.5–3.5。带外触发 warning 并输出 capex_check 块",
+    "margin_step_mode": "off",
+    "$note_margin_step_mode": "D5 利润率情景步长。cva_sigma=按 financials.margin_history 的 σ 定步长并 clamp[1,3]pp（CVA 口径，与收入增速 2–5pp 分开；利润率波动天然小于收入）",
+    "reinvestment_check": false,
+    "$note_reinvestment_check": "D9 期末再投资自检。以 dcf_drivers 逐年明细计算 (Capex−D&A+ΔWC)/NOPAT，与永续增速隐含 RR=g/ROIC 偏离 >50% 时告警——把 p0 守恒律变成期末校验，不要求输入 ROIC",
+    "normalization_hint": false,
+    "$note_normalization_hint": "D8 正常化提示（纯诊断）。非经常性损益占净利 >15%、有效税率 <10%、净利为半年/季度年化档时提示开启 enable_normalized 或改用扣非口径；不改数值"
+  },
+  "dcf_drivers": {
+    "$note": "v3.23.0 D6/D7 报表驱动式 FCFF（可选）：Revenue_t=Revenue_{t−1}×(1+g_t) → EBIT_t=Revenue_t×EBIT率 → NOPAT=EBIT×(1−t) → FCFF=NOPAT+D&A−Capex−ΔWC。与 CVA DCF 的三表口径同构，但只需比率与基数、不需逐科目三表。缺省不提供 → 走 fcff_mode / p0 / p2_legacy，输出逐位不变",
+    "enabled": true,
+    "base_revenue": null,
+    "$note_base_revenue": "基期营业收入（亿元），缺省取 financials.revenue_latest_ttm",
+    "ebit_margin": null,
+    "$note_ebit_margin": "EBIT 利润率：标量或逐年序列（小数）。与 cost_ratio/expense_ratio 二选一；逐年可挂产能爬坡",
+    "cost_ratio": null,
+    "$note_cost_ratio": "营业成本率（标量或逐年）。EBIT 率 = 1 − 成本率 − 费用率（对齐 CVA 四组驱动中的营业成本率）",
+    "expense_ratio": null,
+    "$note_expense_ratio": "营业费用率（销售+管理+研发等，标量或逐年）",
+    "capex_to_revenue": null,
+    "$note_capex_to_revenue": "资本开支/营收（标量或逐年）。逐年可挂募投产能节奏；缺省回退 financials.capex_to_revenue",
+    "da_to_revenue": null,
+    "$note_da_to_revenue": "D&A/营收（标量或逐年）；缺省按 base_da 随收入外推",
+    "nwc_to_revenue": null,
+    "$note_nwc_to_revenue": "ΔWC = ΔRevenue × 比率（简化口径）",
+    "nwc_turnover": null,
+    "$note_nwc_turnover": "收入/营运资本 周转次数（优先于 nwc_to_revenue）：NWC_t=Rev_t/周转，ΔWC=NWC_t−NWC_{t−1}——对齐 CVA「周转率统一取最近一年」口径",
+    "tax_rate": null,
+    "$note_tax_rate": "有效税率，缺省取 wacc_params.tax_rate 或 15%"
+  },
+  "preferences": {
+    "weights": {
+      "dcf": 0.3,
+      "comparable": 0.5,
+      "sentiment": 0.2
+    },
+    "scenario_weights": {
+      "bear": 0.25,
+      "base": 0.5,
+      "bull": 0.25
+    },
+    "exclude_outliers": true,
+    "use_mc_calibration": false,
+    "growth_weights": {
+      "self": 0.4,
+      "comparable": 0.4,
+      "industry": 0.2,
+      "note": "增长三角校准权重（v3.3，可选）：自身历史 CAGR / 可比增速中位 / 行业增速；某项缺失自动对剩余项重归一化，全缺不激活"
+    },
+    "enable_peg_in_synthesis": true,
+    "note_peg": "PEG 参与综合开关（v3.6，可选）：缺省 true 保持 PEG 计入综合均值（旧行为）；false 时 PEG 仅单列展示（v3.9：增速>30% 且 PEG 可用时引擎提示建议开启）",
+    "peg_guard": true,
+    "note_peg_guard": "PEG 护栏（v3.16.4，可选，缺省 true）：①样本增速门槛——comparables[].growth_pct < peg_min_growth_pct（缺省 5）的样本剔除。近零正增速会使 PE/增速 虚高，单只此类可比即可污染 PEG 中位数并令 PEG 值量级爆炸（案例：六家可比仅 1 家为正增速 +1.3% → PEG 中位 14.86 → PEG 值达市值 12 倍）；②中位数上限——PEG 中位数 > peg_max_ratio（缺省 5.0）判定失真则 PEG 整法弃用（不做截断）。留痕 peg.guard_excluded / peg.dropped_by_guard + warning。置 false 逐位回退 v2.13.1 行为",
+    "peg_min_growth_pct": 5.0,
+    "peg_max_ratio": 5.0,
+    "adaptive_scenarios": false,
+    "note_adaptive": "情景档位自适应（v3.7 B6，可选）：true 时按 asset_type（startup ±15/growth ±10/mature ±8/private ±10）与历史波动率动态设定 Bear/Bull 增速幅度；缺省 false 保持 ±10pp（零变化）",
+    "anchor_update": {
+      "enabled": false,
+      "anchor_value": null,
+      "anchor_type": "ipo_price",
+      "sigma_pct": 0.1,
+      "note": "贝叶斯锚定（v3.9 C1，可选）：外部价格锚（ipo_price 发行价 / financing 融资价 / transaction 交易对价 / external）→ 情景权重贝叶斯更新；先验=scenario_weights，似然=N(情景值|锚,σ=锚×sigma_pct)；输出锚定中枢 anchored_mid 与主结果并列（审计原则：主结果不变）；缺省 enabled=false 零变化"
+    },
+    "terminal_growth_source": "auto",
+    "note_tg": "永续增速来源（v3.11，可选）：auto=用户显式>三角校准>公开锚（10Y国债+通胀 3.9% 保底、GDP 4.5% 上限）；user=仅用户显式；triangulation=仅三角校准",
+    "enable_normalized": false,
+    "note_normalized": "周期股正常化开关（v3.12，可选）：true 时 net_profit_basis.normalized_net_profit 覆盖披露档（周期股三步修正：正常化盈利/周期中段增速）；缺省 false → 披露档（年度/季度×4/半年×2/一致预期）为最高优先级",
+    "tier_min_samples": 2,
+    "note_tier": "最可比档最少样本数（v3.13，可选）：逐级回退阈值——最可比样本数≥该值时仅用最可比汇总；不足则并入较可比，仍不足再并入一般可比；缺省 2。旧输入（无 target_profile）整体按最可比，等同于该机制关闭（零变化）",
+    "four_part_mode": true,
+    "note_four_part": "估值四部分拆分（v3.15.0，缺省 true）：①DCF现金流贴现(权重0.30) ②可比公司法含盈利质量调整(0.50) ③市场舆情仅情绪(0.20) ④统计检验P5/P95区间。true 时 ③ 舆情独立加权、不再与可比法共用 70%（③仅情绪，不含质量/流动性）；②含质量+商誉+因子+流动性折扣——注意 ② 的 comp_v 已含情景倍数 multiple_factor（含 impact_map 舆情假设层传导的倍数项），故 ② 并非'零情绪'，与 ③ 分层不叠加；false 逐位回退旧合成（情绪并入可比法），旧输入零变化",
+    "layer0_check": false,
+    "note_layer0": "Layer 0 前提判别门（v3.16.0，可选，缺省 false）：true 时按 meta.framework_check 检验「现金流可定义」与「资本结构≈融资选择」两前提，输出 framework_check 块；DCF 不适用（金融/资源）时 dcf 权重归零并路由 RIM/DDM/NAV；conditional 时按 dcf_weight_cap 封顶。v3.16.2：前提 A4（营收序列 ≥3 年）参与判定，不足则由 full 降为 conditional；与 asset_type 适配器就 DCF 适用性冲突时以 Layer 0 为准。缺省 false → 不挂块、零变化",
+    "lifecycle_mode": "auto",
+    "note_lifecycle_mode": "Layer 1 生命周期模式（v3.16.1）：模板与技能流程默认 auto——按公开指标判别企业阶段（startup/growth/mature/decline）并驱动增速模型（四形态 S曲线/指数fade/均值回归/衰退收敛）与显式期长度（**10/8/6/4**，v3.27.0 重标定；原 10/6/4或7/5），同时输出 lifecycle 块与 DCF 的 growth_schedule。引擎代码缺省仍为 legacy：输入不含本键时保持 5 年线性插值口径（零变化，历史输入不受影响）；如需复现旧口径可显式写 legacy",
+    "industry_params": false,
+    "note_industry_params": "Layer 2 行业参数底座（v3.16.0，可选，缺省 false）：true 时解析 assets/industry_params.json 的行业基准（β/ROIC/倍数中枢/half_life 等），作为参数第 4 档来源与校验锚（WACC 区间/增速 vs ROIC/倍数偏离），输出 industry_params 块。行业命中按「最长命中别名优先」（v3.16.6，避免「制造业」等通用后缀被泛化别名抢占）；缺省 false → 不挂块、零变化",
+    "path_weight_mode": "fixed",
+    "note_path_weight_mode": "三路径权重条件化（v3.16.0 B4，可选，缺省 fixed）：adaptive 时 w = normalize(base × k_lifecycle × k_admissible)，按生命周期调节 dcf/可比/舆情权重并归一化，输出 path_weights 块；base 取用户 preferences.weights（v3.16.2，不再误用 DEFAULT 常量）；与 layer0_check 同时开启时先 B4 后按 dcf_weight_cap 封顶（v3.16.2）；同时挂出 B5 三路径相关性声明（②③共用 comp_v 基数，有效路径数 2.3）。fixed → 保持 0.30/0.50/0.20（零变化）",
+    "lifecycle_weight_mode": "multiplier_k",
+    "note_lifecycle_weight_mode": "生命周期权重口径（v3.28.0，可选，缺省 multiplier_k → 逐位零回归）：multiplier_k=w=normalize(base × k_lifecycle × k_admissible)（v3.16.0 起的行为，12 个无出处乘数）｜damodaran_table=取达莫达兰企业生命周期六阶段（初创/年轻成长/高速成长/成熟成长/成熟稳定/衰退）的**方法定位表**，行内和为 1 的直接权重、不乘 base、不归一化，阶段由 damodaran_stage() 从 v326 四阶段派生（关键增量：15% 线区分高速成长与成熟成长，与 v326 的 8% 线不是同一把尺）。★需 path_weight_mode=adaptive 且 lifecycle_mode=auto 才生效。★保护：base 权重为 0 的路径（用户显式禁用）与 Layer 0 否决的 DCF 一律置零、表不复活，记入 blocked_paths。base 被表覆盖时 base_weight_superseded=true",
+    "cashflow_model": "p2_legacy",
+    "note_cashflow_model": "现金流模型档（v3.16.0 Layer 1，可选，缺省 p2_legacy）：p2_legacy=净利×FCF 比率外推（现行口径，零变化）｜p1_fcff=报表级 FCFF（需 fcff_mode + ebit/capex 齐备，经财务口径）｜p0_value_driver=价值驱动式 FCFF_t=NOPAT_t×(1−g_t/ROIC)（需 ebit + roic，输出 cashflow_schedule + reinvestment_consistency）",
+    "sentiment_adjust_mode": "legacy",
+    "note_sentiment_adjust_mode": "舆情强度驱动调整（v3.18.0，可选，缺省 legacy）：legacy=clamp(sent×k, ±band)（v3.17 口径，存在双重截断冗余）｜strength=方向/强度正交拆分 `adj = band×k_signal×sign(sent)×min(|sent|/10%,1)`，上限放宽到 band×SIGNAL_K_MAX(1.60)。strength 需与 sentiment_layer=correction 同用；缺省 legacy → 逐位零回归",
+    "signal_authority_mode": "legacy",
+    "note_signal_authority_mode": "权威出处加成（v3.18.0，可选，缺省 legacy）：weighted 时 policy 项 authority=true → 信号强度 ×1.15（原实现仅高重要性 ×1.2）；legacy 不加成。仅在 sentiment_adjust_mode=strength 时生效",
+    "signal_decay_mode": "legacy",
+    "note_signal_decay_mode": "信号时效衰减口径（v3.18.0，可选，缺省 legacy）：legacy=线性 1−(d−30)/90｜stepped=分段（≤30 天不衰／31–60 天 ×0.5／60+ ×0.2）。仅在 sentiment_adjust_mode=strength 时生效",
+    "sentiment_overlap_discount": false,
+    "note_sentiment_overlap_discount": "舆情去相关折让（v3.18.0，可选，缺省 false）：true 且 sentiment_structure.enabled 时，舆情修正系数 ×0.70——因事件驱动型影响会同时抬高 sentiment 与 impact_map.multiple_factor，在 comp_v 与 (1+sent_corr) 上重复计费（沿用 B5 路径相关性先例）。仅 opt-in",
+    "method_weight_envelope": true,
+    "note_method_weight_envelope": "权重包络校验（v3.18.0 P6-A，可选，缺省 true＝纠错）：method_set_mode=routed 时，候选集中出现「无引擎取值分支」的方法（不在 COMPUTABLE_METHODS）时，其权重归零并按优先级回流（消除静默少算）。缺省仅在 routed 模式下生效，legacy 不受影响",
+    "enable_rnpv": false,
+    "note_enable_rnpv": "rNPV 管线药企估值（v3.19.0 P6-B，可选，缺省 false）：true 时启用 rnpv_valuation()——管线药企（pipeline_pharma 路由）主方法。须在 input.rnpv.pipelines[] 提供逐管线 name/phase/peak_sales/launch_year（可选 rnd_annual/margin/pos）。收益按上市成功率 PoS 概率加权（成本不乘 PoS）",
+    "enable_sotp": false,
+    "note_enable_sotp": "SOTP 分部加总估值（v3.19.0 P6-C，可选，缺省 false）：true 时启用 sotp_valuation()——控股平台/多业务主体（holdco 路由）主方法。须在 input.sotp.segments[] 提供逐分部 value（或 metric×multiple）与可选 stake。EV=Σ(分部价值×持股)+联营−净债，股权=EV×(1−控股折价)",
+    "note_rnpv_input": "输入块 input.rnpv（v3.19.0，可选）：{enabled, discount_rate?, margin?, pos_overrides?{phase:PoS}, horizon_years?, pipelines:[{name, phase(I/II/III/NDA/approved/临床前 及中文别名), peak_sales(亿元), launch_year(=上市发生于第几年，t=launch 起计收益), rnd_annual?(年研发投入,亿元), margin?, pos?}]}",
+    "note_sotp_input": "输入块 input.sotp（v3.19.0，可选）：{enabled, net_debt?(亿元,缺省取 financials.net_debt), associates_value?, holdco_discount?(显式)/auto_discount?(缺省 true,按分部数分档), segments:[{name, value?(亿元) 或 metric+multiple, stake?(缺省 1.0), method?}]}"
+  },
+  "data_sources": [
+    {
+      "source": "招股书/审计报告/用户提供",
+      "as_of": "YYYY-MM-DD",
+      "confidence": "高（审计口径）",
+      "items": [
+        "财务数据"
+      ]
+    },
+    {
+      "source": "westock-data / neodata / WebSearch",
+      "as_of": "YYYY-MM-DD",
+      "confidence": "中（公开检索未独立验证）",
+      "items": [
+        "可比公司行情",
+        "行业数据",
+        "舆情"
+      ]
+    }
+  ],
+  "peer_screening": {
+    "$note": "v3.20.0 可比公司筛选证据链（四期改造，全部可选）。enabled=false（缺省）→ 不激活、不挂出输出块、不改任何数值。诊断模式（缺省）只产出 status/problems/warnings 与建议权重；仅 enforce.filter_sample=true 时才真的按合格名单过滤可比样本（会改变数值）。status 四态：ok（有效样本≥5 且无致命问题）/degraded（3≤n<5 或规模超限或截点违规）/weak（n<3）/unavailable（n=0），对应建议权重保留 1.00/0.50/0.25/0.00。",
+    "enabled": false,
+    "depth": "full",
+    "classification_system": null,
+    "$note_classification_system": "P0-1 行业分类基准（SW_2021 / CITIC / CSRC / GICS / custom）。未声明时长名单不可复现，报告不得声称『已穷尽可比』",
+    "long_list_source": null,
+    "$note_long_list_source": "P0-1 长名单来源描述（如『申万二级·白色家电 23 家成分股』）",
+    "long_list_size": null,
+    "$note_long_list_size": "P0-1 长名单家数。须 ≥ 最终样本 2 倍，否则判『筛选过粗』",
+    "long_list_median": {
+      "revenue": null,
+      "market_cap": null,
+      "$note": "P0-2 收窄前长名单的收入与市值中位。缺省时退化为最终样本中位作代理（basis=final_sample_proxy）"
+    },
+    "info_cutoff": null,
+    "$note_info_cutoff": "P0-4 信息可得性截点（缺省取 meta.valuation_as_of → meta.as_of_date）",
+    "max_lag_days": 270,
+    "$note_max_lag_days": "P0-4 财务期间相对截点的最大容忍滞后（天），超限记入 lagged 并须披露",
+    "scale_multiple": 5.0,
+    "$note_scale_multiple": "P0-2 规模诊断阈值：收入与市值双口径分别算比值，取偏离 1 更远者为判定基数，超阈值须先收窄子组（对齐 CVA comps 5 倍规则）",
+    "seasoning_months": 12,
+    "$note_seasoning_months": "P1-4 次新剔除阈值（月）：<该值剔除，该值~24 月进观察区",
+    "accounting_gate": true,
+    "seasoning_gate": true,
+    "index_anchor_haircut": true,
+    "index_fallback_level": "fallback_l3",
+    "$note_index_fallback_level": "P1-5 指数锚降权级别：primary 1.00 / fallback_l1 0.50 / fallback_l2 0.40 / fallback_l3 0.30（全样本口径）",
+    "rejected": [
+      {
+        "name": null,
+        "code": null,
+        "reason_type": null,
+        "$note_reason_type": "P0-1 剔除理由枚举：business_model / product / scale / status / data / listing / accounting / duplicate / other",
+        "reason": null
+      }
+    ],
+    "enforce": {
+      "filter_sample": false,
+      "$note_filter_sample": "true 时按合格名单过滤 comparable 样本（会改变估值数值）；过滤后为空则自动阻止并保持原样本",
+      "weight_keep": false,
+      "$note_weight_keep": "true 时仅产出『建议权重保留比例』与 warning，引擎不自动改权重"
+    }
+  }
+}

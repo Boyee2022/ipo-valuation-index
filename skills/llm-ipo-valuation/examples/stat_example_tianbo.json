@@ -1,0 +1,225 @@
+{
+  "meta": {
+    "case": "天博智能",
+    "as_of": "2026-08-19",
+    "engine_version": "2.4.0",
+    "stat_version": "3.2.0",
+    "seed": 42,
+    "n": 3000,
+    "calibration_file": "calibration_params.json"
+  },
+  "base_mid": 123.62,
+  "monte_carlo": {
+    "n_success": 3000,
+    "n_total": 3000,
+    "success_rate": 1.0,
+    "mean": 124.54,
+    "std": 23.33,
+    "p5": 90.86,
+    "p25": 108.86,
+    "p50": 122.66,
+    "p75": 138.57,
+    "p95": 163.69,
+    "ci90": [
+      90.86,
+      163.69
+    ],
+    "histogram": {
+      "edges": [
+        55.9,
+        72.3,
+        88.7,
+        105.1,
+        121.6,
+        138.0,
+        154.4,
+        170.9,
+        187.3,
+        203.7,
+        220.2,
+        236.6,
+        253.0,
+        269.5,
+        285.9,
+        302.3,
+        318.8,
+        335.2,
+        351.6,
+        368.1,
+        384.5
+      ],
+      "counts": [
+        14,
+        108,
+        446,
+        876,
+        790,
+        481,
+        186,
+        67,
+        22,
+        4,
+        2,
+        3,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  },
+  "elasticity": {
+    "wacc": {
+      "value_1sigma_up": 119.36,
+      "value_1sigma_dn": 131.09,
+      "base_value": 123.62,
+      "delta_pct_1sigma": -3.45,
+      "delta_pct_minus_1sigma": 6.04,
+      "signed_delta_pct": -9.49,
+      "direction_flag": "正常"
+    },
+    "net_margin": {
+      "value_1sigma_up": 140.87,
+      "value_1sigma_dn": 106.34,
+      "base_value": 123.62,
+      "delta_pct_1sigma": 13.95,
+      "delta_pct_minus_1sigma": -13.98,
+      "signed_delta_pct": 27.93,
+      "direction_flag": "正常"
+    },
+    "terminal_growth": {
+      "value_1sigma_up": 127.44,
+      "value_1sigma_dn": 120.98,
+      "base_value": 123.62,
+      "delta_pct_1sigma": 3.09,
+      "delta_pct_minus_1sigma": -2.14,
+      "signed_delta_pct": 5.23,
+      "direction_flag": "正常"
+    },
+    "growth_forecast": {
+      "value_1sigma_up": 124.93,
+      "value_1sigma_dn": 122.65,
+      "base_value": 123.62,
+      "delta_pct_1sigma": 1.06,
+      "delta_pct_minus_1sigma": -0.78,
+      "signed_delta_pct": 1.84,
+      "direction_flag": "正常"
+    },
+    "comparable_multiples": {
+      "value_1sigma_up": 142.88,
+      "value_1sigma_dn": 107.85,
+      "base_value": 123.62,
+      "delta_pct_1sigma": 15.58,
+      "delta_pct_minus_1sigma": -12.76,
+      "signed_delta_pct": 28.34,
+      "direction_flag": "正常"
+    },
+    "sentiment": {
+      "value_1sigma_up": 125.12,
+      "value_1sigma_dn": 119.03,
+      "base_value": 123.62,
+      "delta_pct_1sigma": 1.21,
+      "delta_pct_minus_1sigma": -3.71,
+      "signed_delta_pct": 4.93,
+      "direction_flag": "正常"
+    },
+    "quality_indicators": {
+      "value_1sigma_up": 125.09,
+      "value_1sigma_dn": 121.96,
+      "base_value": 123.62,
+      "delta_pct_1sigma": 1.19,
+      "delta_pct_minus_1sigma": -1.34,
+      "signed_delta_pct": 2.53,
+      "direction_flag": "正常"
+    }
+  },
+  "correlation": {
+    "wacc": {
+      "spearman_r": -0.225,
+      "n": 3000
+    },
+    "net_margin": {
+      "spearman_r": 0.774,
+      "n": 3000
+    },
+    "terminal_growth": {
+      "spearman_r": 0.17,
+      "n": 3000
+    },
+    "growth_mult": {
+      "spearman_r": 0.0,
+      "n": 3000
+    },
+    "multiple_mult": {
+      "spearman_r": 0.439,
+      "n": 3000
+    },
+    "sentiment": {
+      "spearman_r": 0.14,
+      "n": 3000
+    }
+  },
+  "robustness": {
+    "weights": {
+      "default": {
+        "weights": {
+          "dcf": 0.3,
+          "comparable": 0.5,
+          "sentiment": 0.2
+        },
+        "mid": 123.62,
+        "delta_pct_vs_default": 0.0
+      },
+      "comparable_heavy": {
+        "weights": {
+          "dcf": 0.15,
+          "comparable": 0.7,
+          "sentiment": 0.15
+        },
+        "mid": 135.67,
+        "delta_pct_vs_default": 9.75
+      },
+      "dcf_heavy": {
+        "weights": {
+          "dcf": 0.5,
+          "comparable": 0.3,
+          "sentiment": 0.2
+        },
+        "mid": 107.55,
+        "delta_pct_vs_default": -13.0
+      }
+    },
+    "comparable_exclusion": {
+      "excluded": "三花智控",
+      "key": "ps",
+      "value": 9.7,
+      "mid": 119.73,
+      "delta_pct_vs_default": -3.15
+    }
+  },
+  "adjusted_interval": {
+    "raw_interval": [
+      53.57,
+      216.45
+    ],
+    "raw_mid": 123.62,
+    "mc_ci90": [
+      90.86,
+      163.69
+    ],
+    "mc_p50": 122.66,
+    "synthesis_interval": [
+      90.86,
+      163.69
+    ],
+    "synthesis_mid": 123.14,
+    "note": "synthesis_interval=原始情景区间∩MC 90%区间；synthesis_mid=MC中位数与原始中枢均值（稳健口径）"
+  },
+  "validation_passed": true,
+  "validation_status": "通过",
+  "elasticity_issues": []
+}

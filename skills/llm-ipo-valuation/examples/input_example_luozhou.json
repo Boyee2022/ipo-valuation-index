@@ -1,0 +1,379 @@
+{
+  "$schema_note": "洛轴股份（301699.SZ）估值输入。轴承龙头（创业板 IPO 招股中，2026-08-26 申购）→ asset_type=mature（重资产制造）。数据来源：招股意向书/公开检索（2026-08-19 基准）；估算字段已在 note 标注。单位：金额=亿元、比率=小数、股票=亿股。",
+  "meta": {
+    "company": "洛轴股份",
+    "ticker": "301699.SZ",
+    "industry": "轴承制造（通用设备 C34：风电/轨交/航空航天/新能源汽车轴承）",
+    "exchange": "创业板",
+    "one_line_input": "洛轴股份（301699）中国轴承行业规模最大的综合性制造企业之一，2025年营收60.34亿元（+29%），归母净利5.29亿元（+111%），拟创业板IPO发行1.24亿股募资18亿元，请估值",
+    "as_of_date": "2026-08-19",
+    "base_case_id": "",
+    "asset_type": "mature",
+    "note_asset_type": "成熟期重资产制造（创业板）：主方法 EV/EBITDA、PE、PB + DCF；NAV 作下限参考"
+  },
+  "financials": {
+    "revenue_latest_ttm": 60.34,
+    "revenue_by_year": {
+      "2023": 44.41,
+      "2024": 46.75,
+      "2025": 60.34
+    },
+    "net_profit_latest_ttm": 5.29,
+    "net_margin": 0.088,
+    "gross_margin": 0.22,
+    "cagr_3y": 0.166,
+    "ebitda_ttm": 10.0,
+    "r_and_d_ratio": 0.04,
+    "ocf_to_net_profit": 0.65,
+    "goodwill_ratio": 0.0,
+    "net_cash": 0.0,
+    "growth_forecast": {
+      "2026": 0.08,
+      "2027": 0.12,
+      "2028": 0.12
+    },
+    "terminal_growth": 0.03,
+    "wacc": 0.09,
+    "total_shares_after_issue": 7.24,
+    "issue_shares": 1.24,
+    "loss_making": false,
+    "receivables_to_revenue": 0.41,
+    "inventory_to_revenue": 0.35,
+    "gross_margin_trend_pp": -0.5,
+    "nonrecurring_ratio": 0.04,
+    "ff_factor_adjust": null,
+    "wacc_params": {
+      "enabled": true,
+      "rf": 0.02,
+      "erp": 0.06,
+      "beta": 1.3,
+      "unlevered_beta": null,
+      "comparable_betas": null,
+      "industry_beta": null,
+      "d_e_ratio": 0.5,
+      "tax_rate": 0.15,
+      "cost_of_debt": 0.035,
+      "note": "CAPM 分解（重资产制造，β 1.3 含周期弹性）：模型约 7.5% vs 显式 9%（含规模溢价，偏差>1pp 由引擎警示留痕）"
+    },
+    "capex_to_revenue": 0.06,
+    "note_capex": "扩产期资本开支强度约 10%（2026H1 固定资产 +20.7%，募投新能源轴承智能化 7.89 亿）",
+    "fcf_by_year": null,
+    "ocf_by_year": null,
+    "net_assets": 42.5,
+    "note_net_assets": "发行后净资产估算 = 发行前 24.48 亿（每股净资产 4.08 元×6 亿股）+ 募资 18 亿"
+  },
+  "segment_benchmark": {
+    "required": false,
+    "median_ps": null,
+    "median_pe": null,
+    "note": "轴承制造环节中枢（未单列，以可比公司中位近似）"
+  },
+  "comparables": [
+    {
+      "name": "新强联",
+      "code": "300850.SZ",
+      "mktcap": 140,
+      "net_profit": 6.3,
+      "revenue": 30,
+      "pe": 22.38,
+      "ps": 3.5,
+      "ev_ebitda": null,
+      "pb": 2.5,
+      "net_margin": 0.21,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": 1.0,
+      "capex_to_rev": 0.1,
+      "d_e_ratio": 0.5,
+      "growth_pct": 20,
+      "note": "风电轴承（主轴/偏变），PE/PB 为 2025-12-31 行情；PS 估算"
+    },
+    {
+      "name": "龙溪股份",
+      "code": "600592.SH",
+      "mktcap": 53,
+      "net_profit": 1.4,
+      "revenue": 13,
+      "pe": 38.02,
+      "ps": 4.0,
+      "ev_ebitda": null,
+      "pb": 2.04,
+      "net_margin": 0.11,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": 1.1,
+      "capex_to_rev": 0.06,
+      "d_e_ratio": 0.2,
+      "growth_pct": 20,
+      "note": "关节轴承/机器人轴承，PE/PB 为 2026-08 最新 TTM（2025-12-31 为 142×，板块炒作回落）"
+    },
+    {
+      "name": "国机精工",
+      "code": "002046.SZ",
+      "mktcap": 232,
+      "net_profit": 2.8,
+      "revenue": 30,
+      "pe": 82.28,
+      "ps": 7.0,
+      "ev_ebitda": null,
+      "pb": 5.35,
+      "net_margin": 0.09,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": 1.0,
+      "capex_to_rev": 0.08,
+      "d_e_ratio": 0.4,
+      "growth_pct": 15,
+      "note": "轴承+磨料磨具，PE/PB 为 2025-12-31 行情"
+    },
+    {
+      "name": "力星股份",
+      "code": "300421.SZ",
+      "mktcap": 50,
+      "net_profit": 0.6,
+      "revenue": 11,
+      "pe": 84.67,
+      "ps": 4.5,
+      "ev_ebitda": null,
+      "pb": 3.87,
+      "net_margin": 0.05,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": 1.1,
+      "capex_to_rev": 0.07,
+      "d_e_ratio": 0.3,
+      "growth_pct": 15,
+      "note": "滚动体钢球/机器人概念，PE/PB 为 2026-08 最新 TTM（2025-12-31 为 192×）"
+    },
+    {
+      "name": "五洲新春",
+      "code": "603667.SH",
+      "mktcap": 256,
+      "net_profit": 0.9,
+      "revenue": 38,
+      "pe": 279.71,
+      "ps": 6.5,
+      "ev_ebitda": null,
+      "pb": 8.59,
+      "net_margin": 0.02,
+      "roe": null,
+      "ev_sales": null,
+      "ocf_ratio": 1.0,
+      "capex_to_rev": 0.08,
+      "d_e_ratio": 0.3,
+      "growth_pct": 25,
+      "note": "成品轴承+行星滚柱丝杠机器人概念（2025-12-31 涨停后 280×，预计被 IQR 剔除）；同为洛轴股东（8.5%）"
+    }
+  ],
+  "transactions": [],
+  "recent_financing": {
+    "required": false,
+    "enabled": false,
+    "note": "拟上市公司招股阶段，无一级市场融资锚（首发定价即发行价）"
+  },
+  "industry_index": {
+    "required": false,
+    "name": "轴承/通用设备行业（可比中位近似）",
+    "pe_median": 60.0,
+    "ps_median": 4.5,
+    "pb_median": 3.9,
+    "index_growth_pct": 10,
+    "index_long_term_growth": 5,
+    "source": "Wind 通用设备/轴承板块 + 可比公司中位（2025-12-31/2026-08 混合），2026-08",
+    "as_of": "2026-08-19",
+    "note": "行业指数参照（口径：可比公司中位近似）；中证指数已发布 C34 通用设备行业平均 PE 供询价参考"
+  },
+  "fundraising": {
+    "required": false,
+    "planned_raise": 18.0,
+    "projects": [
+      {
+        "name": "新能源轴承智能化生产建设",
+        "amount": 7.89,
+        "target_revenue_add": 5.0,
+        "target_profit_add": 0.7,
+        "target_year": 2029
+      },
+      {
+        "name": "重大技术装备配套精密轴承产业升级",
+        "amount": 4.28,
+        "target_revenue_add": 3.0,
+        "target_profit_add": 0.4,
+        "target_year": 2029
+      },
+      {
+        "name": "高速列车转向架轴承开发及应用",
+        "amount": 1.92,
+        "target_revenue_add": 2.0,
+        "target_profit_add": 0.3,
+        "target_year": 2030
+      },
+      {
+        "name": "高端精密小型转盘轴承产业化",
+        "amount": 1.93,
+        "target_revenue_add": 1.0,
+        "target_profit_add": 0.1,
+        "target_year": 2030
+      },
+      {
+        "name": "偿还银行贷款",
+        "amount": 1.97,
+        "target_revenue_add": 0.0,
+        "target_profit_add": 0.0,
+        "target_year": 2029
+      }
+    ],
+    "post_ipo_years_revenue_add": 11.0,
+    "post_ipo_years_profit_add": 1.5,
+    "note": "募投 18 亿（含还贷 1.97 亿）；高铁轴承国产化+机器人轴承为战略看点"
+  },
+  "sentiment": {
+    "required": false,
+    "sector_heat": "neutral",
+    "company_news_sentiment": "positive",
+    "sentiment_adjustment_pct": null,
+    "evidence": "IPO 注册获批（2026-06-18）+ 8-18 启动招股、8-26 申购；高铁轴承国产化（250/350km 装车考核完成）；2026H1 营收 +8.5%（增速放缓）",
+    "events": [
+      {
+        "type": "ipo",
+        "title": "创业板 IPO 注册获批并 8-18 启动招股、8-20 询价、8-26 申购",
+        "date": "2026-08-18",
+        "impact_direction": "positive",
+        "importance": "high",
+        "impact_target": "multiple",
+        "impact_pct": 5,
+        "source": "上证报"
+      },
+      {
+        "type": "技术突破",
+        "title": "高铁轴承国产化：250/350km 牵引电机轴承完成装车考核，轴箱轴承研发中",
+        "date": "2026-06-01",
+        "impact_direction": "positive",
+        "importance": "high",
+        "impact_target": "growth",
+        "impact_pct": 4,
+        "source": "招股意向书"
+      },
+      {
+        "type": "业绩",
+        "title": "2026H1 营收 30.61 亿（+8.52%）、扣非净利 2.68 亿（+6.25%），增速较 2025 放缓",
+        "date": "2026-08-01",
+        "impact_direction": "negative",
+        "importance": "medium",
+        "impact_target": "growth",
+        "impact_pct": -2,
+        "source": "招股意向书"
+      },
+      {
+        "type": "产业布局",
+        "title": "募投布局滚珠丝杠、机器人轴承，五洲新春为股东兼可比（8.5%）",
+        "date": "2026-08-01",
+        "impact_direction": "positive",
+        "importance": "medium",
+        "impact_target": "multiple",
+        "impact_pct": 2,
+        "source": "招股意向书"
+      }
+    ],
+    "risks": [
+      {
+        "type": "现金流",
+        "description": "OCF 波动大（2023 为负、2025 -49% 至 2.47 亿），OCF/净利仅 0.47，盈利现金含量弱",
+        "severity": "high",
+        "impact_target": "margin"
+      },
+      {
+        "type": "存货",
+        "description": "存货 21.17 亿占净资产 86.5%（跌价准备 1.84 亿），备货与跌价风险",
+        "severity": "medium",
+        "impact_target": "margin"
+      },
+      {
+        "type": "应收",
+        "description": "应收账款（1 年内 24.8 亿）占营收 41%，占压营运资金",
+        "severity": "medium",
+        "impact_target": "margin"
+      },
+      {
+        "type": "客户集中",
+        "description": "国铁/中车/金风/远景/比亚迪等大客户依赖，轨交风电招标周期影响",
+        "severity": "medium",
+        "impact_target": "growth"
+      }
+    ],
+    "policy": [
+      {
+        "policy": "工业强基工程/高端轴承国产替代（中国制造2025）",
+        "direction": "利好",
+        "impact_target": "growth",
+        "impact_pct": 5,
+        "source": "产业政策"
+      },
+      {
+        "policy": "高铁/风电/新能源汽车/机器人产业政策",
+        "direction": "利好",
+        "impact_target": "growth",
+        "impact_pct": 3,
+        "source": "产业政策"
+      },
+      {
+        "policy": "通用设备行业平均市盈率指引（创业板询价参考）",
+        "direction": "中性",
+        "impact_target": "multiple",
+        "impact_pct": 0,
+        "source": "中证指数"
+      }
+    ],
+    "investor_orientation": {
+      "lean": "偏乐观",
+      "basis": "高铁轴承国产化主线+机器人轴承布局+风电龙头地位 vs 业绩增速放缓+现金流弱",
+      "horizon": "12个月"
+    },
+    "note": "舆情结构化：事件/政策聚合为 impact_map（假设层）；risks 高严重度（现金流）映射 Bear 情景调整"
+  },
+  "preferences": {
+    "weights": {
+      "dcf": 0.3,
+      "comparable": 0.5,
+      "sentiment": 0.2
+    },
+    "scenario_weights": {
+      "bear": 0.25,
+      "base": 0.5,
+      "bull": 0.25
+    },
+    "exclude_outliers": true,
+    "use_mc_calibration": false,
+    "growth_weights": {
+      "self": 0.4,
+      "comparable": 0.4,
+      "industry": 0.2,
+      "note": "增长三角校准权重：自身历史 CAGR 16.6% / 可比增速中位 20% / 行业增速 10%"
+    }
+  },
+  "data_sources": [
+    {
+      "source": "招股意向书（2026-08-18）/上证报/证券时报",
+      "items": [
+        "财务数据",
+        "发行安排",
+        "募投"
+      ]
+    },
+    {
+      "source": "Wind/公开检索（可比 PE/PB 为 2025-12-31 或 2026-08 行情；PS/EBITDA/毛利率为估算）",
+      "items": [
+        "可比公司估值",
+        "行业数据",
+        "舆情"
+      ]
+    }
+  ],
+  "nav": {
+    "enabled": true,
+    "net_assets": 42.5,
+    "adjustments": 0.0,
+    "liquidation_scenario": false,
+    "note": "净资产法：发行后净资产 42.5 亿（发行前 24.48+募资 18），NAV/股 5.87 元，作下限参考"
+  }
+}

@@ -1,0 +1,570 @@
+{
+  "$schema_note": "llm-ipo-valuation v3.6 输入校验 schema（D1）。纯标准库校验器 scripts/input_validator.py 使用；检查必填/类型/数值范围，输出 issues 供报告'数据校验'章节引用。与引擎 _validate_input（业务勾稽）分层：schema 校验 = 静态结构检查；_validate_input = 业务勾稽校验（A2/A3/A4）。｜v3.20.0 新增 peer_screening 块与 comparables 的 legal_entity_id / listing_date / financial_period_end / included / reason / incomparable 六个字段（可比公司筛选证据链四期改造，全部可选，缺省不激活）。 ｜ v3.21.0：新增 dcf_growth 顶层块（12 项增速参数开关，全部 opt-in，缺省=legacy 零回归）与 financials.terminal_growth_rationale。｜v3.22.0 新增顶层 dcf_cost 块（6 项估值缺陷修复开关）+ dcf_growth.require_explicit_wacc_with_cva_tg，全部 opt-in、缺省 legacy。｜v3.23.0 新增 dcf_drivers 报表驱动块（收入→EBIT→NOPAT→+D&A−Capex−ΔWC 逐年传导）与 8 项 dcf_cost 细节开关、dcf_growth.growth_base_rule，全部 opt-in、缺省零回归。",
+  "required_blocks": [
+    "meta",
+    "financials"
+  ],
+  "fields": {
+    "meta.company": {
+      "type": "str",
+      "required": true,
+      "note": "公司名称"
+    },
+    "meta.industry": {
+      "type": "str",
+      "required": true,
+      "note": "行业类型"
+    },
+    "meta.exchange": {
+      "type": "str",
+      "required": false
+    },
+    "meta.as_of_date": {
+      "type": "str",
+      "required": false,
+      "pattern": "YYYY-MM-DD"
+    },
+    "meta.asset_type": {
+      "type": "str",
+      "enum": [
+        "startup",
+        "growth",
+        "mature",
+        "private"
+      ],
+      "required": false
+    },
+    "meta.target_profile": {
+      "type": "object",
+      "note": "目标公司四维画像（v3.13，可选）：segment(产业链环节)/mode(商业模式)/scale(规模档)/growth_stage(成长阶段)；提供时引擎按四维匹配将可比公司自动分为最可比(4维全中)/较可比(中2-3维)/一般可比(中0-1维)。缺省 → 整体按最可比（旧输入零变化）"
+    },
+    "financials.revenue_latest_ttm": {
+      "type": "number",
+      "min": 0,
+      "max": 50000,
+      "required": true
+    },
+    "financials.net_profit_latest_ttm": {
+      "type": "number",
+      "required": true
+    },
+    "financials.net_profit_basis": {
+      "type": "object",
+      "note": "净利披露档（v3.12）：annual_net_profit/quarterly_net_profit/semiannual_net_profit/consensus_net_profit/normalized_net_profit（亿元，可负）；annualized_source 注明来源；as_of 数据日期。缺省不激活 → rev×net_margin 兜底（零变化）"
+    },
+    "financials.ocf_latest": {
+      "type": "number",
+      "note": "披露经营现金流净额（亿元，v3.12 FCF 披露档 P0）"
+    },
+    "financials.capex_latest": {
+      "type": "number",
+      "note": "披露资本开支（亿元，v3.12；可由 fetch_data capex_implied=OCF−FCFF 填充）"
+    },
+    "financials.fcf_ratio": {
+      "type": "number",
+      "min": 0,
+      "max": 1.5,
+      "note": "显式 FCF/净利（v2.8.1 补齐模板；v3.12 起优先级低于披露档）"
+    },
+    "financials.net_margin": {
+      "type": "number",
+      "min": -2.0,
+      "max": 1.0
+    },
+    "financials.gross_margin": {
+      "type": "number",
+      "min": 0,
+      "max": 1.0
+    },
+    "financials.wacc": {
+      "type": "number",
+      "min": 0.02,
+      "max": 0.25
+    },
+    "financials.terminal_growth": {
+      "type": "number",
+      "min": -0.5,
+      "max": 0.1,
+      "required": false,
+      "note": "永续增速。cva_2pct 口径下超过 4.5%（GDP 上限）须同时提供 terminal_growth_rationale"
+    },
+    "financials.total_shares_after_issue": {
+      "type": "number",
+      "min": 0
+    },
+    "financials.issue_shares": {
+      "type": "number",
+      "min": 0
+    },
+    "financials.ocf_to_net_profit": {
+      "type": "number",
+      "min": -3.0,
+      "max": 3.0
+    },
+    "financials.capex_to_revenue": {
+      "type": "number",
+      "min": 0,
+      "max": 1.0
+    },
+    "financials.net_assets": {
+      "type": "number"
+    },
+    "financials.growth_forecast": {
+      "type": "object",
+      "minItems": 1
+    },
+    "preferences.tier_min_samples": {
+      "type": "number",
+      "min": 1,
+      "max": 10,
+      "note": "最可比档最少样本数（v3.13，可选）：逐级回退阈值——最可比样本数≥该值时仅用最可比汇总；不足则并入较可比，仍不足再并入一般可比；缺省 2"
+    },
+    "peer_screening.enabled": {
+      "type": "bool",
+      "required": false,
+      "note": "v3.20.0 可比公司筛选证据链总开关（缺省 false → 不激活、零数值影响）。诊断模式只产出 status/problems/warnings；enforce.filter_sample=true 才真正过滤样本"
+    },
+    "peer_screening.classification_system": {
+      "type": "str",
+      "enum": [
+        "SW_2021",
+        "SW",
+        "CITIC",
+        "CSRC",
+        "GICS",
+        "custom"
+      ],
+      "required": false,
+      "note": "v3.20.0 P0-1 行业分类基准；未声明时长名单不可复现"
+    },
+    "peer_screening.long_list_size": {
+      "type": "int",
+      "min": 1,
+      "required": false,
+      "note": "v3.20.0 P0-1 长名单家数，须 ≥ 最终样本 2 倍"
+    },
+    "peer_screening.info_cutoff": {
+      "type": "str",
+      "required": false,
+      "pattern": "YYYY-MM-DD",
+      "note": "v3.20.0 P0-4 信息可得性截点，缺省取 meta.valuation_as_of"
+    },
+    "peer_screening.scale_multiple": {
+      "type": "number",
+      "min": 1,
+      "max": 20,
+      "required": false,
+      "note": "v3.20.0 P0-2 规模双口径诊断阈值（缺省 5.0，对齐 CVA comps 5 倍规则）"
+    },
+    "peer_screening.seasoning_months": {
+      "type": "int",
+      "min": 0,
+      "max": 60,
+      "required": false,
+      "note": "v3.20.0 P1-4 次新剔除阈值（月，缺省 12）"
+    },
+    "peer_screening.index_fallback_level": {
+      "type": "str",
+      "enum": [
+        "primary",
+        "fallback_l1",
+        "fallback_l2",
+        "fallback_l3"
+      ],
+      "required": false,
+      "note": "v3.20.0 P1-5 指数锚降权级别，对应权重上限 1.00/0.50/0.40/0.30"
+    },
+    "financials.terminal_growth_rationale": {
+      "type": "str",
+      "required": false,
+      "note": "v3.21.0：永续增速超出长期名义 GDP 上限时的依据；缺省时 cva_2pct 口径会给 warning"
+    },
+    "dcf_growth.terminal_growth_guard": {
+      "type": "str",
+      "enum": [
+        "off",
+        "clamp"
+      ],
+      "required": false,
+      "note": "A1 Gordon 终值前提守卫：g 必须 < WACC。off=不压值但违规时终值置 0；clamp=压到 WACC−1pp 并留痕"
+    },
+    "dcf_growth.terminal_growth_default": {
+      "type": "str",
+      "enum": [
+        "legacy_6pct",
+        "cva_2pct"
+      ],
+      "required": false,
+      "note": "A2 缺省永续增速：6%（旧行为）/ 2%（CVA 与通胀锚）"
+    },
+    "dcf_growth.terminal_growth_basis": {
+      "type": "str",
+      "enum": [
+        "legacy",
+        "chain"
+      ],
+      "required": false,
+      "note": "A3/A4 取值链：用户显式 > 行业 g_lt > 通胀锚；三角值降为校验参照"
+    },
+    "dcf_growth.terminal_growth_scenario_mode": {
+      "type": "str",
+      "enum": [
+        "flat",
+        "stepped"
+      ],
+      "required": false,
+      "note": "A5 永续增速是否随情景移动；stepped 时 bull 受 GDP 上限约束"
+    },
+    "dcf_growth.scenario_tg_adj_pp": {
+      "type": "object",
+      "required": false,
+      "note": "A5 三情景 tg 调整（单位 pp）：{bear: -0.5, base: 0, bull: 0.5}"
+    },
+    "dcf_growth.tv_share_guard": {
+      "type": "bool",
+      "required": false,
+      "note": "A6 终值占比四档门禁（<40/40-75/75-85/>85%）；极端档 error 级告警 + 置信度封顶「中」"
+    },
+    "dcf_growth.implied_tg_market": {
+      "type": "bool",
+      "required": false,
+      "note": "A7 反解市场隐含永续增速 g*，用于判断分歧是否在永续假设上"
+    },
+    "dcf_growth.growth_path_mode": {
+      "type": "str",
+      "enum": [
+        "legacy_truncate",
+        "user_full"
+      ],
+      "required": false,
+      "note": "B1 用户增速路径是否截断（legacy 取前 3 年 / user_full 用满）"
+    },
+    "dcf_growth.growth_history_shape": {
+      "type": "str",
+      "enum": [
+        "off",
+        "advisory"
+      ],
+      "required": false,
+      "note": "B2 历史增速形态判定（advisory 只判形态不改数值）"
+    },
+    "dcf_growth.scenario_step_mode": {
+      "type": "str",
+      "enum": [
+        "fixed",
+        "cva_sigma"
+      ],
+      "required": false,
+      "note": "B4 情景步长：固定 ±10pp / clamp(σ_近三年, 2, 5)pp"
+    },
+    "dcf_growth.growth_terminal_mode": {
+      "type": "str",
+      "enum": [
+        "asymptotic",
+        "forced"
+      ],
+      "required": false,
+      "note": "B5 末段增速是否强制 ≡ tg（forced 等差插值）"
+    },
+    "dcf_growth.growth_shape_mode": {
+      "type": "str",
+      "enum": [
+        "legacy",
+        "plc6"
+      ],
+      "required": false,
+      "note": "v3.29.0 增长函数形态族：legacy（缺省，旧五形态 exp/mean_revert/s_curve/decline/linear，逐位零回归）/ plc6（六阶段，g_t=tg+(g1−tg)·E(t)，E(1)=1、E(n)=0，真 S 曲线 + 达莫达兰六档）。plc6 优先级高于 growth_model（状态空间）与四阶段形态，冲突时挂 warning"
+    },
+    "dcf_growth.lifecycle_mature_n_mode": {
+      "type": "str",
+      "enum": [
+        "table",
+        "legacy_4",
+        "cva_7"
+      ],
+      "required": false,
+      "note": "成熟期显式期长度：table（缺省，取 LIFECYCLE_DEFAULTS 的 6 年）/ legacy_4（4 年，v3.21.0 前旧行为）/ cva_7（7 年，B3 试点口径）。v3.27.0 四阶段表值重标定为 10/8/6/4（修复 growth<mature 倒挂）"
+    },
+    "dcf_growth.require_explicit_wacc_with_cva_tg": {
+      "type": "bool",
+      "required": false,
+      "note": "修复⑤：cva_2pct 永续增速须配套显式/模型化 WACC——仅改 tg 不改 WACC 时终值倍数 21.20×→11.33×（−46.6%）"
+    },
+    "dcf_cost.wacc_default_mode": {
+      "type": "str",
+      "enum": [
+        "legacy_11pct",
+        "capm_auto"
+      ],
+      "required": false,
+      "note": "修复①：未填 WACC 时的缺省。legacy_11pct=硬编码 11%（旧行为）；capm_auto=rf+β×ERP+债务成本动态构造"
+    },
+    "dcf_cost.erp_default_mode": {
+      "type": "str",
+      "enum": [
+        "auto",
+        "legacy_5p5",
+        "cva_8p04"
+      ],
+      "required": false,
+      "note": "ERP 缺省口径：auto（capm_auto→CVA 8.04%，否则 Damodaran 5.5%）｜legacy_5p5｜cva_8p04（CVA CCPFC2026 隐含 ERP）"
+    },
+    "dcf_cost.cashflow_fallback_mode": {
+      "type": "str",
+      "enum": [
+        "silent",
+        "error"
+      ],
+      "required": false,
+      "note": "修复②：cashflow_model=p0_value_driver 缺 ebit/roic 时的处置。silent=仅留痕；error=留痕+降置信度封顶「中」"
+    },
+    "dcf_cost.method_drop_mode": {
+      "type": "str",
+      "enum": [
+        "zero_silent",
+        "renormalize"
+      ],
+      "required": false,
+      "note": "修复③：可比法无可信取值时的权重处置。zero_silent=权重照占、值按 0（旧行为）；renormalize=剔除并按剩余权重再归一"
+    },
+    "dcf_cost.fcff_suggest": {
+      "type": "bool",
+      "required": false,
+      "note": "修复④：资本开支/营收 >8% 且未启用 fcff_mode 时，主动建议开启报表级 FCFF"
+    },
+    "dcf_cost.point_estimate_guard": {
+      "type": "bool",
+      "required": false,
+      "note": "修复⑥：A6 extreme 档（终值占比 >85%）禁出单点估值，synthesis.point_estimate=null（区间仍有效）"
+    },
+    "dcf_cost.discount_timing": {
+      "type": "str",
+      "enum": [
+        "year_end",
+        "mid_year"
+      ],
+      "required": false,
+      "note": "D1：折现时点。year_end=年末（旧行为）；mid_year=年中，显式期 (t−0.5)、终值 (n−0.5)，WACC 8.8% 时现值约 +4%"
+    },
+    "dcf_cost.size_premium_mode": {
+      "type": "str",
+      "enum": [
+        "off",
+        "cva_deciles"
+      ],
+      "required": false,
+      "note": "D2：规模溢价。cva_deciles=按 market_cap 查 CVA CCPFC2026 十分位（0.33%–11.14%，≤24.41 亿用 10w–10z 细分至 18.29%），β 调整后加在 CAPM ke 上；显式 WACC 仍优先"
+    },
+    "dcf_cost.capex_check": {
+      "type": "bool",
+      "required": false,
+      "note": "D3：Capex/D&A 量级勾稽（合理带见 capex_da_band），拦截「capex 异常偏低」——8% 营收阈值只拦偏高"
+    },
+    "dcf_cost.capex_da_band": {
+      "type": "list",
+      "required": false,
+      "note": "D3：Capex/D&A 合理带 [下限, 上限]，缺省 [0.5, 10.0]；白电约 1.5–3.5"
+    },
+    "dcf_cost.margin_step_mode": {
+      "type": "str",
+      "enum": [
+        "off",
+        "cva_sigma"
+      ],
+      "required": false,
+      "note": "D5：利润率情景步长。cva_sigma=按 margin_history 的 σ 定步长并 clamp[1,3]pp（与收入 2–5pp 分开）"
+    },
+    "dcf_cost.reinvestment_check": {
+      "type": "bool",
+      "required": false,
+      "note": "D9：期末再投资一致性自检——(Capex−D&A+ΔWC)/NOPAT 与永续增速隐含 RR=g/ROIC 偏离 >50% 告警（需 dcf_drivers）"
+    },
+    "dcf_cost.normalization_hint": {
+      "type": "bool",
+      "required": false,
+      "note": "D8：非经常性损益占比 >15%、有效税率 <10% 或半年/季度净利档时提示正常化（纯诊断，不改数值）"
+    },
+    "dcf_growth.growth_base_rule": {
+      "type": "str",
+      "enum": [
+        "off",
+        "cva_matrix"
+      ],
+      "required": false,
+      "note": "D4：未提供 growth_forecast 时按历史形态取基准增速（稳定→均值；加速→0.2/0.3/0.5 加权；下行→最近一年；正负切换→不取平均、需业务证据）；用户显式路径永不覆盖"
+    },
+    "financials.margin_history": {
+      "type": "list",
+      "required": false,
+      "note": "D5：按年升序的净利率/EBIT 利润率历史（小数，≥3 期），用于利润率情景步长 σ"
+    },
+    "financials.non_recurring_ratio": {
+      "type": "float",
+      "required": false,
+      "note": "D8：非经常性损益占净利比例，>15% 时提示开启 enable_normalized 或改用扣非口径"
+    },
+    "dcf_drivers.base_revenue": {
+      "type": "float",
+      "required": false,
+      "note": "D6：基期营业收入（亿元），缺省取 financials.revenue_latest_ttm"
+    },
+    "dcf_drivers.ebit_margin": {
+      "type": "float|list",
+      "required": false,
+      "note": "D6：EBIT 利润率，标量或逐年序列；缺省时可与 cost_ratio/expense_ratio 二选一"
+    },
+    "dcf_drivers.cost_ratio": {
+      "type": "float|list",
+      "required": false,
+      "note": "D6：营业成本率（标量或逐年）；EBIT 率 = 1 − 成本率 − 费用率"
+    },
+    "dcf_drivers.expense_ratio": {
+      "type": "float|list",
+      "required": false,
+      "note": "D6：营业费用率（销售+管理+研发等，标量或逐年）"
+    },
+    "dcf_drivers.capex_to_revenue": {
+      "type": "float|list",
+      "required": false,
+      "note": "D6：资本开支/营收（标量或逐年，逐年可挂募投产能节奏）"
+    },
+    "dcf_drivers.da_to_revenue": {
+      "type": "float|list",
+      "required": false,
+      "note": "D6：D&A/营收；缺省按 base_da 随收入外推"
+    },
+    "dcf_drivers.nwc_to_revenue": {
+      "type": "float",
+      "required": false,
+      "note": "D7：ΔWC = ΔRevenue × 比率"
+    },
+    "dcf_drivers.nwc_turnover": {
+      "type": "float",
+      "required": false,
+      "note": "D7：收入/营运资本 周转次数；NWC_t=Rev_t/周转，ΔWC=NWC_t−NWC_{t−1}（优先于 nwc_to_revenue）"
+    },
+    "dcf_drivers.tax_rate": {
+      "type": "float",
+      "required": false,
+      "note": "D6：有效税率，缺省取 wacc_params.tax_rate 或 15%"
+    }
+  },
+  "array_rules": {
+    "comparables": {
+      "minItems": 1,
+      "itemFields": {
+        "name": {
+          "type": "str",
+          "required": true
+        },
+        "pe": {
+          "type": "number",
+          "min": 0,
+          "max": 500
+        },
+        "ps": {
+          "type": "number",
+          "min": 0,
+          "max": 200
+        },
+        "pb": {
+          "type": "number",
+          "min": 0,
+          "max": 500
+        },
+        "ev_ebitda": {
+          "type": "number",
+          "min": 0,
+          "max": 200
+        },
+        "growth_pct": {
+          "type": "number"
+        },
+        "source": {
+          "type": "str",
+          "enum": [
+            "research_report",
+            "public_info",
+            "auto",
+            "user",
+            "none"
+          ],
+          "note": "可比来源档位（v3.12）：research_report(研报)>public_info(公开信息)>auto(自动抓取)>user(用户指定)>none(未注明)"
+        },
+        "priority": {
+          "type": "number",
+          "min": 1,
+          "max": 5,
+          "note": "来源优先级（v3.12）：1=最高（研报），5=最低（未注明）"
+        },
+        "segment": {
+          "type": "str",
+          "note": "产业链环节（v3.13，S3.2 维度1，可选）：如 humanoid_robot 人形机器人整机 / component 核心零部件；与 meta.target_profile.segment 比对"
+        },
+        "mode": {
+          "type": "str",
+          "note": "商业模式（v3.13，S3.2 维度2，可选）：如 product_hardware 产品硬件 / component_supplier 零部件供应 / integrated_solution 整体方案"
+        },
+        "scale": {
+          "type": "str",
+          "note": "规模档（v3.13，S3.2 维度3，可选）：mega 千亿级 / large 百亿级 / mid 十亿级 / small 亿级以下"
+        },
+        "growth_stage": {
+          "type": "str",
+          "note": "成长阶段（v3.13，S3.2 维度4，可选）：high_growth 高成长 / mature 成熟"
+        },
+        "comparability": {
+          "type": "str",
+          "enum": [
+            "most",
+            "fair",
+            "general"
+          ],
+          "note": "显式档位覆盖（v3.13，可选）：most 最可比 / fair 较可比 / general 一般可比；填了则绕过自动推断直接归入该档"
+        },
+        "legal_entity_id": {
+          "type": "str",
+          "required": false,
+          "note": "v3.20.0 P0-3 去重键：同一发行人 A/H/ADR 多股类填同一值，只计一次"
+        },
+        "listing_date": {
+          "type": "str",
+          "required": false,
+          "pattern": "YYYY-MM-DD",
+          "note": "v3.20.0 P1-4 上市日期：<12 月判次新剔除，12~24 月进观察区"
+        },
+        "financial_period_end": {
+          "type": "str",
+          "required": false,
+          "pattern": "YYYY-MM-DD",
+          "note": "v3.20.0 P0-4 财务期末：晚于信息可得性截点判 violation（回填）"
+        },
+        "included": {
+          "type": "bool",
+          "required": false,
+          "note": "v3.20.0 P0-1 是否进入最终样本；false 须在 peer_screening.rejected 记理由"
+        },
+        "reason": {
+          "type": "str",
+          "required": false,
+          "note": "v3.20.0 P0-1 纳入理由"
+        },
+        "incomparable": {
+          "type": "str",
+          "required": false,
+          "note": "v3.20.0 P0-1 主要不可比因素"
+        }
+      }
+    },
+    "transactions": {
+      "minItems": 0,
+      "itemFields": {
+        "name": {
+          "type": "str",
+          "required": true
+        }
+      }
+    }
+  },
+  "note": "缺省可选的字段不强制；数值超范围 → warning；必填缺失 → error。校验器输出 issues 列表（level/field/rule）。"
+}

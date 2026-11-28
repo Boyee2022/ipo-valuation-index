@@ -1,0 +1,225 @@
+{
+  "meta": {
+    "case": "洛轴股份",
+    "as_of": "2026-08-19",
+    "engine_version": "2.4.0",
+    "stat_version": "3.2.0",
+    "seed": 42,
+    "n": 3000,
+    "calibration_file": "calibration_params.json"
+  },
+  "base_mid": 393.32,
+  "monte_carlo": {
+    "n_success": 3000,
+    "n_total": 3000,
+    "success_rate": 1.0,
+    "mean": 390.04,
+    "std": 113.36,
+    "p5": 225.03,
+    "p25": 306.57,
+    "p50": 380.79,
+    "p75": 460.86,
+    "p95": 592.07,
+    "ci90": [
+      225.03,
+      592.07
+    ],
+    "histogram": {
+      "edges": [
+        135.7,
+        178.8,
+        221.9,
+        265.1,
+        308.2,
+        351.4,
+        394.5,
+        437.7,
+        480.8,
+        524.0,
+        567.1,
+        610.3,
+        653.4,
+        696.6,
+        739.7,
+        782.9,
+        826.0,
+        869.1,
+        912.3,
+        955.4,
+        998.6
+      ],
+      "counts": [
+        20,
+        121,
+        270,
+        357,
+        436,
+        443,
+        408,
+        344,
+        237,
+        148,
+        103,
+        56,
+        28,
+        11,
+        13,
+        1,
+        1,
+        2,
+        0,
+        1
+      ]
+    }
+  },
+  "elasticity": {
+    "wacc": {
+      "value_1sigma_up": 390.94,
+      "value_1sigma_dn": 397.53,
+      "base_value": 393.32,
+      "delta_pct_1sigma": -0.61,
+      "delta_pct_minus_1sigma": 1.07,
+      "signed_delta_pct": -1.68,
+      "direction_flag": "正常"
+    },
+    "net_margin": {
+      "value_1sigma_up": 501.03,
+      "value_1sigma_dn": 293.74,
+      "base_value": 393.32,
+      "delta_pct_1sigma": 27.38,
+      "delta_pct_minus_1sigma": -25.32,
+      "signed_delta_pct": 52.7,
+      "direction_flag": "正常"
+    },
+    "terminal_growth": {
+      "value_1sigma_up": 395.48,
+      "value_1sigma_dn": 391.84,
+      "base_value": 393.32,
+      "delta_pct_1sigma": 0.55,
+      "delta_pct_minus_1sigma": -0.38,
+      "signed_delta_pct": 0.93,
+      "direction_flag": "正常"
+    },
+    "growth_forecast": {
+      "value_1sigma_up": 417.74,
+      "value_1sigma_dn": 374.79,
+      "base_value": 393.32,
+      "delta_pct_1sigma": 6.21,
+      "delta_pct_minus_1sigma": -4.71,
+      "signed_delta_pct": 10.92,
+      "direction_flag": "正常"
+    },
+    "comparable_multiples": {
+      "value_1sigma_up": 471.0,
+      "value_1sigma_dn": 329.72,
+      "base_value": 393.32,
+      "delta_pct_1sigma": 19.75,
+      "delta_pct_minus_1sigma": -16.17,
+      "signed_delta_pct": 35.92,
+      "direction_flag": "正常"
+    },
+    "sentiment": {
+      "value_1sigma_up": 398.09,
+      "value_1sigma_dn": 376.26,
+      "base_value": 393.32,
+      "delta_pct_1sigma": 1.21,
+      "delta_pct_minus_1sigma": -4.34,
+      "signed_delta_pct": 5.55,
+      "direction_flag": "正常"
+    },
+    "quality_indicators": {
+      "value_1sigma_up": 395.28,
+      "value_1sigma_dn": 390.68,
+      "base_value": 393.32,
+      "delta_pct_1sigma": 0.5,
+      "delta_pct_minus_1sigma": -0.67,
+      "signed_delta_pct": 1.17,
+      "direction_flag": "正常"
+    }
+  },
+  "correlation": {
+    "wacc": {
+      "spearman_r": -0.039,
+      "n": 3000
+    },
+    "net_margin": {
+      "spearman_r": 0.894,
+      "n": 3000
+    },
+    "terminal_growth": {
+      "spearman_r": 0.028,
+      "n": 3000
+    },
+    "growth_mult": {
+      "spearman_r": 0.1,
+      "n": 3000
+    },
+    "multiple_mult": {
+      "spearman_r": 0.34,
+      "n": 3000
+    },
+    "sentiment": {
+      "spearman_r": 0.063,
+      "n": 3000
+    }
+  },
+  "robustness": {
+    "weights": {
+      "default": {
+        "weights": {
+          "dcf": 0.3,
+          "comparable": 0.5,
+          "sentiment": 0.2
+        },
+        "mid": 393.32,
+        "delta_pct_vs_default": 0.0
+      },
+      "comparable_heavy": {
+        "weights": {
+          "dcf": 0.15,
+          "comparable": 0.7,
+          "sentiment": 0.15
+        },
+        "mid": 469.98,
+        "delta_pct_vs_default": 19.49
+      },
+      "dcf_heavy": {
+        "weights": {
+          "dcf": 0.5,
+          "comparable": 0.3,
+          "sentiment": 0.2
+        },
+        "mid": 291.12,
+        "delta_pct_vs_default": -25.98
+      }
+    },
+    "comparable_exclusion": {
+      "excluded": "国机精工",
+      "key": "ps",
+      "value": 7.0,
+      "mid": 303.37,
+      "delta_pct_vs_default": -22.87
+    }
+  },
+  "adjusted_interval": {
+    "raw_interval": [
+      153.67,
+      720.0
+    ],
+    "raw_mid": 393.32,
+    "mc_ci90": [
+      225.03,
+      592.07
+    ],
+    "mc_p50": 380.79,
+    "synthesis_interval": [
+      225.03,
+      592.07
+    ],
+    "synthesis_mid": 387.06,
+    "note": "synthesis_interval=原始情景区间∩MC 90%区间；synthesis_mid=MC中位数与原始中枢均值（稳健口径）"
+  },
+  "validation_passed": true,
+  "validation_status": "通过",
+  "elasticity_issues": []
+}

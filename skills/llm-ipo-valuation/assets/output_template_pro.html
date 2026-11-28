@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{公司名称} · 投行级估值报告（模板）</title>
+<!--
+  output_template_pro.html — llm-ipo-valuation v3.16.5 投行版报告模板
+
+  用法：复制本文件，将全部 {占位符} 替换为引擎/统计输出真实数据（禁止编造）；
+  图表为内嵌 SVG 或纯 CSS 条形（零外部依赖，可离线打开/打印）。填充完成后删除本注释块。
+  数据硬约束：区间/倍数/敏感性等数字必须来自 valuation_engine.py / stat_validation.py 输出。
+
+  ★ 优先路径：日常出报告建议直接用 scripts/report_generator.py 自动生成（同一套版式），
+    本模板仅供需要手工撰写/增删章节时使用。两者的 CSS 与组件类名保持一致（v3.16.5），
+    修改任一处请同步另一处，并跑 scripts/html_check.py 过机检。
+
+  版式要点（v3.16.5）：① **不出目录**——页眉后直接进入执行摘要（`.toc` 组件已取消）；
+  ② 执行摘要只保留 3 张 KPI 卡 + 图 1 三口径区间条 + 结论前置（`.verdict` 结论条已取消）；
+  ③ 章节序号徽标（01–11）与 h3 的 x.y 呼应；④ 图卡 .fig（编号 + 标题 + 注释）；
+  ⑤ 四部分合成 .stack 构成条；⑥ @media print A4 打印样式。
+  ⑦ **字号统一**：正文级文字全部 `--fs:14px`，KPI 展示数字 `--fs-num:24px`，
+     标题阶梯 h1 22 / h2 18 / h3 15.5 / h4 14，图内文字统一 14（report_generator.CHART_FS，
+     各图 viewBox 宽度归一为 1000 → 渲染尺寸≈正文字号）。
+  交付前机检：python scripts/html_check.py report.html --output output.json
+-->
+<style>
+:root{
+  --navy:#123A7E;--navy-deep:#0B2A5B;--navy-ink:#071B36;
+  --gold:#C9A227;--gold-deep:#8A6D14;--gold-soft:#FBF3D6;
+  --ink:#20242B;--gray:#5F6470;--gray2:#8B909B;
+  --bg:#FFFFFF;--panel:#F7F8FA;--panel2:#EDF1F7;
+  --line:#E4E7EE;--line2:#D3D9E4;
+  --up:#D8352A;--down:#0F8A5F;--warn-bg:#FDF1E3;--ok-bg:#E9F6F0;
+  --r:10px;--r-sm:6px;
+  --sh-sm:0 1px 2px rgba(11,42,91,.06);
+  --sh:0 2px 10px rgba(11,42,91,.07);
+  --sh-lg:0 10px 30px rgba(11,42,91,.10);
+  /* ── 字号令牌（v3.16.5 统一字号）──
+     正文级文字（正文/表格/注释/图注/标签/页眉/页脚）统一 --fs；展示型数字（KPI）统一 --fs-num；
+     标题层级保留阶梯 h1>h2>h3>h4；图内文字由 Python 常量 CHART_FS 统一（与 --fs 等值）。 */
+  --fs:14px;--fs-num:24px;
+  --fs-h1:22px;--fs-h2:18px;--fs-h3:15.5px;--fs-h4:var(--fs);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);line-height:1.72;font-size:var(--fs);
+     font-family:"PingFang SC","Hiragino Sans GB","Microsoft YaHei UI","Microsoft YaHei","Source Han Sans SC","Noto Sans CJK SC","Helvetica Neue",Arial,sans-serif;
+     -webkit-font-smoothing:antialiased;font-feature-settings:"tnum" 1}
+.page{max-width:1120px;margin:0 auto;padding:0 36px 84px;border-top:4px solid var(--navy)}
+/* ── 页眉（v3.16.13：改为「上下结构」——企业简介（品牌行＋标题＋副题）在上、
+     报告元信息条（报告编号／估值基准日／上市板块／引擎／统计／抽样）在下） ── */
+.masthead{display:block;padding:26px 0 20px;border-bottom:1px solid var(--line2)}
+.masthead .brand{display:flex;align-items:center;gap:8px;font-size:var(--fs);color:var(--navy);font-weight:700;letter-spacing:2.2px}
+.masthead .brand::before{content:"";width:13px;height:13px;background:var(--gold);border-radius:3px}
+h1{font-size:var(--fs-h1);line-height:1.34;color:var(--navy-deep);font-weight:700;margin:10px 0 6px;letter-spacing:-.2px}
+.masthead .sub{color:var(--gray);font-size:var(--fs)}
+.masthead .meta{display:block;margin-top:18px;padding:11px 18px;background:linear-gradient(180deg,#fff,var(--panel));border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:var(--r-sm);box-shadow:var(--sh-sm);font-size:var(--fs);color:var(--gray);line-height:1.85}
+.masthead .meta .m{white-space:normal}
+.masthead .meta .k{margin-right:6px}
+.masthead .meta .v{color:var(--navy-deep);font-weight:600}
+.masthead .meta .sep{margin:0 10px;color:var(--line2)}
+/* ── 标题层级 ── */
+h2{display:flex;align-items:center;gap:11px;font-size:var(--fs-h2);color:var(--navy-deep);font-weight:700;margin:44px 0 16px;padding-bottom:10px;border-bottom:2px solid var(--line);scroll-margin-top:16px}
+h2 .secno{display:inline-flex;align-items:center;justify-content:center;min-width:38px;height:26px;padding:0 9px;background:linear-gradient(150deg,var(--navy),var(--navy-deep));color:#fff;border-radius:var(--r-sm);font-size:var(--fs);font-weight:700;letter-spacing:1px;font-variant-numeric:tabular-nums;flex:none}
+h2::after{content:"";flex:1;height:2px;margin-left:4px;background:linear-gradient(90deg,var(--gold),rgba(201,162,39,0))}
+h3{font-size:var(--fs-h3);color:var(--navy-deep);font-weight:600;margin:26px 0 10px;padding-left:10px;border-left:3px solid var(--gold)}
+h4{font-size:var(--fs-h4);color:var(--navy);font-weight:600;margin:18px 0 8px;letter-spacing:.2px}
+p{margin:9px 0;text-align:justify}
+.sub{color:var(--gray);font-size:var(--fs)}
+/* ── KPI 卡（展示型数字统一 --fs-num） ── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;margin:18px 0}
+.kpi{background:linear-gradient(180deg,#fff,var(--panel));border:1px solid var(--line);border-top:3px solid var(--navy);border-radius:var(--r);padding:15px 17px;box-shadow:var(--sh-sm)}
+.kpi .label{font-size:var(--fs);color:var(--gray)}
+.kpi .value{font-size:var(--fs-num);line-height:1.3;font-weight:700;color:var(--navy-deep);margin:5px 0 3px;letter-spacing:-.4px;font-variant-numeric:tabular-nums}
+.kpi .value.gold{color:var(--gold-deep)}
+.kpi .note{font-size:var(--fs);color:var(--gray);line-height:1.6}
+.kpi.hl{background:linear-gradient(155deg,var(--navy),var(--navy-deep));border-color:transparent;border-top-color:var(--gold);box-shadow:var(--sh)}
+.kpi.hl .label,.kpi.hl .note{color:#AFC3E6}
+.kpi.hl .value{color:#fff}
+/* ── 区间条 ── */
+.rangebar{margin:16px 0 6px}
+.rangebar .axis{position:relative;height:24px;background:linear-gradient(90deg,#EDF2FB,#DCE6F5);border-radius:var(--r-sm);margin:6px 0}
+.rangebar .bar{position:absolute;top:2px;height:20px;background:linear-gradient(90deg,var(--navy),#2A5AA8);border-radius:5px;box-shadow:var(--sh-sm)}
+.rangebar .bar.gold{background:linear-gradient(90deg,var(--gold),#E0BE55)}
+.rangebar .midmark{position:absolute;top:-3px;height:30px;width:2px;background:var(--navy-ink);border-radius:1px}
+.rangebar .labels{display:flex;justify-content:space-between;font-size:var(--fs);color:var(--gray);margin-top:4px}
+.rangebar .labels b{color:var(--navy-deep);font-size:var(--fs)}
+.rangebar .cap{font-size:var(--fs);color:var(--gray);margin-top:2px}
+/* ── 表格 ── */
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:var(--fs);background:#fff;border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-sm);margin:14px 0}
+th{background:linear-gradient(180deg,var(--navy),var(--navy-deep));color:#fff;font-weight:600;padding:10px 13px;text-align:left;white-space:nowrap}
+th:first-child{border-top-left-radius:var(--r)}
+th:last-child{border-top-right-radius:var(--r)}
+td{padding:9px 13px;border-top:1px solid var(--line);vertical-align:top}
+tbody tr:nth-child(even) td{background:#F6F8FC}
+tbody tr:hover td{background:#EDF3FB}
+td.r,th.r{text-align:right}
+td.hl{color:var(--gold-deep);font-weight:700}
+tr.hl-row td{background:var(--gold-soft)!important;font-weight:600}
+tr.warn td{background:var(--warn-bg)!important}
+tr.ok td{background:var(--ok-bg)!important}
+.up{color:var(--up);font-weight:600}.down{color:var(--down);font-weight:600}
+.num{font-variant-numeric:tabular-nums}
+table.kv th{background:#F1F4F9;color:var(--navy-deep);white-space:normal;border-top:1px solid var(--line)}
+table.kv td{background:#fff!important}
+table.kv tbody tr:nth-child(even) th{background:#EDF1F8}
+/* ── 标签 / 高亮 ── */
+.tag{display:inline-block;padding:2px 10px;border-radius:11px;font-size:var(--fs);font-weight:600;white-space:nowrap}
+.tag.warn{background:#FCE8D9;color:#B4511C}
+.tag.ok{background:#DDF2E6;color:#0F6E56}
+.tag.navy{background:#DEE8F7;color:var(--navy)}
+.hl{background:linear-gradient(transparent 62%,var(--gold-soft) 62%);padding:0 1px}
+/* ── 结论框（v3.16.5：结论条 .verdict 已取消，区间大字改由 KPI 卡承载） ── */
+.callout{border-left:4px solid var(--gold);background:var(--panel);padding:15px 20px;margin:18px 0;border-radius:0 var(--r) var(--r) 0;box-shadow:var(--sh-sm)}
+.callout b{color:var(--navy-deep)}
+.callout p:first-child{margin-top:0}.callout p:last-child{margin-bottom:0}
+/* ── 图卡 ── */
+.fig{margin:18px 0;border:1px solid var(--line);border-radius:var(--r);background:linear-gradient(180deg,#fff,var(--panel));box-shadow:var(--sh-sm);overflow:hidden}
+.fig-h{display:flex;align-items:center;gap:9px;padding:11px 18px;font-size:var(--fs);color:var(--navy-deep);font-weight:600;border-bottom:1px solid var(--line);background:#FBFCFE}
+.fig-n{display:inline-flex;align-items:center;height:22px;padding:0 9px;background:var(--gold-soft);color:var(--gold-deep);border-radius:var(--r-sm);font-size:var(--fs);font-weight:700;letter-spacing:.5px}
+.fig-body{padding:16px 18px 8px}
+.fig-body svg{display:block;width:100%;height:auto}
+.fig-note{padding:0 18px 12px;font-size:var(--fs);color:var(--gray);line-height:1.65}
+.svgbox{margin:18px 0;padding:16px 18px;border:1px solid var(--line);border-radius:var(--r);background:linear-gradient(180deg,#fff,var(--panel));box-shadow:var(--sh-sm)}
+.svgbox .cap{font-size:var(--fs);color:var(--gray);margin-top:6px;text-align:center}
+/* ── 构成堆叠条 ── */
+.stack{margin:16px 0}
+.stack .row{display:grid;grid-template-columns:168px 1fr 124px;gap:12px;align-items:center;margin:7px 0;font-size:var(--fs)}
+.stack .k{color:var(--gray)}
+.stack .track{position:relative;height:20px;background:var(--panel2);border-radius:5px;overflow:hidden}
+.stack .fill{position:absolute;left:0;top:0;height:100%;border-radius:5px;background:linear-gradient(90deg,var(--navy),#2A5AA8)}
+.stack .fill.g{background:linear-gradient(90deg,var(--gold),#E0BE55)}
+.stack .fill.s{background:linear-gradient(90deg,#5F6470,#8890A0)}
+.stack .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--navy-deep);font-weight:600}
+.stack .eq{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line2);font-size:var(--fs);color:var(--gray)}
+.stack .eq b{color:var(--navy-deep)}
+/* ── 布局（缺省单列纵向堆叠） ── */
+.grid2{display:grid;grid-template-columns:1fr;gap:18px}
+ul,ol{margin:8px 0 8px 22px}li{margin:5px 0}
+.foot{margin-top:52px;padding-top:16px;border-top:2px solid var(--navy);font-size:var(--fs);color:var(--gray);line-height:1.8}
+/* ── 打印（A4；字号令牌整体收敛，保持"统一字号"在打印态同样成立） ── */
+@media print{
+  @page{size:A4;margin:14mm 12mm}
+  :root{--fs:11.5px;--fs-num:19px;--fs-h1:19px;--fs-h2:15px;--fs-h3:13px}
+  html{scroll-behavior:auto}
+  body{line-height:1.6;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .page{max-width:none;padding:0;border-top:0}
+  .no-print{display:none!important}
+  a{color:inherit;text-decoration:none}
+  thead{display:table-header-group}
+  tr,.kpi,.fig,.svgbox,.callout,.stack{page-break-inside:avoid}
+  table{box-shadow:none}
+  h2{margin:22px 0 10px;page-break-after:avoid}
+  h3{margin:14px 0 6px;page-break-after:avoid}
+  th{padding:7px 9px}td{padding:6px 9px}
+  .masthead{padding:0 0 12px}
+  .masthead .meta{box-shadow:none;padding:9px 14px}
+  .foot{margin-top:26px}
+}
+/* ── 响应式 ── */
+@media(max-width:860px){
+  .page{padding:0 18px 60px}
+  .masthead .meta{padding:10px 13px}
+  .masthead .meta .sep{margin:0 6px}
+  .kpis{grid-template-columns:1fr 1fr}
+  .stack .row{grid-template-columns:116px 1fr 100px}
+}
+@media(max-width:560px){.kpis{grid-template-columns:1fr}.stack .row{grid-template-columns:1fr;gap:2px}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ══════════ 页眉（v3.16.13：上下结构——简介在上、元信息条在下） ══════════ -->
+<div class="masthead">
+  <div class="brand">LLM IPO VALUATION · 智能估值研究中心</div>
+  <h1>{公司名称}（{代码}）估值报告</h1>
+  <div class="sub">{行业定位} · {一句话定位：如"全球四足与人形机器人整机龙头"}</div>
+  <div class="meta"><span class="m"><span class="k">报告编号</span><span class="v">VAL-{YYYYMMDD}-{序号}</span></span><span class="sep">｜</span><span class="m"><span class="k">估值基准日</span><span class="v">{as_of_date}</span></span><span class="sep">｜</span><span class="m"><span class="k">上市板块</span><span class="v">{exchange}</span></span><span class="sep">｜</span><span class="m"><span class="k">引擎</span><span class="v">v{engine_version}</span></span><span class="sep">｜</span><span class="m"><span class="k">统计</span><span class="v">v{stat_version}</span></span><span class="sep">｜</span><span class="m"><span class="k">抽样</span><span class="v">seed={seed} · n={n}</span></span></div>
+</div>
+
+<!-- ══════════ 01 执行摘要（v3.16.5：不出目录，页眉后直入本节；KPI 三卡 + 图 1 + 结论前置） ══════════ -->
+<h2 id="s1"><span class="secno">01</span>执行摘要</h2>
+<div class="kpis">
+  <div class="kpi hl"><div class="label">综合估值中枢</div><div class="value">{中枢} 亿</div>
+    <div class="note">Bear {bear} / Base {base} / Bull {bull}</div></div>
+  <div class="kpi"><div class="label">综合估值区间（情景区间）</div><div class="value">{区间下限} – {区间上限} 亿</div>
+    <div class="note">{板块} · 置信度 {等级}（{评分}）</div></div>
+  <div class="kpi"><div class="label">MC 90% 区间</div><div class="value gold">{MC下限} – {MC上限} 亿</div>
+    <div class="note">中位数 {MC中位} ｜ 均值 {均值} ± {标准差}</div></div>
+</div>
+
+<figure class="fig">
+  <figcaption class="fig-h"><span class="fig-n">图 1</span>三口径估值区间并排（亿元）</figcaption>
+  <div class="fig-body">
+    <!-- 三条共用同一比例刻度；left/width 为相对 max_v 的百分比（见 report_generator.svg_range_bar） -->
+    <div class="rangebar">
+      <div class="axis"><div class="bar" style="left:{①left}%;width:{①width}%"></div>
+      <div class="midmark" style="left:{①mid}%"></div></div>
+      <div class="labels"><span>0</span><b>{区间下限} – {区间上限}（中枢 {中枢}）</b><span>{刻度上限}</span></div>
+      <div class="cap">① 情景区间（Bear/Base/Bull 加权中枢）</div>
+    </div>
+    <div class="rangebar">
+      <div class="axis"><div class="bar gold" style="left:{②left}%;width:{②width}%"></div>
+      <div class="midmark" style="left:{②mid}%"></div></div>
+      <div class="labels"><span>0</span><b>{MC下限} – {MC上限}（中枢 {MC中位}）</b><span>{刻度上限}</span></div>
+      <div class="cap">② MC 90% 统计区间（{n} 次，seed={seed}）</div>
+    </div>
+    <div class="rangebar">
+      <div class="axis"><div class="bar" style="left:{③left}%;width:{③width}%"></div>
+      <div class="midmark" style="left:{③mid}%"></div></div>
+      <div class="labels"><span>0</span><b>{修正下界} – {修正上界}（中枢 {修正中枢}）</b><span>{刻度上限}</span></div>
+      <div class="cap">③ 修正综合区间（情景区间 ∩ MC 90%）</div>
+    </div>
+  </div>
+  <div class="fig-note">① 情景区间＝Bear/Base/Bull 加权；② MC 90%＝蒙特卡洛 {n} 次（seed={seed}）；③ 修正综合区间＝情景区间 ∩ MC 90%。三条共用同一比例刻度，可横向比对。</div>
+</figure>
+
+<div class="callout">
+  <b>结论前置：</b>{公司}合理估值区间 <b>{区间下限} – {区间上限} 亿元，中枢 {中枢} 亿元</b>；
+  MC 90% 区间 <b>{MC下限} – {MC上限} 亿元</b>（中位 {MC中位}）。{统计稳健性}；
+  主导不确定变量为{驱动特征}。{发行定位}。{口径关系}。
+</div>
+<h3>核心观点</h3>
+<ol>
+  <li><b>估值驱动特征：</b>{…}（§9.2 参数弹性排序）</li>
+  <li><b>口径关系：</b>{…}</li>
+  <li><b>统计稳健性：</b>{…}（§9.3 统计校验状态）</li>
+  <li><b>发行定位：</b>{…}（§8 IPO 定价约束）</li>
+  <li><b>补充锚：</b>…校验锚见 §7.4（{已启用/未启用}）</li>
+</ol>
+
+<!-- ══════════ 02 核心观点 ══════════ -->
+<h2 id="s2"><span class="secno">02</span>核心观点（数据支撑）</h2>
+<table>
+  <thead><tr><th>观点</th><th>数据支撑</th><th>来源</th></tr></thead>
+  <tbody>
+    <tr><td>估值中枢</td><td>{中枢} 亿元</td><td>§7.2</td></tr>
+    <tr><td>统计口径</td><td>MC 90% {MC下限}–{MC上限} 亿元（中位 {MC中位}）</td><td>§9.3</td></tr>
+    <tr><td>方法结构</td><td>可比 {可比合成值} / DCF {DCF值} 亿元（比值 {gap}）</td><td>§7.1</td></tr>
+    <tr><td>主导变量</td><td>{变量1} {弹性1}、{变量2} {弹性2}、{变量3} {弹性3}</td><td>§9.2</td></tr>
+    <tr><td>发行参考</td><td>{发行市值} 亿元（PE {发行PE}）</td><td>§8</td></tr>
+  </tbody>
+</table>
+
+<!-- ══════════ 03 公司概况 ══════════ -->
+<h2 id="s3"><span class="secno">03</span>公司概况与核心业务</h2>
+<table class="kv"><tbody>
+  <tr><th style="width:26%">资产类型</th><td>{asset_type}（引擎 asset_adapter 主方法建议）</td></tr>
+  <tr><th>TTM 营收</th><td>{营收} 亿元（净利 {净利} 亿）</td></tr>
+  <tr><th>行业定位</th><td>{行业}｜{定位说明}</td></tr>
+  <tr><th>可比数量</th><td>{N} 家（{名单}）</td></tr>
+</tbody></table>
+
+<figure class="fig">
+  <figcaption class="fig-h"><span class="fig-n">图 2</span>{起始年}–{结束年} 营业收入趋势（亿元）</figcaption>
+  <div class="fig-body">
+    <!-- 面积 + 折线 + 网格（tnum 数字）。按 report_generator.svg_trend 生成（viewBox 1000×340，
+         图内文字 font-size=14 与正文字号一致）；无数据时整段删除该 figure -->
+    <svg viewBox="0 0 1000 340" width="100%" role="img" aria-label="营收趋势">
+      <defs><linearGradient id="revfill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#123A7E" stop-opacity="0.16"/>
+        <stop offset="100%" stop-color="#123A7E" stop-opacity="0.01"/></linearGradient></defs>
+      <polygon points="{面积点序列}" fill="url(#revfill)"/>
+      <polyline points="{点序列}" fill="none" stroke="#123A7E" stroke-width="3"/>
+      {各点圆点与标签}{年份标签}
+    </svg>
+  </div>
+  <div class="fig-note">数据来源：input.json › financials.revenue_by_year（亿元）；节点标注为当年营业收入。</div>
+</figure>
+
+<!-- ══════════ 04 行业与竞争 ══════════ -->
+<h2 id="s4"><span class="secno">04</span>行业与竞争格局</h2>
+<h3>4.1 可比公司估值矩阵（单一可比集，按市场分组）</h3>
+<table>
+  <thead><tr><th>公司</th><th>市场</th><th class="r">PE</th><th class="r">PB</th><th class="r">增速%</th><th>数据时点</th></tr></thead>
+  <tbody>
+    {可比公司行}
+    <tr class="hl-row"><td><b>中位数</b></td><td>—</td><td class="r">{PE中位}</td><td class="r">{PB中位}</td><td class="r">{增速中位}</td><td>—</td></tr>
+  </tbody>
+</table>
+<p class="sub">注：同一可比集同时服务市场法倍数、DCF 风险参数（β/D/E）与 FCF 比率 L2 层——可比集一致运用（comparable_set_usage）。</p>
+<h3>4.2 行业指数交叉验证</h3>
+<table>
+  <thead><tr><th>参照</th><th>指数</th><th class="r">隐含值（亿）</th><th>与可比偏差</th></tr></thead>
+  <tbody><tr class="warn"><td>行业指数参照</td><td>{指数名}</td><td class="r">{隐含值}</td><td>与可比法偏差 {偏差}</td></tr></tbody>
+</table>
+<p class="sub">行业指数仅作检验，不并入综合权重（对应中证协"行业指标法仅用于检验"）。</p>
+
+<!-- ══════════ 05 财务基础 ══════════ -->
+<h2 id="s5"><span class="secno">05</span>财务基础</h2>
+<h3>5.1 关键财务指标</h3>
+<table>
+  <thead><tr><th>指标</th><th class="r">数值</th><th>口径</th></tr></thead>
+  <tbody>
+    <tr><td>TTM 营收</td><td class="r num">{值}</td><td>输入口径（input.json）</td></tr>
+    <tr><td>归母净利</td><td class="r num">{值}</td><td>输入口径</td></tr>
+    <tr><td>净利率 / 毛利率</td><td class="r num">{净利率} / {毛利率}</td><td>输入口径</td></tr>
+    <tr><td>OCF/净利</td><td class="r num">{比值}</td><td>输入口径（FCF 校准 L1/L3）</td></tr>
+    <tr><td>质量评分</td><td class="r num">{评分}（修正 {修正}）</td><td>引擎 quality_scorecard</td></tr>
+  </tbody>
+</table>
+<h3>5.2 盈利质量评分卡（修正 {修正}，总分 {总分}）</h3>
+<table>
+  <thead><tr><th>指标</th><th class="r">数值</th></tr></thead>
+  <tbody>{评分卡明细行}</tbody>
+</table>
+
+<!-- ══════════ 06 估值方法与关键假设 ══════════ -->
+<h2 id="s6"><span class="secno">06</span>估值方法与关键假设</h2>
+<h3>6.1 方法框架</h3>
+<p>市场法（可比倍数 + 修正项分层）与内在价值法（两阶段 DCF）并行，权重 w_dcf={w_dcf} / w_comparable={w_comp} / w_sentiment={w_sent}；
+DCF 为内在价值口径不受市场修正项影响；情景权重 {bear}/{base}/{bull}。补充锚（融资价格法/回购/流动性折扣/NAV/贝叶斯锚定）作校验不并入综合权重。</p>
+<h3>6.2 关键假设汇总（生命周期阶段 / 增速 / WACC / FCF）</h3>
+<table class="kv"><tbody>
+  <tr><th style="width:26%">生命周期阶段</th><td>{阶段}（来源：{来源}，置信度 {置信度}）｜增速形态：{形态}，显式期 {n} 年｜终值：{终值模式}</td></tr>
+  <tr><th>预测期增速（逐年）</th><td>{年份1}E {g1} → {年份2}E {g2} → … （显式期 {n} 年；来源：{增速来源}）</td></tr>
+  <tr><th>增速三角参照</th><td>自身历史 CAGR {值} ｜ 可比增速中位 {值} ｜ 行业增速 {值}；三角校准值 {值}</td></tr>
+  <tr><th>WACC</th><td>{值}（{来源}，β {β来源}）</td></tr>
+  <tr><th>永续增速</th><td>{值}（{来源}）</td></tr>
+  <tr><th>FCF 比率</th><td>{值}（{来源}）</td></tr>
+  <tr><th>流动性折扣</th><td>{值}</td></tr>
+  <tr><th>行业指数 PE</th><td>{值}</td></tr>
+</tbody></table>
+<p class="sub">数据来源：引擎 <code>lifecycle</code> / <code>scenarios.base.dcf.growth_schedule</code> / <code>growth_triangulation</code> / <code>assumptions_summary</code>；年份由 input.financials.growth_forecast 的键推导，可逐位复算。</p>
+
+<!-- ══════════ 07 估值结果 ══════════ -->
+<h2 id="s7"><span class="secno">07</span>估值结果</h2>
+<h3>7.1 多方法估值对比（Base 情景）</h3>
+<figure class="fig">
+  <figcaption class="fig-h"><span class="fig-n">图 3</span>多方法估值对比（亿元，Base 情景）</figcaption>
+  <div class="fig-body">{多方法柱状 SVG（report_generator.svg_method_bars）：viewBox 1000×360、基线 y=300、柱高上限 240、柱位按可用宽度均分、含 0.5/0.75 网格线、文字 font-size=14}</div>
+  <div class="fig-note">PEG* 单列展示、不参与综合均值；DCF 为内在价值口径，不承受市场修正项。</div>
+</figure>
+<table>
+  <thead><tr><th>方法</th><th class="r">倍数中位</th><th class="r">隐含值（亿）</th><th>IQR 剔除</th></tr></thead>
+  <tbody>
+    {方法行：PE/PS/EV-EBITDA/PB/PEG（单列）/DCF}
+  </tbody>
+</table>
+<h3>7.2 综合价值推导</h3>
+<table>
+  <thead><tr><th>环节</th><th class="r">数值</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>可比合成值</td><td class="r num">{值} 亿</td><td>PE/PS/PB 可用方法均值</td></tr>
+    <tr><td>＋市场修正项</td><td class="r num">{值}</td><td>质量/商誉/情绪/因子（市场口径）</td></tr>
+    <tr><td>市场口径（修正后）</td><td class="r num">{值} 亿</td><td>加权 w_comp+w_sent={w_comp}+{w_sent}</td></tr>
+    <tr><td>＋ DCF × w_dcf</td><td class="r num">{值} 亿</td><td>权重 {w_dcf}</td></tr>
+    <tr class="hl-row"><td><b>综合加权值（Base）</b></td><td class="r num"><b>{值} 亿</b></td>
+      <td>Bear {bear} / Bull {bull} → 区间 [{下界}, {上界}] 中枢 {中枢}</td></tr>
+  </tbody>
+</table>
+<h3>7.3 四部分合成（①DCF ②可比法 ③市场舆情 ④统计检验）</h3>
+<figure class="fig">
+  <figcaption class="fig-h"><span class="fig-n">图 5</span>四部分合成构成（Base 情景）</figcaption>
+  <div class="fig-body">
+    <!-- 横条长度按三部分取值等比缩放；权重与合成等式取自引擎 synthesis.four_part，可逐位复算 -->
+    <div class="stack">
+      <div class="row"><div class="k">① DCF 现金流贴现</div>
+        <div class="track"><div class="fill a" style="width:{占比1}%"></div></div>
+        <div class="v">{值1} 亿　× {权重1}</div></div>
+      <div class="row"><div class="k">② 可比公司法（含质量）</div>
+        <div class="track"><div class="fill b" style="width:{占比2}%"></div></div>
+        <div class="v">{值2} 亿　× {权重2}</div></div>
+      <div class="row"><div class="k">③ 市场舆情（仅情绪）</div>
+        <div class="track"><div class="fill c" style="width:{占比3}%"></div></div>
+        <div class="v">{值3} 亿　× {权重3}</div></div>
+      <div class="eq">Base 情景四部分合成：<b>{权重1} × {值1} ＋ {权重2} × {值2} ＋ {权重3} × {值3} ＝ {Base综合值} 亿元</b>；
+        再按情景权重 {bear}/{base}/{bull}（Bear/Base/Bull）加权 → 综合中枢 <b>{中枢} 亿元</b>。
+        ④ 统计检验：MC P5–P95 ＝ [{P5}, {P95}] 亿元。③ 不含质量与流动性折扣；②③ 共用可比基数，不计作两条独立路径。</div>
+    </div>
+  </div>
+  <div class="fig-note">横条长度按三部分取值等比缩放；权重与合成等式均取自引擎 synthesis.four_part，可逐位复算。</div>
+</figure>
+<table>
+  <thead><tr><th>部分</th><th class="r">值（亿元）</th><th class="r">权重</th><th>口径与说明</th></tr></thead>
+  <tbody>
+    <tr><td>① DCF 现金流贴现</td><td class="r num">{值}</td><td class="r num">{权重}</td><td>{引擎 note}</td></tr>
+    <tr><td>② 可比公司法（含质量调整）</td><td class="r num">{值}</td><td class="r num">{权重}</td><td>{引擎 note}</td></tr>
+    <tr><td>③ 市场舆情（仅情绪）</td><td class="r num">{值}</td><td class="r num">{权重}</td><td>{引擎 note}</td></tr>
+    <tr class="hl-row"><td><b>综合中枢（含情景加权）</b></td><td class="r num"><b>{中枢}</b></td><td class="r num">—</td>
+      <td>④ 统计检验区间取 MC P5–P95（见 §9.3）；②③ 共用可比基数，不计作两条独立路径</td></tr>
+  </tbody>
+</table>
+<h3>7.4 补充锚（校验，不并入权重）</h3>
+<table class="kv"><tbody>{补充锚行，如未启用则写"未启用补充锚。"}</tbody></table>
+<h3>7.5 敏感性分析</h3>
+<div class="grid2">
+  <div>
+    <h4>WACC 敏感性（DCF 口径）</h4>
+    <table>
+      <thead><tr><th class="r">WACC</th><th class="r">DCF 值（亿）</th></tr></thead>
+      <tbody>{三档 WACC 行}</tbody>
+    </table>
+    <p class="sub">WACC ±1pp → DCF 反向变动（口径：base 情景有效增速，v2.2.0 起与 base DCF 一致）。</p>
+  </div>
+  <div>
+    <h4>增速 × 倍数矩阵（中枢行）</h4>
+    <table>
+      <thead><tr><th class="r">倍数 Δ</th><th class="r">-20%</th><th class="r">-10%</th><th class="r">中枢</th><th class="r">+10%</th><th class="r">+20%</th></tr></thead>
+      <tbody><tr><td>增速基准</td><td class="r num">{值}</td><td class="r num">{值}</td><td class="r num">{值}</td><td class="r num">{值}</td><td class="r num">{值}</td></tr></tbody>
+    </table>
+    <p class="sub">{敏感性口径说明}</p>
+  </div>
+</div>
+
+<!-- ══════════ 08 IPO 定价约束 ══════════ -->
+<h2 id="s8"><span class="secno">08</span>IPO 定价约束与发行定位</h2>
+<table>
+  <thead><tr><th>检查项</th><th>模型口径</th><th>参照</th><th>结论</th></tr></thead>
+  <tbody>
+    <tr><td>发行 PE</td><td class="num">{发行PE}×</td><td>可比中位 {可比PE}×</td><td><span class="tag warn">预警</span></td></tr>
+    <tr><td>发行 PS</td><td class="num">{发行PS}×</td><td>可比中位 {可比PS}×</td><td><span class="tag warn">预警</span></td></tr>
+    <tr><td>每股价格</td><td class="num">{股价} 元</td><td>摊薄 EPS {EPS} 元</td><td>—</td></tr>
+    <tr><td>募资额</td><td class="num">{募资} 亿</td><td>流通比例 {比例}</td><td>{结论}</td></tr>
+  </tbody>
+</table>
+<div class="callout"><b>发行定价定位：</b>{发行估值 vs 模型中枢的偏离解读}。{口径关系}。</div>
+
+<!-- ══════════ 09 风险提示 ══════════ -->
+<h2 id="s9"><span class="secno">09</span>风险提示</h2>
+<h3>9.1 引擎显性警告（warnings 强制呈现）</h3>
+<table>
+  <thead><tr><th>引擎警告（强制呈现）</th><th>性质</th></tr></thead>
+  <tbody><tr class="warn"><td>⚠ {warning}</td><td>引擎警示</td></tr></tbody>
+</table>
+<h3>9.2 参数弹性排序（主导不确定变量）</h3>
+<figure class="fig">
+  <figcaption class="fig-h"><span class="fig-n">图 4</span>参数弹性排序（±1σ 对估值影响）</figcaption>
+  <div class="fig-body">{弹性横向条形 SVG（report_generator.svg_elasticity）：viewBox 1000×n、中轴 x=690、双向半幅 250、标签列右对齐至 x=350、正向深蓝、负向金色、文字 font-size=14}</div>
+  <div class="fig-note">横条向右为正向弹性、向左（金色）为负向；{驱动特征}。</div>
+</figure>
+<h3>9.3 统计校验状态</h3>
+<table class="kv"><tbody>
+  <tr><th style="width:26%">样本成功率</th><td>{n_success} / {n_total}（{通过/未通过}，≥95%）</td></tr>
+  <tr><th>MC 中位 vs 点估计</th><td>{MC中位} vs {中枢}（{偏差说明}）</td></tr>
+  <tr><th>修正区间（情景∩MC）</th><td>[{下界}, {上界}]（中枢 {修正中枢}）</td></tr>
+  <tr><th>统计配置</th><td>seed={seed} / n={n} / 尾部联动 ρ={ρ}</td></tr>
+</tbody></table>
+
+<!-- ══════════ 10 结论与建议 ══════════ -->
+<h2 id="s10"><span class="secno">10</span>结论与建议</h2>
+<div class="callout">
+  <p><b>估值结论：</b>{公司}合理估值区间 <b>{区间下限} – {区间上限} 亿元，中枢 {中枢} 亿元</b>；
+  MC 90% 收敛区间 <b>{MC下限} – {MC上限} 亿元</b>（中位 {MC中位}）。{统计稳健性}，置信度"{等级}"。</p>
+  <p><b>定价参考口径：</b>{发行定位}；{口径关系}；主导不确定变量为{驱动特征}，建议以敏感性分析中的关键变量为跟踪重点。本报告为研究性估值结论，不构成投资建议。</p>
+</div>
+
+<!-- ══════════ 11 数据溯源 ══════════ -->
+<h2 id="s11"><span class="secno">11</span>数据溯源与口径说明</h2>
+<table>
+  <thead><tr><th>数据项</th><th>来源</th><th>日期</th></tr></thead>
+  <tbody>{data_sources 行}</tbody>
+</table>
+<p class="sub">估算项已在输入文件 note 标注；估值基于公开信息与模型假设，不构成投资建议；市场有风险，决策需独立判断。</p>
+
+<div class="foot">
+  LLM IPO VALUATION · 智能估值研究中心 ｜ 报告编号 {报告编号} ｜ 引擎 v{engine_version} / 统计 v{stat_version} / seed={seed} / n={n} ｜ 生成时间 {生成时间}
+  <br>本报告全部数字来自引擎可复算输出（X3 防幻觉：生成器仅做版面编排与定性解读，不产生任何估值数字）；假设修订须基于可比公司与历史数据，方法论可追溯（methodology.md）。打印建议：A4 纵向、边距默认、勾选"背景图形"以保留色块。
+</div>
+
+</div>
+</body>
+</html>

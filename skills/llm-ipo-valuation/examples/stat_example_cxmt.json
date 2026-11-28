@@ -1,0 +1,243 @@
+{
+  "meta": {
+    "case": "cxmt",
+    "as_of": "2026-08-19",
+    "engine_version": "2.7.0",
+    "stat_version": "3.4.0",
+    "seed": 42,
+    "n": 3000,
+    "calibration_file": "calibration_params.json"
+  },
+  "base_mid": 3425.67,
+  "monte_carlo": {
+    "n_success": 3000,
+    "n_total": 3000,
+    "success_rate": 1.0,
+    "mean": 3162.1,
+    "std": 1105.11,
+    "p5": 1723.21,
+    "p25": 2397.07,
+    "p50": 3003.32,
+    "p75": 3734.67,
+    "p95": 5223.82,
+    "ci90": [
+      1723.21,
+      5223.82
+    ],
+    "histogram": {
+      "edges": [
+        576.6,
+        1208.7,
+        1840.8,
+        2472.9,
+        3105.0,
+        3737.0,
+        4369.1,
+        5001.2,
+        5633.3,
+        6265.4,
+        6897.5,
+        7529.6,
+        8161.7,
+        8793.7,
+        9425.8,
+        10057.9,
+        10690.0,
+        11322.1,
+        11954.2,
+        12586.3,
+        13218.4
+      ],
+      "counts": [
+        18,
+        195,
+        629,
+        785,
+        626,
+        370,
+        186,
+        107,
+        46,
+        21,
+        6,
+        5,
+        2,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        1
+      ]
+    }
+  },
+  "mc_config": {
+    "growth_multiple_corr": 0.5,
+    "liquidity_perturbed": false,
+    "note": "growth_multiple_corr=增速×倍数尾部联动相关系数（>0 建模周期回落同向崩溃）；liquidity_perturbed=流动性折扣 σ 是否纳入 MC"
+  },
+  "elasticity": {
+    "wacc": {
+      "value_1sigma_up": 3343.31,
+      "value_1sigma_dn": 3558.56,
+      "base_value": 3425.67,
+      "delta_pct_1sigma": -2.4,
+      "delta_pct_minus_1sigma": 3.88,
+      "signed_delta_pct": -6.28,
+      "direction_flag": "正常"
+    },
+    "net_margin": {
+      "value_1sigma_up": 4622.45,
+      "value_1sigma_dn": 2407.46,
+      "base_value": 3425.67,
+      "delta_pct_1sigma": 34.94,
+      "delta_pct_minus_1sigma": -29.72,
+      "signed_delta_pct": 64.66,
+      "direction_flag": "正常"
+    },
+    "terminal_growth": {
+      "value_1sigma_up": 3493.77,
+      "value_1sigma_dn": 3375.94,
+      "base_value": 3425.67,
+      "delta_pct_1sigma": 1.99,
+      "delta_pct_minus_1sigma": -1.45,
+      "signed_delta_pct": 3.44,
+      "direction_flag": "正常"
+    },
+    "growth_forecast": {
+      "value_1sigma_up": 4508.36,
+      "value_1sigma_dn": 2845.79,
+      "base_value": 3425.67,
+      "delta_pct_1sigma": 31.61,
+      "delta_pct_minus_1sigma": -16.93,
+      "signed_delta_pct": 48.53,
+      "direction_flag": "正常"
+    },
+    "comparable_multiples": {
+      "value_1sigma_up": 4279.2,
+      "value_1sigma_dn": 2760.94,
+      "base_value": 3425.67,
+      "delta_pct_1sigma": 24.92,
+      "delta_pct_minus_1sigma": -19.4,
+      "signed_delta_pct": 44.32,
+      "direction_flag": "正常"
+    },
+    "sentiment": {
+      "value_1sigma_up": 3477.56,
+      "value_1sigma_dn": 3340.01,
+      "base_value": 3425.67,
+      "delta_pct_1sigma": 1.51,
+      "delta_pct_minus_1sigma": -2.5,
+      "signed_delta_pct": 4.02,
+      "direction_flag": "正常"
+    },
+    "quality_indicators": {
+      "value_1sigma_up": 3005.12,
+      "value_1sigma_dn": 3005.12,
+      "base_value": 3425.67,
+      "delta_pct_1sigma": -12.28,
+      "delta_pct_minus_1sigma": -12.28,
+      "signed_delta_pct": 0.0,
+      "direction_flag": "异常"
+    },
+    "liquidity_discount": {
+      "value_1sigma_up": 3425.67,
+      "value_1sigma_dn": 3425.67,
+      "base_value": 3425.67,
+      "delta_pct_1sigma": 0.0,
+      "delta_pct_minus_1sigma": 0.0,
+      "signed_delta_pct": 0.0,
+      "direction_flag": "正常"
+    }
+  },
+  "correlation": {
+    "wacc": {
+      "spearman_r": 0.005,
+      "n": 3000
+    },
+    "net_margin": {
+      "spearman_r": 0.573,
+      "n": 3000
+    },
+    "terminal_growth": {
+      "spearman_r": 0.01,
+      "n": 3000
+    },
+    "growth_mult": {
+      "spearman_r": 0.622,
+      "n": 3000
+    },
+    "multiple_mult": {
+      "spearman_r": 0.656,
+      "n": 3000
+    },
+    "sentiment": {
+      "spearman_r": 0.086,
+      "n": 3000
+    }
+  },
+  "robustness": {
+    "weights": {
+      "default": {
+        "weights": {
+          "dcf": 0.3,
+          "comparable": 0.5,
+          "sentiment": 0.2
+        },
+        "mid": 3309.44,
+        "delta_pct_vs_default": -3.39
+      },
+      "comparable_heavy": {
+        "weights": {
+          "dcf": 0.15,
+          "comparable": 0.7,
+          "sentiment": 0.15
+        },
+        "mid": 3658.14,
+        "delta_pct_vs_default": 6.79
+      },
+      "dcf_heavy": {
+        "weights": {
+          "dcf": 0.5,
+          "comparable": 0.3,
+          "sentiment": 0.2
+        },
+        "mid": 2844.51,
+        "delta_pct_vs_default": -16.96
+      }
+    },
+    "comparable_exclusion": {
+      "excluded": "北京君正",
+      "key": "pe",
+      "value": 105.98,
+      "mid": 2564.86,
+      "delta_pct_vs_default": -25.13
+    }
+  },
+  "adjusted_interval": {
+    "raw_interval": [
+      1630.64,
+      5659.13
+    ],
+    "raw_mid": 3425.67,
+    "mc_ci90": [
+      1723.21,
+      5223.82
+    ],
+    "mc_p50": 3003.32,
+    "synthesis_interval": [
+      1723.21,
+      5223.82
+    ],
+    "synthesis_mid": 3214.49,
+    "note": "synthesis_interval=原始情景区间∩MC 90%区间；synthesis_mid=MC中位数与原始中枢均值（稳健口径）"
+  },
+  "validation_passed": true,
+  "validation_status": "通过",
+  "elasticity_issues": [
+    "quality_indicators: +1σ 方向异常（期望升，实际 -12.28%）",
+    "quality_indicators: ±1σ 同号非单调（-12.28%/-12.28%），检查 clamp 是否作用于乘子",
+    "quality_indicators: 扰动被 clamp 截断（触上界 1.0），弹性可能失真——建议放宽扰动幅度或检查边界合理性"
+  ]
+}
