@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="zh" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>估值计算图 · VCG / MVN 构想 · ValuationSystem Docs</title>
+<meta name="description" content="VCG / MVN：类型化、可组合、可审计的估值计算图；前向是模块图，后向是带合成目标的智能体评论家。分支 design-valuation-net。">
+<link rel="stylesheet" href="../../assets/terminal.css">
+<script src="../../assets/terminal.js"></script>
+<style>
+  /* 本页专用：只做布局与图解，不新造视觉语言；颜色 / 字号全部取自 terminal.css 变量。 */
+  .layout { margin-top: 24px; }
+  .lede strong { color: var(--ink); }
+  .ticker { overflow-x: auto; }
+  .lbl { display: block; margin: 22px 0 9px; color: var(--faint); font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+  .lst { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .lst li { position: relative; padding-left: 14px; color: var(--dim); font-size: 12.5px; line-height: 1.72; }
+  .lst li::before { content: ""; position: absolute; left: 0; top: 8px; width: 5px; height: 1px; background: var(--amber); }
+  .lst li b { color: var(--ink); font-weight: 600; }
+  .lst.mut li::before { background: var(--faint); }
+  .card-p { margin: 0; color: var(--dim); font-size: 12.5px; line-height: 1.8; }
+  .card-p b { color: var(--ink); }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .tbl-note { margin: 8px 0 0; color: var(--faint); font-size: 11.5px; line-height: 1.7; }
+  .red-line { border-top: 2px solid color-mix(in srgb, var(--red) 65%, transparent); }
+
+  /* 前向计算图：details 节点 + CSS 箭头；窄屏折行，箭头隐藏 */
+  .vg { position: relative; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 26px; align-items: start; }
+  .vg-node { position: relative; min-width: 0; border: 1px solid var(--line); border-radius: 4px; background: var(--panel2); }
+  .vg-node:not(:last-child)::after { content: "→"; position: absolute; top: 23px; right: -26px; width: 26px; text-align: center; color: var(--faint); font-family: var(--mono); font-size: 13px; line-height: 1; }
+  .vg-node > summary { display: block; padding: 10px 18px 11px 12px; cursor: pointer; list-style: none; }
+  .vg-node > summary::-webkit-details-marker { display: none; }
+  .vg-node > summary:hover { background: color-mix(in srgb, var(--panel3) 55%, transparent); }
+  .vg-node[open] { border-color: color-mix(in srgb, var(--amber) 45%, var(--line)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--amber) 14%, transparent); }
+  .vg-node[open] > summary { border-bottom: 1px solid var(--line); }
+  .vg-k { display: block; color: var(--faint); font-family: var(--mono); font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; }
+  .vg-t { display: block; margin-top: 5px; color: var(--ink); font-size: 13px; font-weight: 700; line-height: 1.35; }
+  .vg-t small { display: block; margin-top: 3px; color: var(--faint); font-family: var(--mono); font-size: 9.5px; font-weight: 500; line-height: 1.5; word-break: break-word; }
+  .vg-chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+  .vg-chips .tag { font-size: 9px; padding: 0 5px; }
+  .vg-marker { position: absolute; top: 9px; right: 9px; color: var(--faint); font-family: var(--mono); font-size: 9px; transition: transform .15s ease, color .15s ease; }
+  .vg-node[open] .vg-marker { transform: rotate(90deg); color: var(--amber); }
+  .vg-bd { padding: 10px 12px 12px; color: var(--dim); font-size: 11.5px; line-height: 1.7; }
+  .vg-bd b { color: var(--ink); }
+  .vg-return { display: flex; align-items: flex-start; gap: 10px; margin-top: 18px; padding: 10px 12px; border: 1px dashed color-mix(in srgb, var(--violet) 45%, var(--line)); border-radius: 4px; background: color-mix(in srgb, var(--violet) 5%, var(--panel)); color: var(--dim); font-size: 12px; line-height: 1.7; }
+  .vg-return .ar { color: var(--violet); font-family: var(--mono); font-size: 14px; line-height: 1.3; }
+  .vg-return b { color: var(--ink); }
+
+  @media (max-width: 1100px) {
+    .vg { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .vg-node:not(:last-child)::after { display: none; }
+    /* 速览条：窄屏折成两列，避免横向裁切 */
+    .ticker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+    .ticker-item { border-right: 0; border-bottom: 1px solid var(--line); white-space: normal; }
+    .ticker-item:nth-child(odd) { border-right: 1px solid var(--line); }
+    .ticker-item:last-child { grid-column: 1 / -1; border-bottom: 0; border-right: 0; }
+  }
+  @media (max-width: 640px) {
+    .vg { grid-template-columns: 1fr; }
+    .lbl { margin-top: 18px; }
+    .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="../../html/index.html">
+    <span class="brand-mark">V</span>
+    <span>VALUATION SYSTEM</span>
+    <span class="brand-sub">RESEARCH DOCS</span>
+  </a>
+  <nav class="topnav">
+    <a href="../../html/index.html">文档首页</a>
+    <a href="../../html/paper-proposal.html">论文建议</a>
+    <a href="../../html/engineering-roadmap.html">工程规划</a>
+    <a href="../../html/skill-explainer.html">SKILL 讲解</a>
+    <a class="on" href="index.html">VCG 构想</a>
+  </nav>
+  <button class="theme-toggle" data-theme-toggle aria-label="切换主题">☾</button>
+</header>
+
+<main class="wrap wide">
+
+  <!-- ── HERO ─────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="kicker">DESIGN BRANCH · VCG / MVN <span class="dim">/ 2026-11-28 · FROM main f56bb93</span></div>
+    <h1 class="display">估值计算图<small>VALUATION COMPUTATION GRAPH</small></h1>
+    <p class="lede">
+      <strong>从逐券 pipeline 到可组合的估值网络。</strong>
+      一个类型化、可组合、可审计的估值计算图：前向由估值模块与门控 / 池化组成，
+      后向由带合成目标的智能体评论家做有界校准；同一组模块服务指数监控与 IPO 定价。
+    </p>
+    <div class="meta-row">
+      <span class="tag am">VCG / MVN</span>
+      <span class="tag am">Agentic Critic</span>
+      <span class="tag">双场景 · monitoring / IPO</span>
+      <span class="tag">分支 design-valuation-net</span>
+      <span class="tag">分支基点 f56bb93</span>
+      <span class="tag warn">构想 / 原型 · 不进入生产</span>
+      <span class="tag mut">研究参考 · 不构成投资建议</span>
+    </div>
+  </section>
+
+  <div class="ticker" aria-label="本页速览">
+    <div class="ticker-item"><span>Forward</span>数据编码 → 模块 → 门控 → 池化 → 指数</div>
+    <div class="ticker-item"><span>Backward</span>专家 actor · 主审 critic · 信赖域</div>
+    <div class="ticker-item"><span>Pooling</span>线性 / 对数 / 专家乘积</div>
+    <div class="ticker-item"><span>Scenes</span>monitoring × IPO</div>
+    <div class="ticker-item"><span>Branch</span>design-valuation-net</div>
+  </div>
+  <p class="tbl-note">
+    口径：本页依据 <a href="../00-evaluation.md">docs/v2/00-evaluation.md</a>、<a href="../README.md">docs/v2/README.md</a>
+    与 <a href="../../posters/CONTENT.md">docs/posters/CONTENT.md</a>；双场景、实施与评估细节分别见
+    <a href="../04-use-cases.md">04</a>、<a href="../05-implementation-plan.md">05</a>、<a href="../06-evaluation.md">06</a>，冲突时以对应专题文档为准。
+    既有系统基线为 <span class="mono">d06a5ed</span>，设计分支从 <span class="mono">main f56bb93</span> 切出。
+  </p>
+
+  <div class="layout">
+
+    <!-- ── TOC ─────────────────────────────────────────────── -->
+    <aside class="toc">
+      <div class="toc-title">CONTENTS</div>
+      <a class="on" href="#why">01 为什么现在要改</a>
+      <a href="#forward">02 前向图 · VCG</a>
+      <a href="#critic">03 后向评论家</a>
+      <a href="#analogy">04 类比的边界</a>
+      <a href="#scenes">05 双场景</a>
+      <a href="#roadmap">06 V0–V4 路线</a>
+      <a href="#compliance">07 风险与合规</a>
+      <div class="toc-title" style="margin-top:16px">SOURCE / 依据</div>
+      <a href="../00-evaluation.md">00 · 评估</a>
+      <a href="../README.md">v2 · 分支说明</a>
+      <a href="../../posters/CONTENT.md">事实与数字</a>
+      <a href="../../html/index.html">docs 首页</a>
+    </aside>
+
+    <div>
+
+      <!-- ── 01 为什么现在要改 ────────────────────────────── -->
+      <section class="section" id="why">
+        <div class="section-hd">
+          <span class="no">01</span>
+          <h2>为什么现在要改</h2>
+          <span class="en">WHY NOW</span>
+        </div>
+        <div class="prose">
+          <p>
+            现有系统已经能跑通五指数、多 Agent 评审与报告，但方法仍是“写在券内的固定流程”。
+            下面三条痛点不是“模型不准”，而是<b>结构问题</b>；三个机会也不是“再堆一层 Agent”，
+            而是把结构换掉——这正是本分支存在的理由。
+          </p>
+        </div>
+
+        <div class="grid cols-3">
+          <div class="panel">
+            <div class="panel-hd"><span>P1 · 逐券全流程</span><span class="panel-code">COST</span></div>
+            <div class="panel-bd">
+              <p class="card-p">
+                一批指数 = 每只券各跑一次完整流水线。<b>1 券 = 4 个脚本子进程</b>（引擎 / 统计 / 报告 / 机检）；
+                上证综指 <span class="mono">2,201</span> 只 ≈ <span class="mono">8,800</span> 次子进程量级。
+                同一方法在每张券里重复执行。
+              </p>
+              <div class="card-tags">
+                <span class="tag">4 子进程 / 券</span>
+                <span class="tag">重复调度</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd"><span>P2 · 方法写死</span><span class="panel-code">RIGID</span></div>
+            <div class="panel-bd">
+              <p class="card-p">
+                DCF → 可比 → 舆情在券内串行；方法选择、权重与参数以固定流程和人工配置为主；
+                行业分位、可比池等<b>跨券信息每券重算</b>。想换一种合成方式，要改流程而不是换配置。
+              </p>
+              <div class="card-tags">
+                <span class="tag">券内串行</span>
+                <span class="tag">人工配置</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd"><span>P3 · 评审散落</span><span class="panel-code">SCATTERED</span></div>
+            <div class="panel-bd">
+              <p class="card-p">
+                三专家 + 主审、shadow / apply 已可用；但评审发生在 pipeline 内部，参数只保留当前一版、
+                <b>无跨批台账</b>。“提议—裁决—回写”没有成为独立、可审计的一层。
+              </p>
+              <div class="card-tags">
+                <span class="tag">无跨批台账</span>
+                <span class="tag">shadow / apply</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <span class="h">结论先说 · VERDICT</span>
+          方向是合理的，而且比“再加一层多 Agent”更有理论潜力；但必须换一个更严格的提法：
+          把“神经网络”当<b>架构隐喻</b>成立，当<b>端到端可训练 / 反向传播</b>不成立。
+          （<a href="../00-evaluation.md">00 · 评估</a>）
+        </div>
+
+        <div class="lbl">三个机会 / WHERE TO START</div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-no">OPP 01</div>
+            <div class="step-t">可组合</div>
+            <div class="step-d">模块有输入 / 输出类型、约束、版本、证据与不确定性；图可裁剪、可替换、可审计——从“固定流程”变成“可组合语义”。</div>
+          </div>
+          <div class="step">
+            <div class="step-no">OPP 02</div>
+            <div class="step-t">可校准</div>
+            <div class="step-d">门控与池化语义化（线性 / 对数 / 专家乘积）；用带合成目标的智能体评论家，把“人定参数”变成“有界、可回滚的参数更新”。</div>
+          </div>
+          <div class="step">
+            <div class="step-no">OPP 03</div>
+            <div class="step-t">可复用</div>
+            <div class="step-d">同一组模块服务已上市监控与 IPO 定价；数据域、证据域、合规域分离，迁移（domain adaptation / transfer）留作研究项。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── 02 前向图 ────────────────────────────────────── -->
+      <section class="section" id="forward">
+        <div class="section-hd">
+          <span class="no">02</span>
+          <h2>前向图：类型化计算图</h2>
+          <span class="en">FORWARD PASS</span>
+        </div>
+        <div class="prose">
+          <p>
+            前向不是“一个模型”，而是<b>一张类型化计算图</b>。每个模块是独立算子，有输入 / 输出类型、
+            约束、版本与参数 <span class="mono">θ<sub>m</sub></span>；每个输出不是单点，而是
+            点估值 + 区间 + 置信度 + 证据 + 审计轨迹。图可裁剪、可替换、可审计。
+          </p>
+        </div>
+
+        <div class="callout blue">
+          <span class="h">L0a · 前置采样 / 证据智能体</span>
+          在编码之前，智能体团队做证据采集、核验、缺口补全与来源标注，产出
+          <span class="mono">EvidenceBatch</span>；它<b>不改估值参数</b>。后置评论家才改参数——
+          前置“证据层”与后置“参数层”分开，避免证据同源与循环论证。
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd">
+            <span>前向计算图 · 单券 i 的一次前向</span>
+            <span class="panel-code">DAG / TYPED</span>
+          </div>
+          <div class="panel-bd">
+            <p class="tiny faint" style="margin:0 0 12px">点击任一节点展开说明；01–05 即前向顺序。</p>
+
+            <div class="vg">
+              <details class="vg-node">
+                <summary>
+                  <span class="vg-k">01 · INPUT</span>
+                  <span class="vg-t">数据编码<small>E(x) · typed Batch</small></span>
+                  <span class="vg-marker">▸</span>
+                </summary>
+                <div class="vg-bd">
+                  把财报、行情、可比与舆情编码为带类型的 <span class="code">Batch</span>；
+                  缺失、口径与时点标记随数据下行，作为门控可用性 <span class="mono">a<sub>m</sub></span> 的输入。
+                </div>
+              </details>
+
+              <details class="vg-node">
+                <summary>
+                  <span class="vg-k">02 · MODULES</span>
+                  <span class="vg-t">估值模块<small>f<sub>m</sub>(·; θ<sub>m</sub>)</small></span>
+                  <span class="vg-chips">
+                    <span class="tag">DCF</span>
+                    <span class="tag">可比</span>
+                    <span class="tag">舆情</span>
+                    <span class="tag">RIM</span>
+                  </span>
+                  <span class="vg-marker">▸</span>
+                </summary>
+                <div class="vg-bd">
+                  每个模块是独立算子，有输入 / 输出类型、约束与参数 <span class="mono">θ<sub>m</sub></span>；
+                  输出不是单点，而是区间 / 分布 + 置信度 + 证据 + trace；另含 rNPV / NAV / SOTP 等扩展模块。<br>
+                  残差块：<span class="mono">h<sup>m</sup> = Norm(h<sup>in</sup> + α<sub>m</sub>·f<sub>m</sub>(h<sup>in</sup>; θ<sub>m</sub>))</span>，
+                  <span class="mono">α<sub>m</sub> = 0</span> 即跳过该模块。
+                </div>
+              </details>
+
+              <details class="vg-node">
+                <summary>
+                  <span class="vg-k">03 · GATE</span>
+                  <span class="vg-t">门控<small>g<sub>m</sub>(x) · 行业 / 生命周期 / 质量</small></span>
+                  <span class="vg-marker">▸</span>
+                </summary>
+                <div class="vg-bd">
+                  可用性 <span class="mono">a<sub>m</sub></span>（Layer 0 / 行业路由）决定模块是否进入；
+                  适用度 <span class="mono">μ<sub>m</sub></span> 与先验 logit <span class="mono">γ<sub>m</sub></span> 决定池化权重：<br>
+                  <span class="mono">g<sub>m</sub> = a<sub>m</sub>μ<sub>m</sub>e<sup>γ<sub>m</sub></sup> / Σ<sub>k</sub>a<sub>k</sub>μ<sub>k</sub>e<sup>γ<sub>k</sub></sup></span>
+                </div>
+              </details>
+
+              <details class="vg-node">
+                <summary>
+                  <span class="vg-k">04 · POOL</span>
+                  <span class="vg-t">池化<small>V<sub>i</sub> = ⊕<sub>ω</sub>{v<sub>i</sub><sup>m</sup>}</small></span>
+                  <span class="vg-marker">▸</span>
+                </summary>
+                <div class="vg-bd">
+                  线性池 <span class="mono">Σω<sub>m</sub>v<sub>m</sub></span>、对数池
+                  <span class="mono">exp(Σω<sub>m</sub>ln v<sub>m</sub>)</span>、专家乘积
+                  <span class="mono">∏p<sub>m</sub><sup>ω<sub>m</sub></sup></span>；<span class="mono">ω</span>
+                  可为固定、门控或由评估 Agent 选择。<br>
+                  当前实现为线性池，另两种为论文扩展；池化同时传播区间与不确定性。
+                </div>
+              </details>
+
+              <details class="vg-node">
+                <summary>
+                  <span class="vg-k">05 · SYNTHESIS</span>
+                  <span class="vg-t">指数合成<small>V<sup>idx</sup> · Σw·(V/P) / Σw</small></span>
+                  <span class="vg-marker">▸</span>
+                </summary>
+                <div class="vg-bd">
+                  <span class="mono">V<sup>idx</sup> = P<sup>idx</sup> · Σw<sub>i</sub>(V<sub>i</sub>/P<sub>i</sub>) / Σw<sub>i</sub></span>；
+                  跳过券不计入分子分母，三情景点位由逐券区间按同一权重合成。价格加权口径只作对照。
+                </div>
+              </details>
+            </div>
+
+            <div class="vg-return">
+              <span class="ar">↩</span>
+              <span>
+                <b>后向回写（虚线）</b>：专家 actor 提议 <span class="mono">δ</span> →
+                主审 critic 夹断到可行域 <span class="mono">C</span> →
+                shadow / apply 回写参数 <span class="mono">θ</span>。
+                这是 actor-critic / 信赖域，<b>不是反向传播</b>，详见下一节。
+              </span>
+            </div>
+            <p class="tbl-note">实线 = 前向数据流；虚线 = 后向的有界参数更新。节点类型与端口约束见 graph 契约（<span class="mono">docs/v2/graphs/</span>）。</p>
+          </div>
+        </div>
+
+        <div class="grid cols-2" style="margin-top:14px">
+          <div class="panel">
+            <div class="panel-hd"><span>前向：残差块与门控</span><span class="panel-code">FORWARD</span></div>
+            <div class="panel-bd">
+              <div class="formula"><span class="lbl">TYPED GRAPH</span>h<sub>i</sub><sup>0</sup> = E(x<sub>i</sub>)
+h<sub>i</sub><sup>m</sup> = Norm( h<sub>i</sub><sup>in(m)</sup> + α<sub>m</sub> · f<sub>m</sub>(h<sub>i</sub><sup>in(m)</sup>; θ<sub>m</sub>) )
+
+g<sub>m</sub>(x<sub>i</sub>) = a<sub>m</sub>(x<sub>i</sub>) · μ<sub>m</sub>(x<sub>i</sub>) · e<sup>γ<sub>m</sub></sup>
+              / Σ<sub>k</sub> a<sub>k</sub>(x<sub>i</sub>) · μ<sub>k</sub>(x<sub>i</sub>) · e<sup>γ<sub>k</sub></sup></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd"><span>池化与输出契约</span><span class="panel-code">POOL / OUTPUT</span></div>
+            <div class="panel-bd">
+              <div class="formula"><span class="lbl">POOLING</span>V<sub>i</sub> = ⊕<sub>ω<sub>i</sub></sub>{ v<sub>i</sub><sup>m</sup> },   ω<sub>i</sub> = softmax(h<sub>ω</sub>(x<sub>i</sub>))
+
+O<sub>i</sub><sup>m</sup> = ( v<sub>i</sub><sup>m</sup>, [v<sub>i</sub><sup>−</sup>, v<sub>i</sub><sup>+</sup>], c<sub>i</sub><sup>m</sup>, e<sub>i</sub><sup>m</sup>, trace<sub>i</sub><sup>m</sup> )
+
+区间传播：MC 或区间算术；池化层同时传播不确定性。</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:14px">
+          <div class="panel-hd"><span>模块输出契约 · ModuleOutput</span><span class="panel-code">TYPE</span></div>
+          <div class="panel-bd flush">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>字段</th><th>含义</th><th>在图中起什么作用</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="ink mono">v<sup>m</sup></td><td>点估值</td><td>池化输入；方法分歧的起点</td></tr>
+                  <tr><td class="ink mono">[v<sup>−</sup>, v<sup>+</sup>]</td><td>区间 / 分布</td><td>MC 或区间算术传播；池化同时传播不确定性</td></tr>
+                  <tr><td class="ink mono">c<sup>m</sup></td><td>置信度</td><td>门控与主审的证据之一，不合并成单一分数</td></tr>
+                  <tr><td class="ink mono">e<sup>m</sup></td><td>证据</td><td>可比证据链、舆情证据强弱</td></tr>
+                  <tr><td class="ink mono">trace<sup>m</sup></td><td>审计轨迹</td><td>模块版本、参数快照与跳过原因</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout blue">
+          <span class="h">为什么叫“类型化” · WHY TYPED</span>
+          模块不是随手写死的函数：有输入 / 输出类型、约束、版本、证据与不确定性，图可裁剪、可替换、可审计。
+          这是“可验证的组合语义”，也是它<b>不是 pipeline 换个词</b>的关键。
+        </div>
+      </section>
+
+      <!-- ── 03 后向评论家 ────────────────────────────────── -->
+      <section class="section" id="critic">
+        <div class="section-hd">
+          <span class="no">03</span>
+          <h2>后向评论家：有界校准</h2>
+          <span class="en">AGENTIC CRITIC</span>
+        </div>
+        <div class="prose">
+          <p>
+            后向不是“反向传播”，而是<b>评审 + 有界参数更新</b>。把多智能体评审写成一个独立层：
+            专家 = actor（提议），主审 = critic（裁决 / 夹断），shadow = 反事实对照，
+            apply = 带信赖域的更新。
+          </p>
+        </div>
+
+        <div class="flow compact" style="margin-top:4px">
+          <div class="flow-node">三专家提议<small>可比质量 / 折现参数 / 舆情</small></div>
+          <div class="flow-node">证据门槛<small>严重度 caps · 幅度上限</small></div>
+          <div class="flow-node">主审裁决<small>accept / clamp / reject</small></div>
+          <div class="flow-node">shadow / apply<small>留痕 / 回写重跑 / 失败回滚</small></div>
+          <div class="flow-node">参数存储<small>版本化 · 可回放 · 可回滚</small></div>
+        </div>
+
+        <div class="panel" style="margin-top:14px">
+          <div class="panel-hd"><span>信赖域更新 · 带约束</span><span class="panel-code">TRUST REGION</span></div>
+          <div class="panel-bd">
+            <div class="formula"><span class="lbl">BOUNDED UPDATE</span>δ* = argmin<sub>δ∈C</sub> L<sub>synth</sub>(θ + δ; e) + λ‖δ‖<sub>1</sub>
+
+C = { δ : |δ<sub>j</sub>| ≤ c<sub>j</sub>(s),  θ + δ ∈ Θ<sub>feas</sub> }
+
+θ<sub>t+1</sub> = θ<sub>t</sub> + η<sub>t</sub> · A<sub>t</sub> · δ<sub>t</sub>*</div>
+            <p class="tbl-note">
+              没有标签，所以 <span class="mono">L<sub>synth</sub></span> 不含 <span class="mono">|V − P|</span>：
+              市价不是价值，价格只作诊断。区间传播与参数敏感度用 MC / 隐式微分；
+              离散与黑箱部分用策略搜索 / 贝叶斯优化，不假装有梯度。
+            </p>
+          </div>
+        </div>
+
+        <div class="lbl">合成目标 · L_synth 的四部分</div>
+        <div class="kpis">
+          <div class="kpi">
+            <div class="kpi-k">01 · CONSISTENCY</div>
+            <div class="kpi-v">一致性</div>
+            <div class="kpi-s">跨方法（DCF / 可比 / 舆情 / RIM）自洽</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-k">02 · STABILITY</div>
+            <div class="kpi-v">稳定</div>
+            <div class="kpi-s">时序稳定；周环比不异常抖动</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-k">03 · CALIBRATION</div>
+            <div class="kpi-v">校准</div>
+            <div class="kpi-s">区间覆盖与宽度成对报告</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-k">04 · HUMAN</div>
+            <div class="kpi-v">盲评</div>
+            <div class="kpi-s">人工盲评偏好，匿名、独立、可复现</div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:14px">
+          <div class="panel-hd"><span>后向角色与边界</span><span class="panel-code">ACTOR / CRITIC</span></div>
+          <div class="panel-bd flush">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>角色</th><th>类比</th><th>职责</th><th>边界 / 约束</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="ink">三专家</td><td>actor</td><td>只提本域内的参数修改建议 δ</td><td>可比质量 / 折现参数 / 舆情；不改他人域，不写估值叙事</td></tr>
+                  <tr><td class="ink">主审</td><td>critic</td><td>裁决 accept / clamp / reject</td><td>只接受可行域 C 内的结果（命题 1：可行域保持）</td></tr>
+                  <tr><td class="ink">shadow</td><td>反事实对照</td><td>参数不变，只留痕</td><td>作为 apply 的基线对照；必须严格空操作</td></tr>
+                  <tr><td class="ink">apply</td><td>信赖域更新</td><td>回写参数并重跑引擎</td><td>保留 baseline；失败回滚；所有参数版本化</td></tr>
+                  <tr><td class="ink">参数存储</td><td>台账</td><td>提案 → 审批 → 生效全链留痕</td><td>可回放、可回滚；跨批可追溯</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout">
+          <span class="h">不是反向传播 · NOT BACKPROP</span>
+          专家提议与主审裁决是<b>协议</b>，不是 prompt 堆叠，也不是梯度反传。更准确的说法是：
+          可微模块用隐式微分求参数敏感度；不可微模块用 actor-critic、策略搜索或贝叶斯优化；
+          约束用信赖域 / 投影。
+        </div>
+        <p class="tbl-note">
+          起点不是从零开始：现有协议已有三专家 + 主审、severity caps、shadow / apply 与 baseline 回滚
+          （幅度上限示例：可比 5/8/10pp、舆情 5/10pp、WACC 0.4/1.0pp、永续 0.2/0.6pp，可作为信赖域上界的起点）。
+          V2 要做的是把它提升为独立的一层，并加上合成目标与校准指标。
+        </p>
+      </section>
+
+      <!-- ── 04 类比的边界 ────────────────────────────────── -->
+      <section class="section" id="analogy">
+        <div class="section-hd">
+          <span class="no">04</span>
+          <h2>神经网络类比的边界</h2>
+          <span class="en">ANALOGY BOUNDARY</span>
+        </div>
+        <div class="prose">
+          <p>
+            一张表说清哪些类比成立、哪些需修正、哪些不成立。结论：把“神经网络”当<b>架构隐喻</b>成立；
+            把它当“有标签、可端到端训练、能反向传播”的系统<b>不成立</b>。
+            这是本分支的提法边界，也是对外表述必须守住的一条线。
+          </p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><span>神经网络类比对照</span><span class="panel-code">ANALOGY AUDIT</span></div>
+          <div class="panel-bd flush">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>NN 概念</th><th>估值系统中的对应</th><th>判定</th><th>说明 / 边界</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="ink">Layer / block</td><td>估值模块（DCF、可比、舆情、RIM、rNPV、NAV…）</td><td><span class="tag ok">成立</span></td><td>每个模块是独立算子，有输入 / 输出 / 参数</td></tr>
+                  <tr><td class="ink">Gating / routing</td><td>行业、生命周期、数据质量决定方法可用性与权重</td><td><span class="tag ok">成立</span></td><td>已是 Layer 0 + 六阶段 + 三路权重，可升级为可学习门控</td></tr>
+                  <tr><td class="ink">Residual / skip</td><td>行业基准 + 方法调整；V = V<sub>base</sub> + α·f(x)</td><td><span class="tag ok">成立</span></td><td>对“偏离行业中枢”的建模很自然</td></tr>
+                  <tr><td class="ink">Attention</td><td>可比公司注意力、舆情证据注意力、方法注意力</td><td><span class="tag ok">成立</span></td><td>可比池不是等权；证据有强弱</td></tr>
+                  <tr><td class="ink">Normalization</td><td>截面标准化、winsorize、单位归一</td><td><span class="tag ok">成立</span></td><td>多方法量纲 / 尺度不同，必须有</td></tr>
+                  <tr><td class="ink">Dropout</td><td>方法 dropout、证据 dropout、多 seed</td><td><span class="tag ok">成立</span></td><td>用于稳健性与不确定性，不是训练技巧</td></tr>
+                  <tr><td class="ink">Ensemble</td><td>多模型、多 prompt、多 seed、多池化</td><td><span class="tag ok">成立</span></td><td>已有 MC / 情景，可扩展</td></tr>
+                  <tr><td class="ink">Pooling</td><td>线性池 / 对数池 / 专家乘积</td><td><span class="tag ok">成立</span></td><td>“合成层可选”完全成立</td></tr>
+                  <tr><td class="ink">Loss</td><td>合成校准目标（自洽、稳定、校准、人评）</td><td><span class="tag warn">需修正</span></td><td>没有真值，不是监督 loss</td></tr>
+                  <tr><td class="ink">Backprop</td><td>多智能体评审回写参数</td><td><span class="tag err">不成立</span></td><td>不是 BP；是 actor-critic / bilevel / 黑箱优化</td></tr>
+                  <tr><td class="ink">Architecture search</td><td>选模块、选门控、选池化</td><td><span class="tag ok">成立</span></td><td>离散搜索 / 贝叶斯优化，不是 DARTS 式可微搜索</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <p class="tbl-note">依据 <a href="../00-evaluation.md">00 · 评估 §1</a>；判定沿用原文：成立 / 需修正 / 不成立。</p>
+
+        <div class="grid cols-2" style="margin-top:14px">
+          <div class="panel">
+            <div class="panel-hd"><span>可以写进论文 · KEEP</span><span class="panel-code">VALID</span></div>
+            <div class="panel-bd">
+              <ul class="lst">
+                <li><b>模块化、门控、残差、注意力、归一化、dropout、集成、池化</b>都有明确语义，能形成真实的学术表达。</li>
+                <li><b>评论家</b>（专家 / 主审 / shadow / apply）可写成协议与信赖域算子，而不只是 prompt 工程。</li>
+                <li><b>双场景共享模块</b>带来 domain adaptation / transfer 研究问题。</li>
+              </ul>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><span>必须克制 · RESTRAIN</span><span class="panel-code">BOUNDARY</span></div>
+            <div class="panel-bd">
+              <ul class="lst mut">
+                <li>不要把“神经网络”当成<b>有标签可训练</b>的承诺。</li>
+                <li>不要把“BP”当成真的<b>反向传播</b>；没有标签，也没有全图梯度。</li>
+                <li>不要把“<b>国家队操作</b>”写成系统输出；只做估值温度 / 偏离诊断。</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:14px">
+          <div class="panel-hd"><span>四条可写的命题（需严格假设）</span><span class="panel-code">THEORY</span></div>
+          <div class="panel-bd">
+            <div class="grid cols-2">
+              <ul class="lst">
+                <li><b>命题 1 · 可行域保持</b>：若所有提议 δ ∈ C，主审只接受 C 内结果，则更新后参数仍在可行域，估值始终有定义。</li>
+                <li><b>命题 2 · 池化单调性 / 有界性</b>：线性池 / 对数池在正权重、正估值下保持上下界；专家乘积在对数空间等价于加权几何平均，分歧越大方差越大。</li>
+              </ul>
+              <ul class="lst">
+                <li><b>命题 3 · Lipschitz 界</b>：若各模块对输入 Lipschitz，则整图 Lipschitz 常数可由路径乘积给出，用于说明有界更新的稳定性。</li>
+                <li><b>命题 4 · 校准误差</b>：在合成基准上，区间覆盖误差随 MC 样本数 O(1/√n) 收敛；真实数据上只给经验校准，不给理论保证。</li>
+              </ul>
+            </div>
+            <p class="tbl-note">这些命题不需要“神经网络”假设，只需要算子性质与约束；严格形式化见 <a href="../01-theory.md">01 · 理论</a>。</p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <span class="h">建议的提法 · POSITIONING</span>
+          <b>VCG / MVN</b>：一个类型化、可组合、可审计的估值计算图；前向由估值模块与门控 / 池化组成，
+          后向由带合成目标的智能体评论家做有界校准；同一组模块服务指数监控与 IPO 定价。
+        </div>
+        <div class="prose">
+          <blockquote>一句话：前向是“计算图”，后向是“评论家”，不是“神经网络训练”。</blockquote>
+        </div>
+        <p class="tbl-note">
+          相关脉络（见 00 §5）：Neural Module Networks、Mixture-of-Experts、Hypernetworks、NAS / DARTS、
+          BMA / forecast combination、actor-critic / bilevel、LLM multi-agent debate、differentiable programming——
+          novelty 不是“首次把神经网络用于估值”，而是“类型化计算图 + 智能体评论家 + 双场景复用”的组合。
+        </p>
+      </section>
+
+      <!-- ── 05 双场景 ────────────────────────────────────── -->
+      <section class="section" id="scenes">
+        <div class="section-hd">
+          <span class="no">05</span>
+          <h2>双场景：同一张图，两套域</h2>
+          <span class="en">TWO SCENARIOS</span>
+        </div>
+        <div class="prose">
+          <p>
+            同一组估值模块，两个场景：<b>monitoring（已上市监控）</b>与 <b>IPO（拟上市定价）</b>。
+            共享的是模块与类型契约，隔离的是数据域、证据域与合规域；输出天然不同——一个给诊断，一个给区间与约束检查。
+            （场景细节见 <a href="../04-use-cases.md">04 · 两个用途</a>）
+          </p>
+        </div>
+
+        <div class="stack" style="margin-bottom:14px">
+          <div class="layer">
+            <span class="lk">SHARED · 6</span>
+            <span class="lv">共享模块<small>财报编码 / 可比 / DCF / 池化 / 评论家 / 审计：接口与类型契约相同，差别只在配置、数据域与池化规则。</small></span>
+          </div>
+          <div class="layer">
+            <span class="lk">ISOLATED</span>
+            <span class="lv">数据域与证据域<small>监控用公开行情、财报、公告、舆情；IPO 用公开数据 + 保密材料（招股书、问询回复、发行方案），独立缓存、最小必要授权、脱敏、留痕与归档。</small></span>
+          </div>
+          <div class="layer">
+            <span class="lk">CONTEXT</span>
+            <span class="lv">输出与合规<small>监控给估值诊断与拟合点位；IPO 给估值区间与定价约束检查；两者都不输出单一决策，由人和机构按程序决策。</small></span>
+          </div>
+        </div>
+
+        <div class="grid cols-2">
+          <div class="panel">
+            <div class="panel-hd"><span>MONITORING · 已上市监控</span><span class="panel-code">PUBLIC</span></div>
+            <div class="panel-bd">
+              <ul class="lst">
+                <li><b>目标</b> · 指数与逐券的估值诊断：当前指数相对自身基本面中枢处在什么位置、偏离由谁贡献、判断有多不稳。</li>
+                <li><b>输出</b> · 估值区间、指数拟合点位、偏离分布、行业 / 风格分解、时序稳定性；置信度与图级不确定性分开呈现。</li>
+                <li><b>用途</b> · 内部研究、风控与讨论的“估值温度计”；不对外发布指数观点。</li>
+                <li><b>边界</b> · 不是交易信号；不自动下单；不生成“国家队撤退 / 入场”或仓位 / 择时指令。表述限定在诊断词表：偏贵 / 偏便宜 / 接近中枢。</li>
+                <li><b>状态</b> · 现有系统已有可跑通雏形（基线 <span class="mono">d06a5ed</span>）：五指数跑批、三专家 + 主审、shadow / apply、8 项机检。</li>
+              </ul>
+              <div class="card-tags">
+                <span class="tag">公开数据</span>
+                <span class="tag">诊断</span>
+                <span class="tag warn">非交易信号</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-hd"><span>IPO · 拟上市定价</span><span class="panel-code">RESTRICTED</span></div>
+            <div class="panel-bd">
+              <ul class="lst">
+                <li><b>输入</b> · 监管通道的结构化财报、招股书要点、可比、行业参数、发行条款与募投；独立数据域、按项目授权、脱敏、全链留痕。</li>
+                <li><b>输出</b> · 估值区间、方法分解、敏感性、可比证据链、IPO 定价约束检查；不输出单一“建议发行价”。</li>
+                <li><b>决策</b> · 定价委员会、保荐机构与主承销商按监管规则与内部程序决策；系统只是研究参考，不替代保荐核查与信息披露。</li>
+                <li><b>合规</b> · 公平披露、静默期、利益冲突、内幕信息隔离、模型风险、可解释与复核；所有输出标注“研究参考”。</li>
+                <li><b>状态</b> · V3 目标形态；当前尚无保密数据通道、权限系统与审计登录，不能直接承接真实 IPO 项目。</li>
+              </ul>
+              <div class="card-tags">
+                <span class="tag">监管通道</span>
+                <span class="tag">区间定价</span>
+                <span class="tag warn">不输出单一发行价</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout blue">
+          <span class="h">一句话 · TWO MODES</span>
+          双场景不是“两个产品”，而是<b>同一张前向图 + 两套域约束</b>：共享模块降低维护成本，
+          隔离数据域与合规域守住边界；跨域适配只研究特征 / 先验迁移，不引入目标域标签。
+        </div>
+      </section>
+
+      <!-- ── 06 V0–V4 路线 ────────────────────────────────── -->
+      <section class="section" id="roadmap">
+        <div class="section-hd">
+          <span class="no">06</span>
+          <h2>V0–V4 路线</h2>
+          <span class="en">ROADMAP</span>
+        </div>
+        <div class="prose">
+          <p>
+            周数与验收按 <a href="../05-implementation-plan.md">05 · 实施计划</a>（草案）：V0 3 周、V1 5 周、V2 5 周、V3 7 周，
+            主路径 20 周；V4 是 6 周研究线，可在 V3 后段并行。00 §7 另给出 2–3 / 4–6 / 4–6 / 6–8 周的区间估算，本页取 05 的细化值。
+            原则是<b>先包住、再拆开、再校准、再复用</b>，最后才谈研究项。
+          </p>
+        </div>
+
+        <div class="panel">
+          <div class="panel-hd"><span>五个阶段 · 交付与验收</span><span class="panel-code">V0 → V4</span></div>
+          <div class="panel-bd">
+            <div class="timeline">
+              <div class="tl-item done">
+                <div class="tl-when">V0 · 3 周 · 先包住</div>
+                <div class="tl-title">LegacyValuationModule 接入图执行器</div>
+                <div class="tl-desc">交付：把 <span class="mono">input_builder → engine → stat → report</span> 包成一个 <span class="mono">LegacyValuationModule</span>，接入图执行器；冻结图协议 v1 与基线快照。<br>验收：同一 as_of 数值零回归（逐位 diff = 0，|Δ|≤1e-9）、<span class="mono">170</span> 用例全绿（05）。</div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-when">V1 · 5 周 · 再拆开</div>
+                <div class="tl-title">模块注册表 + DAG 执行器 + 三种池化 + trace</div>
+                <div class="tl-desc">交付：模块注册表、DAG 执行器、线性 / 对数 / 专家乘积池化、trace；DCF / 可比 / 舆情拆成独立模块（可先调用现有脚本）。<br>验收：sh50 线性池零回归（逐位）、三池可切换、区间单调且包含中枢；<span class="mono">ok</span> 券 trace 覆盖率 100%（05）。</div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-when">V2 · 5 周 · 再校准</div>
+                <div class="tl-title">Agentic Critic 独立成层</div>
+                <div class="tl-desc">交付：参数存储、提案 / 审批 / 回写 / 回滚；合成目标与校准指标。<br>验收：台账可重放、apply 回滚零泄漏、次日默认取最新 approved、振荡检测可触发；L<sub>synth</sub> 四项可复算且不含价格项（05）。</div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-when">V3 · 7 周 · 再复用</div>
+                <div class="tl-title">双模式：monitoring / IPO</div>
+                <div class="tl-desc">交付：数据域与合规模块、IPO 输入 schema。<br>验收：IPO 定价约束检查全过、两域隔离测试双向通过、输出不出现单一“建议发行价”、monitoring 零回归（05）。</div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-when">V4 · 6 周研究线 · 可与 V3 后段并行</div>
+                <div class="tl-title">离散搜索、隐式微分与迁移</div>
+                <div class="tl-desc">交付：门控 / 池化的离散搜索、可微模块的隐式微分、跨市场迁移（研究）。<br>验收：实验可重放、每个结论有消融 / 对照、负结果如实记录；任何成果进生产需重走 V1–V3 门槛（05）。</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout blue">
+          <span class="h">低耦合原则 · DECOUPLING</span>
+          模块只依赖 typed <span class="mono">Batch</span> / <span class="mono">ModuleOutput</span>；
+          不共享可变全局状态；所有参数版本化；失败隔离到单模块 / 单券；图可部分执行。
+        </div>
+      </section>
+
+      <!-- ── 07 风险与合规 ────────────────────────────────── -->
+      <section class="section" id="compliance">
+        <div class="section-hd">
+          <span class="no">07</span>
+          <h2>风险与合规</h2>
+          <span class="en">RISK &amp; COMPLIANCE</span>
+        </div>
+        <div class="prose">
+          <p>
+            这个方向的工程门槛不是模型，而是<b>审计与边界</b>。以下三条红线在任何阶段都不放开；
+            无真值时，评估对象是机制、共识与一致性，而不是“猜得准不准”。
+          </p>
+        </div>
+
+        <div class="grid cols-3">
+          <div class="panel red-line">
+            <div class="panel-hd"><span>不自动交易</span><span class="panel-code">NO AUTO-TRADE</span></div>
+            <div class="panel-bd">
+              <p class="card-p">输出是“估值温度 / 偏离诊断”，不是交易信号；<b>不自动下单</b>，不生成仓位、择时或“国家队撤退 / 入场”指令。</p>
+            </div>
+          </div>
+          <div class="panel red-line">
+            <div class="panel-hd"><span>不自动定价</span><span class="panel-code">NO AUTO-PRICE</span></div>
+            <div class="panel-bd">
+              <p class="card-p">IPO 只输出估值区间、方法分解、敏感性与证据链；<b>不输出单一“建议发行价”</b>，由定价委员会 / 保荐机构决策。</p>
+            </div>
+          </div>
+          <div class="panel red-line">
+            <div class="panel-hd"><span>不把政策写成指令</span><span class="panel-code">NO POLICY CALL</span></div>
+            <div class="panel-bd">
+              <p class="card-p">国家队 / 政策操作只作为外部情境讨论，<b>不写成系统输出或操作建议</b>；决策由人和机构按程序作出。</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="lbl">无真值评估 · 三件套（<a href="../06-evaluation.md">06 · 评估协议</a>）</div>
+        <div class="grid cols-3">
+          <div class="panel">
+            <div class="panel-hd"><span>01 · 合成基准</span><span class="panel-code">SYNTHETIC</span></div>
+            <div class="panel-bd">
+              <p class="card-p">已知 <span class="mono">V<sup>★</sup></span>，注入财报错报、口径错误、可比缺失、路由错误等缺陷；测恢复误差、区间覆盖、路由准确、参数与图结构恢复。</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><span>02 · 人工盲评</span><span class="panel-code">BLIND</span></div>
+            <div class="panel-bd">
+              <p class="card-p">隐藏 Agent 建议与点位；4–6 名内部评审独立评“证据 / 方向 / 幅度 / 置信”；两轮 Delphi + 仲裁；报 Krippendorff α。</p>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-hd"><span>03 · 内部一致性</span><span class="panel-code">CONSISTENCY</span></div>
+            <div class="panel-bd">
+              <p class="card-p">同输入多 seed；股票 / 节点顺序、单位缩放、行业标签扰动；shadow 严格空操作；apply 回滚；8 项机检。</p>
+            </div>
+          </div>
+        </div>
+        <p class="tbl-note">市场指标与发行结果只作外部效度与诊断，不作优化目标、不作训练标签；方向命中、跟踪误差、偏离分布不反向校正估值。</p>
+
+        <div class="panel" style="margin-top:14px">
+          <div class="panel-hd"><span>风险与缓解</span><span class="panel-code">RISK REGISTER</span></div>
+          <div class="panel-bd flush">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr><th>风险</th><th>诱因</th><th>缓解（建议）</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td class="ink">合成目标过拟合</td><td>L<sub>synth</sub> 由评审偏好与规则构成</td><td>预注册、留出专家、对抗扰动、负结果、跨指数 / 跨期复现</td></tr>
+                  <tr><td class="ink">参数不可识别</td><td>无真值；门控 / 权重 / 池化联合估计</td><td>先验、单调性、约束与敏感性分析</td></tr>
+                  <tr><td class="ink">层数膨胀</td><td>“多加一层看起来更聪明”</td><td>每增加一层或模块，都要有单独的消融与证据</td></tr>
+                  <tr><td class="ink">数据保密与公平性</td><td>IPO 材料、内幕信息、静默期</td><td>数据域隔离、监管通道、访问控制、审计、利益冲突披露</td></tr>
+                  <tr><td class="ink">维护成本</td><td>模块与协议数量增长</td><td>V0 先包现有引擎为单模块、V1 再拆；每模块契约测试</td></tr>
+                  <tr><td class="ink">价格当标签的诱惑</td><td>市价 / 指数收盘看似“答案”</td><td>L<sub>synth</sub> 不含 |V−P|；价格只作诊断，不反向校正</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="callout red">
+          <span class="h">本页边界 · SCOPE</span>
+          本页是构想传播页，不是实施文档；数字与判断以 <a href="../00-evaluation.md">00 · 评估</a> 与
+          <a href="../../posters/CONTENT.md">CONTENT.md</a> 为准，合规细节见 <a href="../07-compliance.md">07 · 合规与治理</a>。
+          分支 <span class="mono">design-valuation-net</span>
+          为构想 / 原型，<b>不进入生产</b>，合并前需组内评审；所有输出标注“研究参考”，不构成投资建议。
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <footer class="foot">
+    <span>中证指数有限公司 · 创新项目 · ValuationSystem</span>
+    <span>作者：陈映洲、宋泊毅、孙棽一（共同第一作者）· 通信作者：宋泊毅 bysong@sse.com.cn</span>
+    <span class="mono">BRANCH design-valuation-net · FROM main f56bb93 · 2026-11-28</span>
+    <span>构想 / 原型，不进入生产 · 不构成投资建议 · <a href="../../html/index.html">返回 docs 首页</a> · <a href="../README.md">v2 文档</a></span>
+  </footer>
+
+</main>
+
+</body>
+</html>

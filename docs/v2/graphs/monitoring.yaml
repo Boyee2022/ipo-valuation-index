@@ -1,0 +1,555 @@
+# docs/v2/graphs/monitoring.yaml
+# VCG 图规范 v1 · 已上市指数监控（monitoring）
+#
+# 状态：design（设计稿；执行器与模块均未完整实现，见 docs/v2/05-implementation-plan.md）
+# 定位：把现有「逐券 pipeline」表达为类型化计算图；本文件是图契约，不是可执行生产配置。
+#
+# 解析约定（未来执行器按此解析；V1 只要求最小子集）：
+#   - nodes[].inputs 只声明端口名；实际接线由 edges 决定，数据类型写在 edges[].type。
+#   - pool / critic 是顶层「虚拟节点」；edges 可用 `<pool.id>.<port>`、`critic.<port>` 引用。
+#   - ${params.x} 为图级参数引用；运行前由执行器解析，可被 POST /api/graph/run 覆盖。
+#   - gate.when 为布尔谓词（白名单函数，不做任意表达式求值）；执行器必须能判定真假。
+#   - 所有金额单位「亿元」、比率小数、每股单位「元/股」；单位为图级约定，节点不得复用同名异义端口。
+version: 1
+name: monitoring
+mode: monitoring
+title: 已上市指数成分券估值监控
+status: design
+spec_ref: docs/v2/02-architecture.md
+catalog_ref: docs/v2/03-module-catalog.md
+baseline_ref: docs/spec/01-architecture.md
+
+# ── 图级参数 ─────────────────────────────────────────────────────────────────
+params:
+  index:
+    type: enum
+    values: [sh50, sh180, hs300, kc50, sse]
+    default: sh50
+  as_of:
+    type: date
+    default: latest
+    note: 当前生产实际使用成分数据时点；PIT 全链路在 V3 才承诺
+  weights:
+    type: map
+    fields: [dcf, comparable, sentiment]
+    default: { dcf: 0.3, comparable: 0.5, sentiment: 0.2 }
+    constraint: "sum(values) == 1 and all(v >= 0)"
+    note: 与 preferences.weights 同义；用户显式给 0 的方法不得被门控复活
+  pool_mode:
+    type: enum
+    values: [linear, log, product]
+    default: linear
+    note: linear 为零回归基线；log/product 在 V1 后半作为可切换实验
+  critic_mode:
+    type: enum
+    values: [off, shadow, apply]
+    default: shadow
+    note: 与现有 agent_mode 对齐；off 时评论家整层跳过
+  review_sample:
+    type: map
+    fields: [max_rows, min_confidence, extreme_ratio]
+    default: { max_rows: 80, min_confidence: 0.0, extreme_ratio: 5.0 }
+    note: 全市场指数不可能逐券评审；按权重 top-N + 低置信度 + 极端偏离抽样（路线 6.5）
+  seed:
+    type: int
+    default: 42
+
+# ── 启动前置能力（缺失即拒绝启动，不静默降级）────────────────────────────────
+requires:
+  - market.components          # 指数成分与权重（现有 dsources.components）
+  - market.quotes              # 行情/收盘（现有 dsources.tencent_quotes / index_quote）
+  - financials.annual          # 年报财务（现有 dsources.financials）
+  - peers.universe             # 可比全集（现有 dsources.peer_universe）
+  - industry.valuation         # 申万二级行业估值（现有 dsources.industry_valuation）
+
+# ── 执行阶段（决定 barrier 与批/逐券调度；与 03-engineering-roadmap 第一层对齐）──
+stages:
+  - id: encode
+    title: 数据/编码层（按层批处理）
+    barrier: true
+    nodes: [n_universe, n_fin, n_ind, n_life, n_peers]
+  - id: route
+    title: 门控/路由层（跨券一次性判定）
+    barrier: true
+    nodes: [n_attn, n_cost, n_pit, g_layer0, g_quality]
+  - id: sidecar
+    title: 非基础层（逐券异步，不设 barrier）
+    barrier: false
+    per_security: true
+    nodes: [n_sent]
+  - id: value
+    title: 估值模块层（按方法批算，层内可 chunk）
+    barrier: true
+    chunk: 200
+    nodes: [v_dcf, v_cmp, v_qi, v_sent, v_rim, v_ddm, v_nav, v_rnpv, v_sotp, v_fb]
+  - id: combine
+    title: 归一化/残差/池化/不确定性
+    barrier: true
+    nodes: [p_norm, n_res, p_ens, pool_main, p_unc]
+  - id: index
+    title: 指数合成层
+    barrier: true
+    nodes: [idx_fit]
+  - id: critic
+    title: 评论家层（逐券异步抽样，不阻塞数值产物落盘）
+    barrier: false
+    nodes: [critic]
+  - id: output
+    title: 报告与审计
+    barrier: true
+    nodes: [o_report]
+
+# ── 执行默认值 ───────────────────────────────────────────────────────────────
+defaults:
+  timeout_s: 180
+  retry: { network: 1, llm: 1, deterministic: 0 }
+  isolation: mask_cell
+  cache: content_hash
+  on_node_error: mark_unavailable
+  on_degraded: fallback_legacy
+
+# ── 节点 ─────────────────────────────────────────────────────────────────────
+nodes:
+  # ── 数据/编码层 ──
+  - id: n_universe
+    type: entry.monitor
+    label: 成分券/权重/收盘
+    inputs: []
+    params:
+      index: ${params.index}
+      as_of: ${params.as_of}
+    schedule: batch
+    timeout_s: 60
+
+  - id: n_fin
+    type: enc.financials
+    label: 财报编码
+    inputs: [universe]
+    params: { basis: annual, unit: yi, require: [revenue, net_profit] }
+    gate:
+      when: "has(universe.secucode)"
+      mode: hard
+      on_fail: mask_cell
+
+  - id: n_ind
+    type: enc.industry
+    label: 行业/板块编码
+    inputs: [universe]
+    params: { taxonomy: SW2021, fallback_prefix: true }
+
+  - id: n_life
+    type: enc.lifecycle
+    label: 生命周期编码
+    inputs: [financials, industry]
+    params: { mode: auto, classifier: v326, weight_mode: damodaran_table }
+
+  - id: n_peers
+    type: enc.peers
+    label: 可比池编码
+    inputs: [universe, financials]
+    params: { n: 5, fallback: [same_industry, industry_prefix, board], screening: true }
+
+  - id: n_cost
+    type: enc.cost_capital
+    label: 折现率编码（WACC / 金融 Ke）
+    inputs: [financials, industry, peers]
+    params:
+      capm: { rf: 0.019, erp: 0.0804, beta_window_months: 60, beta_floor: 0.5, beta_cap: 2.0 }
+      debt: { tax: 0.15, d_e: 0.3 }
+      financial_route: { ke_capm: true, bank_industry_beta: 0.90 }
+
+  - id: n_sent
+    type: enc.sentiment
+    label: 舆情编码（规则/LLM）
+    inputs: [universe]
+    params: { mode: rule, rounds: 10, max_days: 30 }
+    schedule: per_security
+    timeout_s: 120
+
+  # ── 门控/注意力 ──
+  - id: n_attn
+    type: comb.attention
+    label: 可比注意力
+    inputs: [peers, financials]
+    params:
+      kernel: size_log_distance
+      temperature: 0.5
+      top_k: 8
+      fallback: equal_weight
+
+  - id: n_pit
+    type: enc.pit_quality
+    label: PIT/质量掩码
+    inputs: [universe, financials, peers]
+    params:
+      checks: [as_of_consistency, coverage, stale_financials, negative_profit, missing_peers]
+      mask_policy: degrade_not_drop
+
+  - id: g_layer0
+    type: gate.layer0
+    label: Layer 0 路由（金融/管线/分部/general）
+    inputs: [industry, pit_quality]
+    params:
+      rules: [financial, pipeline_pharma, multi_segment, general]
+      negative_fcff_cap: { threshold: 0.6, dcf_weight_cap: 0.3 }
+      veto_record: blocked_paths
+
+  - id: g_quality
+    type: gate.quality
+    label: 数据质量门控
+    inputs: [pit_quality, financials, peers]
+    params:
+      min_peers: 3
+      min_coverage: 0.2
+      confidence_caps: { high: 0.8, medium: 1.0 }
+
+  # ── 估值模块层（gate 未通过 → 该券该方法掩码，不阻断整批）──
+  - id: v_dcf
+    type: val.dcf
+    label: DCF
+    inputs: [financials, lifecycle, cost]
+    params: { growth_model: damodaran, terminal_guard: clamp, tv_share_guard: true }
+    gate:
+      when: "routing.allows('dcf') and quality.dcf_ok"
+      mode: soft
+      weight_from: routing.weights.dcf
+      on_fail: mask_cell
+
+  - id: v_cmp
+    type: val.comparable
+    label: 可比法（PE/PS/EV-EBITDA/PB；PEG 单列护栏）
+    inputs: [peers, attention, financials]
+    params:
+      multiples: [pe, ps, ev_ebitda, pb]
+      peg: { enabled: true, in_synthesis: false, guard: 2.5 }
+      outlier_rule: winsorize_0.05_0.95
+    gate:
+      when: "routing.allows('comparable') and quality.comparable_ok"
+      mode: soft
+      weight_from: routing.weights.comparable
+      on_fail: mask_cell
+
+  - id: v_qi
+    type: val.quality_adjust
+    label: 盈利质量/商誉/流动性调整
+    inputs: [comparable, pit_quality, financials]
+    params: { quality_score: true, goodwill: true, liquidity_discount: true }
+
+  - id: v_sent
+    type: val.sentiment
+    label: 舆情修正（共享可比基数）
+    inputs: [sentiment, comparable]
+    params: { layer: correction, band: typed, adjust: strength }
+    gate:
+      when: "routing.allows('sentiment')"
+      mode: soft
+      weight_from: routing.weights.sentiment
+      on_fail: mask_cell
+
+  - id: v_rim
+    type: val.rim
+    label: RIM（金融主方法）
+    inputs: [financials, cost]
+    params: { explicit_years: 5, persistence: 0.70, payout: 0.30 }
+    gate:
+      when: "routing.allows('rim')"
+      mode: soft
+      weight_from: routing.weights.rim
+      on_fail: mask_cell
+
+  - id: v_ddm
+    type: val.ddm
+    label: DDM（金融交叉校验）
+    inputs: [financials, cost]
+    params: { explicit_years: 5, payout: 0.30, weight: 0.0 }
+    gate:
+      when: "routing.allows('ddm')"
+      mode: soft
+      on_fail: mask_cell
+
+  - id: v_nav
+    type: val.nav
+    label: NAV（资源/公用；数据未接，默认关）
+    inputs: [financials]
+    params: { enabled: false, asset_classes: [resource, utility] }
+    gate:
+      when: "routing.allows('nav')"
+      mode: hard
+      on_fail: mask_cell
+
+  - id: v_rnpv
+    type: val.rnpv
+    label: rNPV（管线药企；个股覆写注入）
+    inputs: [universe, financials]
+    params: { enabled: false, override_source: overrides }
+    gate:
+      when: "routing.allows('rnpv') and has(override.rnpv)"
+      mode: hard
+      on_fail: mask_cell
+
+  - id: v_sotp
+    type: val.sotp
+    label: SOTP（多分部）
+    inputs: [financials, industry]
+    params: { enabled: false, segments_required: true }
+    gate:
+      when: "routing.allows('sotp') and has(financials.segments)"
+      mode: hard
+      on_fail: mask_cell
+
+  - id: v_fb
+    type: val.industry_fallback
+    label: 行业基准兜底
+    inputs: [financials, industry]
+    params: { trigger: "not available(dcf) and not available(comparable)", confidence: low }
+
+  # ── 组合层 ──
+  - id: p_norm
+    type: comb.norm
+    label: 截面归一（winsorize/单位对齐）
+    inputs: [v_dcf, v_cmp, v_sent, v_rim, v_ddm, v_nav, v_rnpv, v_sotp, v_fb]
+    params: { winsorize: [0.05, 0.95], unit: yi, inverse_before_output: true }
+
+  - id: n_res
+    type: comb.residual
+    label: 行业残差（默认 α=0，关闭）
+    inputs: [values, industry]
+    params: { base: industry_median, alpha: 0.0, cap: 0.6, positivity: true }
+
+  - id: p_ens
+    type: ens.dropout
+    label: 方法/证据 dropout 集成（默认关）
+    inputs: [values]
+    params: { methods_dropout_p: 0.2, evidence_dropout_p: 0.2, seeds: [42, 43, 44], mode: uncertainty }
+
+  - id: pool_main
+    type: pool.linear
+    label: 池化（虚拟节点，实现由 pool 段与 pool_mode 决定）
+    inputs: [values]
+    params: { weighted: true }
+
+  - id: p_unc
+    type: unc.interval
+    label: 区间/不确定性合流
+    inputs: [value, v_dcf, v_cmp, v_sent, v_rim, v_ddm]
+    params: { scenario: [bear, base, bull], mc: { n: 3000, seed: "${params.seed}" }, coverage: 0.90 }
+
+  # ── 指数合成层 ──
+  - id: idx_fit
+    type: idx.index_fit
+    label: 指数拟合与三情景
+    inputs: [value, interval, universe, index_quote]
+    params:
+      caliber_a: index_weight        # 零回归锚点：P × Σw(V/P)/Σw
+      caliber_b: wls_residual        # V1 后半作为对照口径
+      weight_kind: [official, computed]
+      checks: [scenario_monotonic, cross_index_containment, weight_sum]
+
+  # ── 输出 ──
+  - id: o_report
+    type: out.report
+    label: 逐券/汇总报告与机检
+    inputs: [values, intervals, summary, criticism]
+    params: { template: report_11sections, machine_check: html_check, theme: report_theme }
+    schedule: batch
+
+# ── 边（from/to 必须与 nodes[].inputs / pool / critic 端口一致）───────────────
+edges:
+  # 编码
+  - { from: n_universe.universe, to: n_fin.universe, type: UniverseBatch }
+  - { from: n_universe.universe, to: n_ind.universe, type: UniverseBatch }
+  - { from: n_universe.universe, to: n_peers.universe, type: UniverseBatch }
+  - { from: n_universe.universe, to: n_pit.universe, type: UniverseBatch }
+  - { from: n_fin.features, to: n_pit.financials, type: FinancialsBatch }
+  - { from: n_peers.peers, to: n_pit.peers, type: PeersBatch }
+  - { from: n_universe.universe, to: v_rnpv.universe, type: UniverseBatch }
+  - { from: n_universe.index_quote, to: idx_fit.index_quote, type: IndexQuote }
+  - { from: n_fin.features, to: n_life.financials, type: FinancialsBatch }
+  - { from: n_ind.industry, to: n_life.industry, type: IndustryBatch }
+  - { from: n_fin.features, to: n_peers.financials, type: FinancialsBatch }
+  - { from: n_fin.features, to: n_cost.financials, type: FinancialsBatch }
+  - { from: n_ind.industry, to: n_cost.industry, type: IndustryBatch }
+  - { from: n_peers.peers, to: n_cost.peers, type: PeersBatch }
+  - { from: n_universe.universe, to: n_sent.universe, type: UniverseBatch }
+  - { from: n_peers.peers, to: n_attn.peers, type: PeersBatch }
+  - { from: n_fin.features, to: n_attn.financials, type: FinancialsBatch }
+  # 门控
+  - { from: n_ind.industry, to: g_layer0.industry, type: IndustryBatch }
+  - { from: n_pit.mask, to: g_layer0.pit_quality, type: QualityMask }
+  - { from: n_pit.mask, to: g_quality.pit_quality, type: QualityMask }
+  - { from: n_fin.features, to: g_quality.financials, type: FinancialsBatch }
+  - { from: n_peers.peers, to: g_quality.peers, type: PeersBatch }
+  # 估值
+  - { from: n_fin.features, to: v_dcf.financials, type: FinancialsBatch }
+  - { from: n_life.lifecycle, to: v_dcf.lifecycle, type: LifecycleBatch }
+  - { from: n_cost.cost, to: v_dcf.cost, type: CostBatch }
+  - { from: v_dcf.value, to: p_norm.v_dcf, type: MethodValue }
+  - { from: n_peers.peers, to: v_cmp.peers, type: PeersBatch }
+  - { from: n_attn.attention, to: v_cmp.attention, type: AttentionBatch }
+  - { from: n_fin.features, to: v_cmp.financials, type: FinancialsBatch }
+  - { from: v_cmp.value, to: v_qi.comparable, type: MethodValue }
+  - { from: n_pit.mask, to: v_qi.pit_quality, type: QualityMask }
+  - { from: n_fin.features, to: v_qi.financials, type: FinancialsBatch }
+  - { from: v_qi.value, to: p_norm.v_cmp, type: MethodValue }
+  - { from: v_qi.value, to: v_sent.comparable, type: MethodValue }
+  - { from: n_sent.sentiment, to: v_sent.sentiment, type: SentimentBatch }
+  - { from: v_sent.value, to: p_norm.v_sent, type: MethodValue }
+  - { from: n_fin.features, to: v_rim.financials, type: FinancialsBatch }
+  - { from: n_cost.cost, to: v_rim.cost, type: CostBatch }
+  - { from: v_rim.value, to: p_norm.v_rim, type: MethodValue }
+  - { from: n_fin.features, to: v_ddm.financials, type: FinancialsBatch }
+  - { from: n_cost.cost, to: v_ddm.cost, type: CostBatch }
+  - { from: v_ddm.value, to: p_norm.v_ddm, type: MethodValue }
+  - { from: v_nav.value, to: p_norm.v_nav, type: MethodValue }
+  - { from: v_rnpv.value, to: p_norm.v_rnpv, type: MethodValue }
+  - { from: n_fin.features, to: v_rnpv.financials, type: FinancialsBatch }
+  - { from: v_sotp.value, to: p_norm.v_sotp, type: MethodValue }
+  - { from: n_ind.industry, to: v_sotp.industry, type: IndustryBatch }
+  - { from: v_fb.value, to: p_norm.v_fb, type: MethodValue }
+  - { from: n_ind.industry, to: v_fb.industry, type: IndustryBatch }
+  - { from: n_fin.features, to: v_fb.financials, type: FinancialsBatch }
+  - { from: n_fin.features, to: v_sotp.financials, type: FinancialsBatch }
+  - { from: n_fin.features, to: v_nav.financials, type: FinancialsBatch }
+  # 组合
+  - { from: p_norm.values, to: n_res.values, type: MethodMatrix }
+  - { from: n_ind.industry, to: n_res.industry, type: IndustryBatch }
+  - { from: n_res.values, to: p_ens.values, type: MethodMatrix }
+  - { from: p_ens.values, to: pool_main.values, type: MethodMatrix }
+  - { from: pool_main.value, to: p_unc.value, type: Valuation }
+  - { from: pool_main.value, to: idx_fit.value, type: Valuation }
+  - { from: pool_main.interval, to: idx_fit.interval, type: Interval }
+  - { from: v_dcf.interval, to: p_unc.v_dcf, type: Interval }
+  - { from: v_qi.interval, to: p_unc.v_cmp, type: Interval }
+  - { from: v_sent.interval, to: p_unc.v_sent, type: Interval }
+  - { from: v_rim.interval, to: p_unc.v_rim, type: Interval }
+  - { from: v_ddm.interval, to: p_unc.v_ddm, type: Interval }
+  - { from: n_universe.universe, to: idx_fit.universe, type: UniverseBatch }
+  # 输出与评论家
+  - { from: pool_main.value, to: o_report.values, type: Valuation }
+  - { from: p_unc.interval, to: o_report.intervals, type: Interval }
+  - { from: idx_fit.summary, to: o_report.summary, type: IndexSummary }
+  - { from: critic.verdicts, to: o_report.criticism, type: CritiqueRecord }
+  - { from: v_dcf.value, to: critic.evidence, type: MethodValue }
+  - { from: v_cmp.value, to: critic.evidence, type: MethodValue }
+  - { from: v_sent.value, to: critic.evidence, type: MethodValue }
+  - { from: pool_main.value, to: critic.baseline, type: Valuation }
+
+# ── 池化 ─────────────────────────────────────────────────────────────────────
+pool:
+  id: pool_main
+  module: ${params.pool_mode}          # 运行时由参数选择，缺省 linear
+  modules:
+    linear: pool.linear
+    log: pool.log
+    product: pool.product
+  inputs: [p_ens.values]               # 池化接收组合层已归一/残差/集成的「方法矩阵」
+  method_slots: [v_dcf, v_cmp, v_sent, v_rim, v_ddm, v_nav, v_rnpv, v_sotp, v_fb]
+                                       # 方法槽位仅用于归因与权重来源（gate.weight_from），不重复拉数据
+  weights:
+    from: gates                        # 各节点 gate.weight_from
+    fallback: ${params.weights}
+    normalize: renormalize             # 与 method_drop_mode=renormalize 同义
+    floor: { min: 0.0, max: 0.6 }
+  missing:
+    policy: drop_and_renormalize
+    trace: true
+  interval:
+    method: propagate
+    coverage: 0.90
+    formula:
+      linear: "[Σ w·a_m, Σ w·b_m]"
+      log: "[exp(Σ w·ln a_m), exp(Σ w·ln b_m)]"
+      product: "precision_weighted: V* = (Σ w_m·V_m/σ_m²)/(Σ w_m/σ_m²), 1/σ*² = Σ w_m/σ_m²"
+  correlation:
+    adjust: covariance_inflation
+    kappa: 1.2                         # 方法相关时的区间放大（V2 由评论家校准）
+  guards:
+    positivity: true
+    hull: true                         # 线性/对数池输出必须落在方法值 min/max 内
+    scenario_monotonic: true
+    dispersion: { metric: iqr_over_median, warn: 0.5, block: 0.9 }
+  output:
+    value: weighted_mid
+    interval: interval
+    confidence: confidence
+    decomposition: four_part
+    trace: method_weights
+
+# ── 评论家 ───────────────────────────────────────────────────────────────────
+critic:
+  id: critic
+  mode: ${params.critic_mode}
+  sampling: ${params.review_sample}
+  experts:
+    - id: critic.expert.comparable
+      evidence: [peers, attention, quality, comparable]
+      params: [comp_weight_pp]
+    - id: critic.expert.financial
+      evidence: [cost, lifecycle, financials, dcf]
+      params: [wacc_pp, tg_pp]
+    - id: critic.expert.sentiment
+      evidence: [sentiment, comparable, sentiment_value]
+      params: [sent_weight_pp]
+  main:
+    id: critic.main
+    rule: two_level_verdict
+    cannot_add_params: true
+  shadow:
+    enabled: true
+    record: graph/critic/<code>.shadow.json
+    keep_existing_schema: true
+  apply:
+    enabled_when: "mode == apply"
+    trust_region: { l1: 0.10 }
+    baseline: "<code>.input.baseline.json"
+    rollback_on_fail: true
+    feasibility: [weights_sum_one, wacc_gt_terminal_growth, caps]
+  ledger:
+    scope: "index:${params.index}"
+    read: latest_approved
+    propose: true
+    approve_requires: human
+  objective:
+    version: synth-v0
+    terms: [cross_method_consistency, temporal_stability, interval_calibration, human_preference]
+    exclude: [abs(value_minus_price)]  # 市场偏离只作诊断，绝不进入目标
+  audit:
+    trace: graph/trace.jsonl
+    params_hash: true
+    model_and_prompt_hash: true
+
+# ── 图级校验（执行前后都要跑；失败按 on_degraded 处理）──────────────────────
+checks:
+  - id: weight_sum
+    when: "sum(method_weights) > 0"
+  - id: scenario_order
+    when: "scenario_low <= scenario_base <= scenario_high"
+  - id: interval_contains_point
+    when: "interval[0] <= weighted_mid <= interval[1]"
+  - id: no_price_leak
+    when: "not used_as_input(index_close, [v_dcf, v_cmp, v_sent, critic])"
+  - id: point_estimate_present
+    when: "weighted_mid is not null or fallback_reason is not null"
+
+# ── 输出 ─────────────────────────────────────────────────────────────────────
+outputs:
+  - id: rows
+    from: pool_main.value
+    fields: [secucode, weighted_mid, per_share, interval, confidence, four_part, evidence, trace_ref]
+    sink: runtime/jobs/<run>/graph/rows/<code>.json
+  - id: index_fit
+    from: idx_fit.summary
+    fields: [fitted_point, fitted_point_index, fitted_point_price_weighted, scenarios, weight_kind, checks, deviation]
+    sink: runtime/jobs/<run>/graph/index_fit.json
+  - id: summary
+    from: o_report.summary
+    fields: [ok, skip, coverage, fitted_point, index_close, scenario_low, scenario_base, scenario_high]
+    sink: summary.html                       # 复用现有报告存档与工作台
+  - id: criticism
+    from: critic.verdicts
+    fields: [decision, items, applied, adoption, metrics]
+    sink: graph/critic/summary.json
+  - id: audit
+    from: critic.audit
+    fields: [run_id, graph_version, params_hash, node_timings, cache_hits, errors]
+    sink: graph/trace.jsonl

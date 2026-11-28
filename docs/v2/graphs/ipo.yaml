@@ -1,0 +1,568 @@
+# docs/v2/graphs/ipo.yaml
+# VCG 图规范 v1 · 拟上市单公司估值与定价约束检查（ipo）
+#
+# 状态：design（设计稿；执行器与模块均未完整实现，见 docs/v2/05-implementation-plan.md V3）
+# 定位：与 monitoring 共享估值模块，但数据域、门控、输出契约不同；
+#       只输出「估值区间 + 方法分解 + 定价约束检查」，不输出单一建议发行价。
+#
+# 解析约定同 monitoring.yaml：
+#   - nodes[].inputs 只声明端口名，实际接线由 edges 决定；
+#   - pool / critic 是顶层虚拟节点；
+#   - ${params.x} 为图级参数；${input.x} 为本次 IPO 输入（deal 级，受数据域隔离约束）；
+#   - 所有金额单位「亿元」、比率小数；发行条款缺失时 gate.ipo_eligibility 判 fail，不静默补默认值。
+version: 1
+name: ipo
+mode: ipo
+title: 拟上市单公司估值与定价约束
+status: design
+spec_ref: docs/v2/02-architecture.md
+catalog_ref: docs/v2/03-module-catalog.md
+
+# ── 数据域（与 monitoring 物理/逻辑隔离；V3 验收项）────────────────────────────
+domain: ipo
+data_policy:
+  isolation: deal                  # 每单独立命名空间，不写 monitoring 任务目录
+  cross_domain_cache: false        # 缓存键含 domain，禁止跨域复用中间结果
+  access: deal_team_only           # 权限由部署层实现；图执行器只负责不越界读写
+  retention: "按项目留档；到期删除，删除动作入审计"
+  secrets: "仓库外环境变量；不得写入图、trace、报告"
+
+params:
+  as_of:
+    type: date
+    default: latest
+    note: 估值基准日；财务数据不得晚于该日（P0-4 信息可得性截点）
+  board:
+    type: enum
+    values: [sse_main, sz_main, star, chinext, bse]
+    default: star
+  weights:
+    type: map
+    fields: [dcf, comparable, sentiment]
+    default: { dcf: 0.3, comparable: 0.5, sentiment: 0.2 }
+    constraint: "sum(values) == 1 and all(v >= 0)"
+  pool_mode:
+    type: enum
+    values: [linear, log, product]
+    default: linear
+  critic_mode:
+    type: enum
+    values: [off, shadow, apply]
+    default: shadow
+  seed:
+    type: int
+    default: 42
+
+# ── 启动前置能力（IPO 输入由 deal 提供，不从公开成分池推断）────────────────────
+requires:
+  - ipo.input_schema              # 招股书/申报稿结构化输入（V3 定义）
+  - financials.annual             # 申报期财务 + 可比财务
+  - peers.input                   # 本单锁定的可比清单（含来源与截点）
+  - issuance.terms                # 发行股数、发行后总股本、募投、板块
+  - industry.valuation            # 行业基准兜底（申万二级整体法）
+
+stages:
+  - id: ingest
+    title: 入口与输入校验
+    barrier: true
+    nodes: [n_ipo_input, g_ipo]
+  - id: encode
+    title: 数据/编码层
+    barrier: true
+    nodes: [n_fin, n_ind, n_life, n_peers]
+  - id: route
+    title: 门控/路由层
+    barrier: true
+    nodes: [n_attn, n_cost, n_pit, g_layer0, g_quality]
+  - id: sidecar
+    title: 非基础层（逐券，本图只有 1 行；可关）
+    barrier: false
+    per_security: true
+    nodes: [n_sent]
+  - id: value
+    title: 估值模块层
+    barrier: true
+    nodes: [v_dcf, v_cmp, v_qi, v_sent, v_rim, v_ddm, v_nav, v_rnpv, v_sotp, v_fb]
+  - id: combine
+    title: 归一化/残差/池化/不确定性
+    barrier: true
+    nodes: [p_norm, n_res, p_ens, pool_main, p_unc]
+  - id: compliance
+    title: 定价约束与合规输出
+    barrier: true
+    nodes: [o_compliance, o_report]
+  - id: critic
+    title: 评论家层（IPO 参数评审）
+    barrier: false
+    nodes: [critic]
+
+defaults:
+  timeout_s: 180
+  retry: { network: 1, llm: 1, deterministic: 0 }
+  isolation: mask_cell
+  cache: content_hash
+  on_node_error: mark_unavailable
+  on_degraded: "区间照出、点估值置空、原因入 o_compliance"
+
+# ── 节点 ─────────────────────────────────────────────────────────────────────
+nodes:
+  - id: n_ipo_input
+    type: entry.ipo
+    label: IPO 输入装配（单公司）
+    inputs: []
+    params:
+      schema: ipo_input.v1
+      required: [company, financials.annual, comparables, issuance]
+      reject_late_data: true        # 财务报告期晚于 as_of → violation
+    schedule: single
+    timeout_s: 60
+
+  # ── 编码层（同样的模块，单行 Batch）──
+  - id: n_fin
+    type: enc.financials
+    label: 申报期财报编码
+    inputs: [company]
+    params: { basis: annual, unit: yi, periods: "3y", require: [revenue] }
+
+  - id: n_ind
+    type: enc.industry
+    label: 行业/板块编码
+    inputs: [company]
+    params: { taxonomy: SW2021, fallback_prefix: true }
+
+  - id: n_life
+    type: enc.lifecycle
+    label: 生命周期编码
+    inputs: [financials, industry]
+    params: { mode: auto, classifier: v326, weight_mode: damodaran_table }
+
+  - id: n_peers
+    type: enc.peers
+    label: 可比池编码（本单锁定清单 + 截点核验）
+    inputs: [company, financials]
+    params:
+      source: deal_list
+      n: 5
+      screening: true
+      cutoffs: [p0_1_long_list, p0_2_scale_5x, p0_3_entity_dedup, p0_4_availability]
+
+  # ── 门控/注意力 ──
+  - id: n_attn
+    type: comb.attention
+    label: 可比注意力
+    inputs: [peers, financials]
+    params: { kernel: size_log_distance, temperature: 0.5, top_k: 8, fallback: equal_weight }
+
+  - id: n_cost
+    type: enc.cost_capital
+    label: 折现率编码
+    inputs: [financials, industry, peers]
+    params:
+      capm: { rf: 0.019, erp: 0.0804, beta_window_months: 60, beta_floor: 0.5, beta_cap: 2.0 }
+      debt: { tax: 0.15, d_e: 0.3 }
+      financial_route: { ke_capm: true, bank_industry_beta: 0.90 }
+
+  - id: n_pit
+    type: enc.pit_quality
+    label: PIT/质量掩码（含信息可得性截点）
+    inputs: [company, financials, peers, sentiment]
+    params:
+      checks: [as_of_consistency, coverage, stale_financials, late_data_violation, missing_peers]
+      mask_policy: degrade_not_drop
+
+  - id: n_sent
+    type: enc.sentiment
+    label: 舆情编码（IPO 默认关，仅作辅助证据）
+    inputs: [company]
+    params: { mode: rule, rounds: 5, max_days: 30, enabled: false }
+    schedule: per_security
+
+  # ── 门控层 ──
+  - id: g_ipo
+    type: gate.ipo_eligibility
+    label: 发行条件与定价约束门
+    inputs: [company, issuance]
+    params:
+      checklist: assets/ipo_rules_checklist.md
+      rules:
+        board_profit_standard: true
+        float_ratio_floor: 0.10
+        planned_raise_required: true
+        late_data_violation: block
+      outputs: [eligible, constraints, violations]
+
+  - id: g_layer0
+    type: gate.layer0
+    label: Layer 0 路由
+    inputs: [industry, pit_quality]
+    params:
+      rules: [financial, pipeline_pharma, multi_segment, general]
+      negative_fcff_cap: { threshold: 0.6, dcf_weight_cap: 0.3 }
+      veto_record: blocked_paths
+
+  - id: g_quality
+    type: gate.quality
+    label: 数据质量门控
+    inputs: [pit_quality, financials, peers]
+    params:
+      min_peers: 3
+      min_coverage: 0.2
+      confidence_caps: { high: 0.8, medium: 1.0 }
+      weak_peers: { n_lt_3: only_interval }   # 可比 <3 → 仅列区间、不出点估值
+
+  # ── 估值模块层 ──
+  - id: v_dcf
+    type: val.dcf
+    label: DCF
+    inputs: [financials, lifecycle, cost]
+    params: { growth_model: damodaran, terminal_guard: clamp, tv_share_guard: true }
+    gate:
+      when: "routing.allows('dcf') and quality.dcf_ok"
+      mode: soft
+      weight_from: routing.weights.dcf
+      on_fail: mask_cell
+
+  - id: v_cmp
+    type: val.comparable
+    label: 可比法（PE/PS/EV-EBITDA/PB；PEG 单列护栏）
+    inputs: [peers, attention, financials, gate_ipo]
+    params:
+      multiples: [pe, ps, ev_ebitda, pb]
+      peg: { enabled: true, in_synthesis: false, guard: 2.5 }
+      outlier_rule: winsorize_0.05_0.95
+    gate:
+      when: "routing.allows('comparable') and quality.comparable_ok"
+      mode: soft
+      weight_from: routing.weights.comparable
+      on_fail: mask_cell
+
+  - id: v_qi
+    type: val.quality_adjust
+    label: 质量/商誉/流动性调整
+    inputs: [comparable, pit_quality, financials]
+    params: { quality_score: true, goodwill: true, liquidity_discount: true }
+
+  - id: v_sent
+    type: val.sentiment
+    label: 舆情修正（默认关）
+    inputs: [sentiment, comparable]
+    params: { layer: correction, band: typed, enabled: false }
+    gate:
+      when: "routing.allows('sentiment') and input.sentiment_enabled"
+      mode: soft
+      weight_from: routing.weights.sentiment
+      on_fail: mask_cell
+
+  - id: v_rim
+    type: val.rim
+    label: RIM（金融类发行主体）
+    inputs: [financials, cost]
+    params: { explicit_years: 5, persistence: 0.70, payout: 0.30 }
+    gate:
+      when: "routing.allows('rim')"
+      mode: soft
+      weight_from: routing.weights.rim
+      on_fail: mask_cell
+
+  - id: v_ddm
+    type: val.ddm
+    label: DDM（交叉校验）
+    inputs: [financials, cost]
+    params: { explicit_years: 5, payout: 0.30, weight: 0.0 }
+    gate:
+      when: "routing.allows('ddm')"
+      mode: soft
+      on_fail: mask_cell
+
+  - id: v_nav
+    type: val.nav
+    label: NAV（资源/重资产发行主体）
+    inputs: [financials]
+    params: { enabled: false, asset_classes: [resource, utility] }
+    gate:
+      when: "routing.allows('nav')"
+      mode: hard
+      on_fail: mask_cell
+
+  - id: v_rnpv
+    type: val.rnpv
+    label: rNPV（管线药企；本单人工核定参数）
+    inputs: [company, financials]
+    params: { enabled: false, override_source: deal_overrides, require_manual_review: true }
+    gate:
+      when: "routing.allows('rnpv') and has(input.rnpv)"
+      mode: hard
+      on_fail: mask_cell
+
+  - id: v_sotp
+    type: val.sotp
+    label: SOTP（多分部发行主体）
+    inputs: [financials, industry]
+    params: { enabled: false, segments_required: true }
+    gate:
+      when: "routing.allows('sotp') and has(input.segments)"
+      mode: hard
+      on_fail: mask_cell
+
+  - id: v_fb
+    type: val.industry_fallback
+    label: 行业基准兜底
+    inputs: [financials, industry]
+    params: { trigger: "not available(dcf) and not available(comparable)", confidence: low }
+
+  # ── 组合层 ──
+  - id: p_norm
+    type: comb.norm
+    label: 截面归一（单行时退化为单位对齐）
+    inputs: [v_dcf, v_cmp, v_sent, v_rim, v_ddm, v_nav, v_rnpv, v_sotp, v_fb]
+    params: { winsorize: [0.05, 0.95], unit: yi, inverse_before_output: true }
+
+  - id: n_res
+    type: comb.residual
+    label: 行业残差（默认 α=0）
+    inputs: [values, industry]
+    params: { base: industry_median, alpha: 0.0, cap: 0.6, positivity: true }
+
+  - id: p_ens
+    type: ens.dropout
+    label: 方法 dropout 集成（默认关）
+    inputs: [values]
+    params: { methods_dropout_p: 0.2, seeds: [42, 43, 44], mode: uncertainty }
+
+  - id: pool_main
+    type: pool.linear
+    label: 池化（虚拟节点）
+    inputs: [values]
+    params: { weighted: true }
+
+  - id: p_unc
+    type: unc.interval
+    label: 区间/不确定性
+    inputs: [value, v_dcf, v_cmp, v_sent, v_rim, v_ddm, v_rnpv, v_sotp]
+    params: { scenario: [bear, base, bull], mc: { n: 3000, seed: "${params.seed}" }, coverage: 0.90 }
+
+  # ── 输出层 ──
+  - id: o_compliance
+    type: out.compliance
+    label: 定价约束/合规检查
+    inputs: [values, interval, issuance, constraints]
+    params:
+      ipo_check: true                 # 复用引擎 ipo_check（发行 PE/PS 偏离、募资、流通比）
+      outputs: [valuation_range, pricing_constraints, compliance_block]
+      forbid: [single_recommended_price, trading_signal]
+      disclaimer: "研究参考，不构成投资建议；发行定价由定价委员会/保荐机构按程序决策"
+    schedule: batch
+
+  - id: o_report
+    type: out.report
+    label: IPO 估值报告与机检
+    inputs: [values, intervals, compliance, comparable_chain, criticism]
+    params: { template: ipo_report, machine_check: html_check, theme: report_theme }
+
+# ── 边 ───────────────────────────────────────────────────────────────────────
+edges:
+  - { from: n_ipo_input.company, to: n_fin.company, type: Company }
+  - { from: n_ipo_input.company, to: n_ind.company, type: Company }
+  - { from: n_ipo_input.comparables, to: n_peers.company, type: PeersBatch }
+  - { from: n_ipo_input.issuance, to: g_ipo.issuance, type: Issuance }
+  - { from: n_ipo_input.company, to: g_ipo.company, type: Company }
+  - { from: n_ipo_input.company, to: n_sent.company, type: Company }
+  - { from: n_ipo_input.company, to: n_pit.company, type: Company }
+  - { from: n_fin.features, to: n_life.financials, type: FinancialsBatch }
+  - { from: n_ind.industry, to: n_life.industry, type: IndustryBatch }
+  - { from: n_fin.features, to: n_peers.financials, type: FinancialsBatch }
+  - { from: n_peers.peers, to: n_attn.peers, type: PeersBatch }
+  - { from: n_fin.features, to: n_attn.financials, type: FinancialsBatch }
+  - { from: n_fin.features, to: n_cost.financials, type: FinancialsBatch }
+  - { from: n_ind.industry, to: n_cost.industry, type: IndustryBatch }
+  - { from: n_peers.peers, to: n_cost.peers, type: PeersBatch }
+  - { from: n_ipo_input.company, to: n_peers.company, type: Company }
+  - { from: n_ipo_input.company, to: v_rnpv.company, type: Company }
+  - { from: n_fin.features, to: v_rnpv.financials, type: FinancialsBatch }
+  - { from: n_ind.industry, to: g_layer0.industry, type: IndustryBatch }
+  - { from: n_pit.mask, to: g_layer0.pit_quality, type: QualityMask }
+  - { from: n_pit.mask, to: g_quality.pit_quality, type: QualityMask }
+  - { from: n_fin.features, to: g_quality.financials, type: FinancialsBatch }
+  - { from: n_peers.peers, to: g_quality.peers, type: PeersBatch }
+  - { from: n_fin.features, to: n_pit.financials, type: FinancialsBatch }
+  - { from: n_peers.peers, to: n_pit.peers, type: PeersBatch }
+  - { from: n_sent.sentiment, to: n_pit.sentiment, type: SentimentBatch }
+  # 估值
+  - { from: n_fin.features, to: v_dcf.financials, type: FinancialsBatch }
+  - { from: n_life.lifecycle, to: v_dcf.lifecycle, type: LifecycleBatch }
+  - { from: n_cost.cost, to: v_dcf.cost, type: CostBatch }
+  - { from: v_dcf.value, to: p_norm.v_dcf, type: MethodValue }
+  - { from: n_peers.peers, to: v_cmp.peers, type: PeersBatch }
+  - { from: n_attn.attention, to: v_cmp.attention, type: AttentionBatch }
+  - { from: n_fin.features, to: v_cmp.financials, type: FinancialsBatch }
+  - { from: g_ipo.constraints, to: v_cmp.gate_ipo, type: IpoConstraints }
+  - { from: v_cmp.value, to: v_qi.comparable, type: MethodValue }
+  - { from: n_pit.mask, to: v_qi.pit_quality, type: QualityMask }
+  - { from: n_fin.features, to: v_qi.financials, type: FinancialsBatch }
+  - { from: v_qi.value, to: p_norm.v_cmp, type: MethodValue }
+  - { from: v_qi.value, to: v_sent.comparable, type: MethodValue }
+  - { from: n_sent.sentiment, to: v_sent.sentiment, type: SentimentBatch }
+  - { from: v_sent.value, to: p_norm.v_sent, type: MethodValue }
+  - { from: n_fin.features, to: v_rim.financials, type: FinancialsBatch }
+  - { from: n_cost.cost, to: v_rim.cost, type: CostBatch }
+  - { from: v_rim.value, to: p_norm.v_rim, type: MethodValue }
+  - { from: n_fin.features, to: v_ddm.financials, type: FinancialsBatch }
+  - { from: n_cost.cost, to: v_ddm.cost, type: CostBatch }
+  - { from: v_ddm.value, to: p_norm.v_ddm, type: MethodValue }
+  - { from: v_nav.value, to: p_norm.v_nav, type: MethodValue }
+  - { from: v_rnpv.value, to: p_norm.v_rnpv, type: MethodValue }
+  - { from: v_sotp.value, to: p_norm.v_sotp, type: MethodValue }
+  - { from: n_ind.industry, to: v_sotp.industry, type: IndustryBatch }
+  - { from: v_fb.value, to: p_norm.v_fb, type: MethodValue }
+  - { from: n_ind.industry, to: v_fb.industry, type: IndustryBatch }
+  - { from: n_fin.features, to: v_fb.financials, type: FinancialsBatch }
+  - { from: n_fin.features, to: v_sotp.financials, type: FinancialsBatch }
+  - { from: n_fin.features, to: v_nav.financials, type: FinancialsBatch }
+  # 组合
+  - { from: p_norm.values, to: n_res.values, type: MethodMatrix }
+  - { from: n_ind.industry, to: n_res.industry, type: IndustryBatch }
+  - { from: n_res.values, to: p_ens.values, type: MethodMatrix }
+  - { from: p_ens.values, to: pool_main.values, type: MethodMatrix }
+  - { from: pool_main.value, to: p_unc.value, type: Valuation }
+  - { from: v_dcf.interval, to: p_unc.v_dcf, type: Interval }
+  - { from: v_qi.interval, to: p_unc.v_cmp, type: Interval }
+  - { from: v_sent.interval, to: p_unc.v_sent, type: Interval }
+  - { from: v_rim.interval, to: p_unc.v_rim, type: Interval }
+  - { from: v_ddm.interval, to: p_unc.v_ddm, type: Interval }
+  - { from: v_rnpv.interval, to: p_unc.v_rnpv, type: Interval }
+  - { from: v_sotp.interval, to: p_unc.v_sotp, type: Interval }
+  - { from: pool_main.value, to: o_compliance.values, type: Valuation }
+  - { from: p_unc.interval, to: o_compliance.interval, type: Interval }
+  - { from: n_ipo_input.issuance, to: o_compliance.issuance, type: Issuance }
+  - { from: g_ipo.constraints, to: o_compliance.constraints, type: IpoConstraints }
+  - { from: pool_main.value, to: o_report.values, type: Valuation }
+  - { from: p_unc.interval, to: o_report.intervals, type: Interval }
+  - { from: o_compliance.output, to: o_report.compliance, type: ComplianceBlock }
+  - { from: v_cmp.value, to: o_report.comparable_chain, type: MethodValue }
+  - { from: critic.verdicts, to: o_report.criticism, type: CritiqueRecord }
+  - { from: v_dcf.value, to: critic.evidence, type: MethodValue }
+  - { from: v_cmp.value, to: critic.evidence, type: MethodValue }
+  - { from: pool_main.value, to: critic.baseline, type: Valuation }
+
+# ── 池化（与 monitoring 同一组模块；区间语义一致）──────────────────────────────
+pool:
+  id: pool_main
+  module: ${params.pool_mode}
+  modules:
+    linear: pool.linear
+    log: pool.log
+    product: pool.product
+  inputs: [p_ens.values]
+  method_slots: [v_dcf, v_cmp, v_sent, v_rim, v_ddm, v_nav, v_rnpv, v_sotp, v_fb]
+  weights:
+    from: gates
+    fallback: ${params.weights}
+    normalize: renormalize
+    floor: { min: 0.0, max: 0.6 }
+  missing:
+    policy: drop_and_renormalize
+    trace: true
+  interval:
+    method: propagate
+    coverage: 0.90
+    formula:
+      linear: "[Σ w·a_m, Σ w·b_m]"
+      log: "[exp(Σ w·ln a_m), exp(Σ w·ln b_m)]"
+      product: "precision_weighted"
+  guards:
+    positivity: true
+    hull: true
+    scenario_monotonic: true
+    weak_peers: { n_lt_3: interval_only }    # IPO：可比 <3 只给区间，不给点估值
+
+# ── 评论家（角色同 monitoring，权限与台账 scope 不同）──────────────────────────
+critic:
+  id: critic
+  mode: ${params.critic_mode}
+  scope: "ipo:${input.deal_id}"             # 与 monitoring 台账隔离
+  experts:
+    - id: critic.expert.comparable
+      evidence: [peers, screening, attention, comparable, gate_ipo]
+      params: [comp_weight_pp]
+    - id: critic.expert.financial
+      evidence: [cost, lifecycle, financials, dcf]
+      params: [wacc_pp, tg_pp]
+    - id: critic.expert.sentiment
+      evidence: [sentiment, comparable]
+      params: [sent_weight_pp]
+      enabled: false                        # IPO 舆情证据弱，默认关
+  main:
+    id: critic.main
+    rule: two_level_verdict
+    cannot_add_params: true
+  shadow:
+    enabled: true
+    record: graph/critic/<deal_id>.shadow.json
+    keep_existing_schema: true
+  apply:
+    enabled_when: "mode == apply"
+    trust_region: { l1: 0.10 }
+    baseline: "<deal_id>.input.baseline.json"
+    rollback_on_fail: true
+    require_manual_review: true             # IPO 的参数回写必须人工复核
+  ledger:
+    scope: "ipo:${input.deal_id}"
+    read: none                               # 单笔交易，不继承历史参数
+    propose: true
+    approve_requires: human
+  objective:
+    version: synth-v0
+    terms: [cross_method_consistency, interval_calibration, human_preference]
+    exclude: [abs(value_minus_price), issue_price_fit]  # 不以「贴近发行价/可比中位」为目标
+  audit:
+    trace: graph/trace.jsonl
+    params_hash: true
+    model_and_prompt_hash: true
+
+# ── 图级校验 ────────────────────────────────────────────────────────────────
+checks:
+  - id: single_recommended_price_forbidden
+    when: "compliance.forbid contains 'single_recommended_price' and no single_point_output"
+  - id: interval_contains_point
+    when: "interval[0] <= weighted_mid <= interval[1]"
+  - id: weak_peers_interval_only
+    when: "n_peers < 3 implies weighted_mid is null"
+  - id: late_data_blocked
+    when: "no financial period_end > as_of"
+  - id: no_price_leak
+    when: "not used_as_input(issue_price_actual, [v_dcf, v_cmp, pool_main])"
+
+# ── 输出（IPO 契约：区间 + 约束检查；无指数拟合）────────────────────────────────
+outputs:
+  - id: valuation_range
+    from: p_unc.interval
+    fields: [bear, base, bull, mc_low, mc_high, report_interval, per_share, confidence]
+    sink: runtime/jobs/<run>/graph/ipo/valuation.json
+  - id: method_decomposition
+    from: pool_main.decomposition
+    fields: [methods, values, weights, mask, confidence_each, evidence_ref]
+    sink: runtime/jobs/<run>/graph/ipo/methods.json
+  - id: sensitivity
+    from: p_unc.sensitivity
+    fields: [param, sigma, delta_plus_1sigma, delta_minus_1sigma, elasticity, direction_flag]
+    sink: runtime/jobs/<run>/graph/ipo/sensitivity.json
+  - id: comparable_chain
+    from: v_cmp.evidence
+    fields: [long_list, exclusions, included, scale_ratio, coverage, cutoff_violations]
+    sink: runtime/jobs/<run>/graph/ipo/comparables.json
+  - id: pricing_constraints
+    from: o_compliance.output
+    fields: [issue_pe, issue_ps, pe_deviation, ps_deviation, raise_amount, raise_status, float_ratio, liquidity_discount, board_constraints, violations]
+    sink: runtime/jobs/<run>/graph/ipo/pricing.json
+  - id: compliance
+    from: o_compliance.output
+    fields: [disclaimer, forbid_list, manual_review_required, data_domain, retention]
+    sink: graph/ipo/compliance.json
+  - id: report
+    from: o_report.html
+    fields: [sections, machine_check_ok]
+    sink: runtime/jobs/<run>/graph/ipo/report.html
+  - id: audit
+    from: critic.audit
+    fields: [run_id, graph_version, params_hash, node_timings, cache_hits, errors, domain]
+    sink: graph/trace.jsonl
