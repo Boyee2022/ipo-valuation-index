@@ -9,7 +9,9 @@
 | [en-nlp.tex](en-nlp.tex) / [pdf](en-nlp.pdf) | 英文 | 48×36in 横版 1219×914mm | ACL/EMNLP 风：navy/teal/coral、4 栏、彩色 section bar、大图 | NLP 顶会（ACL/EMNLP/NAACL） | 多智能体、证据门控、有界参数编辑、评估与可复现 |
 | [en-finance.tex](en-finance.tex) / [pdf](en-finance.pdf) | 英文 | A0 竖版 841×1189mm | AFA/金融期刊风：parchment、Palatino、burgundy/navy、2 栏 | 海外金融期刊/会议 | 经济问题、指数构建、估值框架、案例、讨论 |
 
-预览图在 [`previews/`](previews/)，由 PDF 以 `sips` 渲染。
+预览图在 [`previews/`](previews/)，由 PDF 以 `sips` 渲染。四张总览：
+
+![四张学术海报总览](previews/contact-sheet.png)
 
 ## 作者与单位（四张统一）
 
