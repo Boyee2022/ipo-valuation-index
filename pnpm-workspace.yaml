@@ -1,2 +1,7 @@
 packages:
   - packages/*
+
+# esbuild / lightningcss 的 postinstall 落地平台二进制；不授权 pnpm 11 会直接非零退出。
+allowBuilds:
+  esbuild: true
+  lightningcss: true

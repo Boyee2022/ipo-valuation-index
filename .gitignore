@@ -6,3 +6,11 @@ lib/
 runtime/
 *.bak
 *.bak.*
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 技能源目录（已导入 skills/，本地副本不入库）
+llm-ipo-valuation-skills/
