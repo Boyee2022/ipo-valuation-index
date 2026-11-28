@@ -1,0 +1,540 @@
+% !TEX program = xelatex
+% ============================================================================
+%  模糊证据下的有界校准 · 中文核心期刊风格 A0 横版学术海报（1189 mm × 841 mm）
+%  编译（在本目录下连跑两遍；TikZ 印章定位需第二次编译）：
+%     xelatex -interaction=nonstopmode cn-core.tex
+%     xelatex -interaction=nonstopmode cn-core.tex
+%     sips -s format png cn-core.pdf --out previews/cn-core.png
+%  事实来源：docs/posters/CONTENT.md（唯一事实源）
+%  依赖：TeX Live 2022（xelatex + ctex + newpx + booktabs + tikz + tcolorbox）
+% ============================================================================
+\documentclass[UTF8,fontset=mac,10pt]{ctexart}
+
+\usepackage{geometry}
+\geometry{paperwidth=1189mm,paperheight=841mm,margin=0mm}
+
+\usepackage{amsmath,amssymb}
+\usepackage{newpxtext,newpxmath}
+\usepackage{booktabs,tabularx,array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,calc,positioning}
+\usepackage[most]{tcolorbox}
+
+% ---------------------------------------------------------------- 字体 -----
+% newpxtext 会全局设置 Extension=.otf；若此后声明 CJK 系统字体，xeCJK 会把
+% “Songti SC”当成文件名去找 Songti SC.otf。故先清空默认字体特性，再声明 CJK。
+\defaultfontfeatures{}
+\setCJKmainfont{Songti SC}
+\setCJKsansfont{Heiti SC}
+\setCJKmonofont{Songti SC}
+\setCJKfamilyfont{posterhei}{Heiti SC}[AutoFakeBold=1.8]
+\newcommand{\hei}{\CJKfamily{posterhei}}
+\setCJKfamilyfont{postersong}{Songti SC}[AutoFakeBold=1.2]
+\newcommand{\song}{\CJKfamily{postersong}}
+
+% 数学字号随正文放大（正文 22 pt；上下标 16 / 12 pt）
+\DeclareMathSizes{10}{22}{16}{12}
+\DeclareMathSizes{22}{22}{16}{12}
+
+% ---------------------------------------------------------------- 色彩 -----
+\definecolor{lacquer}{HTML}{A6192E}   % 漆红：仅细线、编号、图注
+\definecolor{ink}{HTML}{141414}
+\definecolor{stone}{HTML}{6E6A63}
+\definecolor{hair}{HTML}{D8D0C2}
+\definecolor{band}{HTML}{F7F5F0}
+\definecolor{bandb}{HTML}{FBFAF7}
+
+% ---------------------------------------------------------------- 版面 -----
+\pagestyle{empty}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\setlength{\emergencystretch}{4em}
+\setlength{\abovedisplayskip}{2.2mm}
+\setlength{\belowdisplayskip}{2.2mm}
+\setlength{\abovedisplayshortskip}{1.4mm}
+\setlength{\belowdisplayshortskip}{1.4mm}
+\renewcommand{\arraystretch}{1.2}
+\setlength{\fboxsep}{2mm}
+
+\newlength{\contentw}\setlength{\contentw}{1141.77mm}  % 3×368.59 + 2×18
+\newlength{\colw}\setlength{\colw}{368.59mm}          % ≈ 0.31\textwidth
+\newbox\colA \newbox\colB \newbox\colC
+\newdimen\colmax
+
+% 正文 22 pt、行距 1.35（29.7 pt），首行缩进 2 字
+\newcommand{\bodysize}{\fontsize{22}{29.7}\selectfont\parindent=2em\parskip=1.0mm}
+\newcommand{\inset}{\hspace*{23.615mm}}
+
+% ------------------------------------------------------- 章节 / 图表题 -----
+\newcommand{\Sec}[2]{%
+  \par\addvspace{3.4mm}%
+  \noindent{\color{lacquer}\hei\bfseries\fontsize{30}{34}\selectfont #1}\hspace{3.2mm}%
+  {\hei\bfseries\fontsize{30}{34}\selectfont #2}\par
+  \vspace{1.4mm}%
+  \noindent{\color{lacquer}\rule{\linewidth}{1.15pt}}\par
+  \vspace{2.0mm}%
+}
+\newcommand{\Sub}[2]{%
+  \par\addvspace{2.0mm}%
+  \noindent{\color{lacquer}\hei\bfseries\fontsize{19}{23}\selectfont #1}\hspace{2.2mm}%
+  {\hei\bfseries\fontsize{24}{28}\selectfont #2}\par
+  \vspace{1.0mm}%
+}
+\newcommand{\FigCap}[2]{%
+  \par\vspace{2.0mm}%
+  {\parindent=0pt\centering{\hei\bfseries\fontsize{15}{18.5}\selectfont\color{lacquer}图\,#1}\hspace{2.6mm}%
+   {\hei\fontsize{15}{18.5}\selectfont #2}\par}%
+}
+\newcommand{\TabCap}[2]{%
+  \par\vspace{3.0mm}%
+  {\parindent=0pt\centering{\hei\bfseries\fontsize{15}{18.5}\selectfont\color{lacquer}表\,#1}\hspace{2.6mm}%
+   {\hei\fontsize{15}{18.5}\selectfont #2}\par}%
+  \vspace{1.4mm}%
+}
+\newcommand{\TabHead}[1]{%
+  \par\vspace{1.2mm}%
+  {\parindent=0pt\hei\bfseries\fontsize{15}{18.5}\selectfont #1\par}%
+  \vspace{1.4mm}%
+}
+\newcommand{\TabNote}[1]{%
+  \par\vspace{0.4mm}%
+  {\parindent=0pt\fontsize{13}{16.5}\selectfont\color{stone}#1\par}%
+}
+
+% ------------------------------------------------------------ 强调盒子 -----
+\newtcolorbox{notebox}{%
+  colback=band, colframe=lacquer, boxrule=0pt, leftrule=2.2pt,
+  arc=0pt, outer arc=0pt, left=3.6mm, right=3.6mm, top=2.0mm, bottom=2.0mm,
+  fontupper={\parindent=0pt\fontsize{18.5}{23.5}\selectfont}}
+
+% --------------------------------------------------------------- 列表 -----
+\setlist[itemize]{leftmargin=1.4em,labelsep=0.5em,topsep=0.8mm,itemsep=0.8mm,
+  parsep=0pt,label={\color{lacquer}\rule[0.30em]{1.6mm}{1.6mm}}}
+
+% ------------------------------------------------------------- TikZ 风格 ---
+\tikzset{
+  fb/.style={draw=ink!80,line width=0.45pt,fill=white,align=center,inner sep=1.8mm},
+  fr/.style={draw=lacquer,line width=0.85pt,fill=white,align=center,inner sep=1.8mm},
+  fd/.style={draw=stone,line width=0.4pt,dashed,fill=bandb,align=center,inner sep=1.6mm},
+  fa/.style={-{Latex[length=2.2mm,width=1.5mm]},line width=0.55pt,draw=ink!80},
+  fn/.style={align=center,font=\fontsize{12}{14.4}\selectfont},
+}
+
+\begin{document}
+
+% ============================================================================
+%  一、通栏标题区（约 120 mm）
+% ============================================================================
+\noindent{\color{lacquer}\rule{\paperwidth}{0.9mm}}\par
+\vspace{2.2mm}
+\noindent\inset%
+\begin{minipage}{\contentw}
+\parindent=0pt\parskip=0pt
+{\hei\fontsize{11}{13.5}\selectfont\color{stone}%
+ 学术海报\quad\textperiodcentered\quad ACADEMIC POSTER\hfill
+ 2026 年 11 月\quad\textperiodcentered\quad 内部研究稿 v0.1}\par
+\vspace{1.2mm}
+{\centering
+  {\hei\bfseries\fontsize{66}{71}\selectfont 模糊证据下的有界校准\par}
+  \vspace{0.4mm}
+  {\hei\fontsize{25}{30}\selectfont 指数成分券估值：层次化 MoE、多 Agent 评审与无真值评估\par}
+  \vspace{1.0mm}
+  {\fontsize{18}{21.5}\selectfont 陈映洲$^{\dagger}$\quad 宋泊毅$^{\dagger,\ast}$\quad 孙棽一$^{\dagger}$\par}
+  \vspace{0.4mm}
+  {\fontsize{14.5}{17.5}\selectfont\color{stone}%
+   中证指数有限公司，上海\quad\textperiodcentered\quad $^{\dagger}$\,共同第一作者；%
+   $^{\ast}$\,通信作者：宋泊毅，\mbox{bysong@sse.com.cn}\par}
+\par}
+\vspace{1.2mm}
+\begin{tcolorbox}[colback=band,colframe=lacquer,boxrule=0pt,leftrule=2.2pt,
+  arc=0pt,outer arc=0pt,left=4.2mm,right=4.2mm,top=1.0mm,bottom=1.0mm,after skip=1.0mm]
+  {\hei\bfseries\fontsize{17}{20.5}\selectfont 摘要}\quad
+  {\fontsize{18}{21.5}\selectfont
+   指数点位只是价格的加权平均，无法回答成分券“相对基本面是否被高估”。本文以估值替代价格，把成分券估值写成模糊证据下的条件非线性映射，提出层次化混合专家（生命周期$\times$方法）、模糊加权与 $\alpha$-cut 表达，并给出指数点位合成口径。针对无真值约束，设计三专家加主审的有界评审协议——角色正交、证据门槛、严重度上限、离散网格、shadow/apply 与 baseline 回滚——并形式化为信赖域稀疏算子。系统在五个指数、2{,}201 只成分券上落地，170 项回归全绿；评估以合成基准、人工盲评与内部一致性三角验证，市场偏离只作诊断。实践表明，可审计的边界比更自由的 Agent 更接近可用的估值治理。\par}
+  \vspace{0.4mm}
+  {\hei\bfseries\fontsize{16}{19}\selectfont 关键词}\quad
+  {\fontsize{16.5}{20}\selectfont
+   估值合成；模糊证据；层次化混合专家；多智能体评审；无真值评估；指数编制\par}
+\end{tcolorbox}
+\end{minipage}\par
+
+% 红色“中证”小印章（抽象图形，非官方标识）
+\begin{tikzpicture}[remember picture,overlay]
+  \node[anchor=north east,rotate=-3.5] at ([xshift=-40mm,yshift=-32mm]current page.north east) {%
+    \begin{tikzpicture}[x=1mm,y=1mm]
+      \draw[lacquer,line width=1.8pt] (0,0) rectangle (25,25);
+      \draw[lacquer,line width=0.5pt] (1.6,1.6) rectangle (23.4,23.4);
+      \node at (12.5,17.2) {\hei\bfseries\fontsize{21}{21}\selectfont\color{lacquer}中};
+      \node at (12.5,7.8)  {\hei\bfseries\fontsize{21}{21}\selectfont\color{lacquer}证};
+    \end{tikzpicture}};
+\end{tikzpicture}
+
+\vspace{1.0mm}
+\noindent{\color{lacquer}\rule{\paperwidth}{1.15pt}}\par
+\vspace{3.6mm}
+
+% ============================================================================
+%  二、三栏正文
+% ============================================================================
+\typeout{POSTER-PREBODY-PT=\the\pagetotal}
+
+% ------------------------------------------------------------------ 左栏 ---
+\setbox\colA=\vbox{%
+\hsize=\colw\linewidth=\colw\columnwidth=\colw
+\bodysize
+\raggedright\parindent=2em
+
+\Sec{1}{引言}
+
+指数点位是价格的加权平均：\(P^{idx}=\sum_i w_iP_i/\sum_i w_i\)。它忠实记录市场报价，却不回答成分券相对其基本面是否被高估：对亏损的科创企业与重组标的，价格倍数甚至没有经济含义；成分调整与停牌又使点位变化混入非估值信息。
+
+本文以估值替代价格：\(V_i=F(x_i;\Theta)+\varepsilon_i\)，市价 \(P_i=V_i(1+\eta_i)\)，\(\eta_i\) 含噪声、流动性与情绪。把 \(P_i\) 当标签，等于把 \(\eta_i\) 一并学入；把“贴近指数收盘”当目标，等于默认市场永远正确。故本文求解的是带可行域约束的过程风险优化，而非监督拟合。估值因而面对输入、模型、目标三重模糊，“更准”不可直接定义，只能以过程质量做三角验证。
+
+\vspace{0.6mm}
+{\hei\bfseries 本文贡献}\quad （1）形式化三重模糊与条件映射，不以市价为监督信号；（2）层次 MoE、模糊加权／$\alpha$-cut 与三种合成语义；（3）三专家加主审的信赖域算子；（4）五指数、2{,}201 只上的系统与无真值评估协议。
+
+\begin{notebox}
+{\hei\bfseries 立场}\quad 不以贴近指数收盘为优化目标；市价只作诊断；不声称跑赢指数或预测点位。
+\end{notebox}
+
+与国金证券“多空博弈”路线（多空并行、高级 Agent 裁决）不同，本文不让 Agent 定价：估值由结构化引擎完成，Agent 只在四个参数族内提出有限修改，由主审裁决——区别在于把 LLM 的自由度压缩为可审计边界。
+
+\Sec{2}{问题定义与模型}
+
+\Sub{2.1}{记号与条件映射}
+
+记成分券 \(i=1,\dots,N\)，特征 \(x_i\) 覆盖财务、行业、生命周期、可比、舆情与市场；方法
+\(m\in M=\{\text{DCF},\text{可比},\text{舆情},\text{RIM},\text{DDM},\text{NAV},\text{rNPV},\text{SOTP}\}\)
+的输出为 \(f_m(x;\theta_m)\)，\(a_m\) 为可用性、\(\mu_m\) 为适用度、\(z\in Z\) 为六阶段生命周期、\(\theta\in\Theta_{\text{feas}}\) 为参数。条件映射与观测方程为
+\begin{equation*}
+V_i=F(x_i;\Theta)+\varepsilon_i,\qquad P_i=V_i(1+\eta_i).
+\end{equation*}
+可行域含权重和为 1、\(r>g\)、参数上下限与 severity caps。
+
+\Sub{2.2}{三重模糊}
+
+\noindent{\fontsize{14.8}{17.8}\selectfont
+\begin{tabularx}{\linewidth}{@{}>{\hei\bfseries}p{30mm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X@{}}
+\toprule[1.4pt]
+{\hei 来源} & {\hei 典型表现} & {\hei 当前处理}\\
+\midrule[0.6pt]
+输入 & 口径、缺失、新股与 ST、可比不足、非 PIT & 四层取值阶梯；缺失跳过或降置信度\\
+\midrule[0.45pt]
+模型 & 方法边界；生命周期误判 & Layer 0 前提门 + 六阶段 + 方法路由；剔除后归一\\
+\midrule[0.45pt]
+目标 & 无真值；市价$\neq$价值；指标冲突 & 不以收盘为目标；差异只诊断、不反向校正\\
+\bottomrule[1.4pt]
+\end{tabularx}}
+
+\Sub{2.3}{层次 MoE、门控与方法路由}
+
+生命周期作上层门控、方法作下层门控：
+\begin{align}
+F(x;\Theta)&=\sum_{z\in Z}p(z\mid x)\sum_{m\in M}w_{m\mid z}(x)\,f_{m,z}(x;\theta_{m,z}),\label{eq:moe}\\
+w_{m\mid z}(x)&=\frac{a_m(x)\,\mu_{m,z}(x)\,e^{\gamma_m}}{\sum_{j\in M}a_j(x)\,\mu_{j,z}(x)\,e^{\gamma_j}}.\label{eq:gate}
+\end{align}
+方法权重是“阶段$\times$方法”的条件权重：金融走 RIM／DDM，管线药企走 rNPV，多分部走 SOTP；不可用方法剔除后按剩余权重再归一。当前以 one-hot 近似 \(p(z\mid x)\)，式 \eqref{eq:moe} 为目标形态。
+
+\Sub{2.4}{模糊加权与 $\alpha$-cut}
+
+\begin{equation}
+\tilde V=\frac{\sum_{m}\tilde w_m\otimes\tilde v_m}{\sum_{m}\tilde w_m},\qquad
+[V]_\alpha=\Big\{\tfrac{\sum_{m}w_mv_m}{\sum_{m}w_m}:w_m\in[w_m]_\alpha,\ v_m\in[v_m]_\alpha\Big\}.
+\label{eq:fuzzy}
+\end{equation}
+\(M\le 4\) 时对权重盒顶点枚举可得精确端点；报告 \(\hat V=\tfrac12(V^-_{0.5}+V^+_{0.5})\) 与 \([V]_{0.1},[V]_{0.5},[V]_{0.9}\)。\textbf{【状态】}式 \eqref{eq:fuzzy} 为论文扩展，当前仍为清晰权重加 MC 区间。
+
+\Sub{2.5}{指数点位合成与合成语义}
+
+\begin{equation}
+V^{idx}=P^{idx}\cdot\frac{\sum_i w_i\left(V_i/P_i\right)}{\sum_i w_i},
+\qquad
+V^{pw}=P^{idx}\cdot\frac{\sum_i w_iV_i}{\sum_i w_iP_i}.
+\label{eq:index}
+\end{equation}
+跳过券不计入分子分母；三情景点位由逐券区间按同一权重合成。三种合成语义——线性池、对数池、专家乘积——分别对应“不惩罚分歧”“分歧惩罚”“精度加权”；\textbf{当前为线性池}，后两者为消融扩展。
+}
+
+% ------------------------------------------------------------------ 中栏 ---
+\setbox\colB=\vbox{%
+\hsize=\colw\linewidth=\colw\columnwidth=\colw
+\bodysize
+\raggedright\parindent=2em
+
+\Sec{3}{多智能体评审协议}
+
+协议把提议约束为有界、可审计、可回滚的参数编辑：专家只看本域证据，主审只能裁决。
+
+\Sub{3.1}{角色与权限}
+
+\noindent{\fontsize{14.8}{17.8}\selectfont
+\begin{tabularx}{\linewidth}{@{}>{\hei\bfseries}p{30mm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{82mm}@{}}
+\toprule[1.4pt]
+{\hei 角色} & {\hei 可见证据域} & {\hei 权限}\\
+\midrule[0.6pt]
+可比质量 & 公司行、纳入可比（$\le$8 家）、筛池与覆盖率、剔除台账 & 仅提 \mbox{comp\_weight\_pp}\\
+\midrule[0.45pt]
+折现参数 & CAPM（rf／ERP／$\beta$／kd／税率／D-E）、TTM 财务、生命周期 & 仅提 \mbox{wacc\_pp}、\mbox{tg\_pp}\\
+\midrule[0.45pt]
+舆情 & 舆情口径／标签／幅度／条数、证据、相对可比的偏离 & 仅提 \mbox{sent\_weight\_pp}\\
+\midrule[0.45pt]
+主审 & 三专家证据合并版、基线、结论与建议 & 不新增参数，只 accept／clamp／reject\\
+\bottomrule[1.4pt]
+\end{tabularx}}
+\TabNote{注：金融路由下仅折现专家参与；所有专家均看不到指数拟合点位。}
+
+\Sub{3.2}{证据门槛与幅度控制}
+
+建议须同时满足权限、severity 档位、confidence $\ge 0.65$、证据含数字与方向自洽；未过者进入 gated，只留痕、不送主审。网格为权重 5pp、WACC／\(g\) 0.2pp；caps 为可比 5／8／10pp、舆情 5／10pp、WACC 0.4／1.0pp、\(g\) 0.2／0.6pp。
+
+\Sub{3.3}{受限算子与两条性质}
+
+\begin{equation}
+T_{\text{apply}}(x)=F\bigl(x;\theta+A\,R\,G\,\Pi(e)\bigr),
+\qquad
+T_{\text{shadow}}(x)=F(x;\theta).
+\label{eq:op}
+\end{equation}
+其中 \(G\) 为证据门槛、\(R\) 为主审裁决、\(A\) 为被接受坐标的选择矩阵、\(\Pi\) 为专家提议。这是信赖域内的稀疏局部更新：\(\min_{\delta\in\mathcal C}\mathcal L(\theta+\delta;e)+\lambda\|\delta\|_1\)，\(\mathcal C=\{\delta:|\delta_j|\le c_j(s),\ \theta+\delta\in\Theta_{\text{feas}}\}\)。\textbf{【边界】}系统并不求解该优化：提议是热启动，门槛与主审是近似投影。
+
+若 caps 覆盖被接受坐标且主审执行 \(r>g\)，apply 的输出仍在可行域内，shadow 对 \(\theta\) 恒等。对 Gordon 终值 DCF（终值占比 0.7、\(r-g=4\%\)），0.6pp 的 \(g\) 上限约对应 10.5\% 弹性，1pp 的 \(r\) 上限约 12\%，故须叠加主审与回滚。
+
+\Sub{3.4}{shadow／apply 与审计回滚}
+
+shadow 是严格空操作：参数与估值不变，只多一条审计记录，为“没有 Agent”提供反事实；apply 才改参数——先快照 baseline，再回写重跑，中枢须为正，失败则恢复 baseline。
+
+\par\vspace{0.8mm}
+{\centering
+\begin{tikzpicture}[x=1mm,y=-1mm,
+  every node/.append style={font=\fontsize{12.2}{14.6}\selectfont}]
+
+\node[fb,text width=232mm] (ev) at (180,6)
+  {{\hei\bfseries 证据包 $e_i$}\quad 公司行 · 可比池 · CAPM · 财务 · 质量五指标 · 舆情（不含指数点位）};
+
+\node[fb,text width=100mm] (e1) at (62,21)
+  {{\hei\bfseries 可比质量}\quad comp\_weight\_pp};
+\node[fb,text width=100mm] (e2) at (180,21)
+  {{\hei\bfseries 折现参数}\quad wacc\_pp · tg\_pp};
+\node[fb,text width=100mm] (e3) at (298,21)
+  {{\hei\bfseries 舆情}\quad sent\_weight\_pp};
+
+\node[fr,text width=226mm] (gate) at (136,37)
+  {{\hei\bfseries 证据门槛}\quad 权限 · 具体数字 · 置信 $\ge$ 0.65 · 方向自洽 · 长度 · 非零};
+\node[fd,text width=88mm] (gated) at (296,37)
+  {未过门槛 $\rightarrow$ gated\\[0.1mm] 仅留痕，不送主审};
+
+\node[fr,text width=250mm] (main) at (136,52)
+  {{\hei\bfseries 主审裁决}\quad accept／clamp／reject（不新增参数、不跨域、$r>g$）};
+
+\node[fb,text width=156mm] (sh) at (86,67)
+  {{\hei\bfseries shadow}\quad 空操作 $T_{\text{shadow}}=F(x;\theta)$};
+\node[fb,text width=176mm] (ap) at (260,67)
+  {{\hei\bfseries apply}\quad 快照 $\rightarrow$ 回写重跑 $\rightarrow$ 失败回滚};
+
+\draw[fa] (180,9.2) -- (180,13.8);
+\draw[fa] (62,13.8) -- (298,13.8);
+\draw[fa] (62,13.8) -- (62,15.0);
+\draw[fa] (180,13.8) -- (180,15.0);
+\draw[fa] (298,13.8) -- (298,15.0);
+
+\draw[fa] (62,27.0) -- (62,30.6);
+\draw[fa] (180,27.0) -- (180,30.6);
+\draw[fa] (298,27.0) -- (298,30.6);
+\draw[fa] (62,30.6) -- (298,30.6);
+\draw[fa] (136,30.6) -- (136,31.4);
+
+\draw[fa] (224,37) -- (251,37);
+\draw[fa] (136,43.0) -- (136,46.4);
+
+\draw[fa] (136,57.4) -- (136,59.8);
+\draw[fa] (86,59.8) -- (260,59.8);
+\draw[fa] (86,59.8) -- (86,61.2);
+\draw[fa] (260,59.8) -- (260,61.2);
+
+\node[fn,text width=346mm,text=stone] at (180,75)
+  {审计落盘：每批配置快照 · 逐券 shadow.json · summary.html · 11 段报告 · 8 项机检 · apply 失败回滚};
+\end{tikzpicture}\par}
+\FigCap{1}{有界评审协议：门槛前置、主审两级裁决、shadow／apply 分叉与 baseline 回滚。}
+
+\Sec{4}{系统实现}
+
+批跑服务以 Python 子进程串起每券四步：估值引擎（路由与合成）$\rightarrow$ 统计校验（MC 3{,}000 次，seed 42）$\rightarrow$ 11 段报告 $\rightarrow$ 八项机检；单券失败记 skip，不阻断整批，并行度可配 3 或 10。
+
+覆盖五个指数：上证 50、上证 180、科创 50、沪深 300 与上证综指。综指取沪市 A 股全市场 2{,}201 只，总市值权重，剔除 ST/*ST 与未满计入期新股；数据来自公开披露的指数成分、财报、F10 与行情舆情。版本须显式披露：技能包 v3.29.1、引擎 2.28.0、批跑层按 v3.31.0 适配；smoke\_test.py 170 用例全绿（约 5 s），examples/ 27 个文件。
+
+\par\vspace{2.4mm}
+{\centering
+\begin{tikzpicture}[x=1mm,y=-1mm,
+  every node/.append style={font=\fontsize{12}{14.4}\selectfont}]
+\foreach \i/\xx/\ttl/\det in {%
+  1/26/{数据装配}/{成分·财报·F10},
+  2/84/{input\_builder}/{四层取值阶梯},
+  3/142/{valuation\_engine}/{Layer 0 · 路由},
+  4/200/{stat\_validation}/{MC 3{,}000},
+  5/258/{report\_generator}/{11 段 HTML},
+  6/316/{html\_check}/{8 项机检}}{
+  \node[fb,text width=50mm,minimum height=13mm] (s\i) at (\xx,9)
+    {{\hei\bfseries \ttl}\\[0.1mm]\det};
+}
+\draw[fa] (51.5,9) -- (56.5,9);
+\draw[fa] (109.5,9) -- (114.5,9);
+\draw[fa] (167.5,9) -- (172.5,9);
+\draw[fa] (225.5,9) -- (230.5,9);
+\draw[fa] (283.5,9) -- (288.5,9);
+\node[fn,text=stone] at (55,25) {每券 4 子进程 · 并行 3／10};
+\node[fn,text=stone] at (180,25) {单券失败 skip，不阻断整批};
+\node[fn,text=stone] at (305,25) {五指数 · 2{,}201 只};
+\node[fb,text width=338mm,minimum height=8mm] (svc) at (176,34)
+  {{\hei\bfseries 运行形态}\quad DSH 网页客户端 $\;\rightleftarrows\;$ Python 批跑服务 :3089 $\;\rightleftarrows\;$ 技能包 v3.29.1（10 脚本）};
+\end{tikzpicture}\par}
+\FigCap{2}{系统链路：数据装配、逐券四子进程、审计落盘与指数点位合成。}
+}
+
+% ------------------------------------------------------------------ 右栏 ---
+\setbox\colC=\vbox{%
+\hsize=\colw\linewidth=\colw\columnwidth=\colw
+\bodysize
+\raggedright\parindent=2em
+
+\Sec{5}{实验设计与结果}
+
+没有真值，不等于没有评估。本文以三件套做三角验证，市场指标只作诊断、不作优化目标：
+\begin{itemize}
+\item {\hei 合成基准}：已知 \(V_i^{\star}\)，注入财报错报、可比缺失、增长误判与路由错误，测恢复误差、区间覆盖、路由准确与参数恢复；首轮 1{,}200 例。
+\item {\hei 人工盲评}：从五指数分层抽 100–150 个券-周，隐藏 Agent 建议与拟合点位，4–6 名评审独立评证据、方向、幅度与置信，两轮 Delphi 加仲裁，报 Krippendorff $\alpha$。
+\item {\hei 内部一致性}：同输入多 seed、股票排列与单位缩放扰动；shadow 空操作、apply 回滚、八项机检通过率。
+\end{itemize}
+
+诊断残差 \(e_i=V_i/P_i-1\) 与其加权均值只用于描述偏离结构（方向、截面分布、行业集中度、对点位的贡献），不反向校正，也不进入损失函数。
+
+\TabHead{过程质量指标：定义、用途与期望方向}
+\noindent{\fontsize{14.8}{17.8}\selectfont
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{56mm}>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}p{68mm}@{}}
+\toprule[1.4pt]
+{\hei 指标} & {\hei 定义} & {\hei 方向}\\
+\midrule[0.6pt]
+覆盖率／跳过率 & ok／total 与 skip／total，跳过按原因分层 & 覆盖高、跳过低\\
+\midrule[0.45pt]
+离散度 & 逐券偏离或专家 $\delta$ 的 IQR & 看稳定性与解释\\
+\midrule[0.45pt]
+校准 & ECE、Brier（合成基准）；置信对采纳 & 越低越好\\
+\midrule[0.45pt]
+周环比 & 共同券参数中位绝对变动 & 低，但不以“不动”为目标\\
+\midrule[0.45pt]
+采纳率 & adopted／(adopted+rejected) & 高，需防“全采纳”偏差\\
+\midrule[0.45pt]
+区间宽度 & \(W_{0.8}=(V^+_{0.1}-V^-_{0.1})/\hat V\) & 覆盖约束下越窄越好\\
+\midrule[0.45pt]
+弹性 & \(\partial\ln V/\partial r\)、\(\partial\ln V/\partial g\) & 解释 caps 必要性\\
+\bottomrule[1.4pt]
+\end{tabularx}}
+
+\TabCap{1}{参考案例：引擎输出的综合中枢与区间（人民币亿元）}
+\noindent{\fontsize{14.8}{18.2}\selectfont
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{38mm}>{\raggedright\arraybackslash}X>{\raggedleft\arraybackslash}p{42mm}>{\raggedleft\arraybackslash}p{62mm}>{\centering\arraybackslash}p{22mm}@{}}
+\toprule[1.4pt]
+{\hei 案例} & {\hei 行业} & {\hei 中枢} & {\hei 区间} & {\hei 置信}\\
+\midrule[0.6pt]
+芯曜微电 & AI 芯片设计（Fabless） & 271.23 & 149.81–423.03 & 高\\
+\midrule[0.45pt]
+长鑫科技 & 半导体 & 3{,}425.67 & 1{,}630.64–5{,}659.13 & 高\\
+\midrule[0.45pt]
+天博智能 & 汽车热管理零部件 & 123.62 & 53.57–216.45 & 高\\
+\midrule[0.45pt]
+宇树科技 & 人形／四足机器人 & 972.42 & 569.24–1{,}446.64 & 高\\
+\bottomrule[1.4pt]
+\end{tabularx}}
+\TabNote{注：技能包示例案例，不是指数级回测；置信度为引擎输出，样本为示例、非随机抽样。}
+
+\TabCap{2}{系统证据：规模、工程与评估装置}
+\noindent{\fontsize{14.8}{18.2}\selectfont
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{68mm}>{\raggedright\arraybackslash}p{62mm}>{\raggedright\arraybackslash}X@{}}
+\toprule[1.4pt]
+{\hei 证据项} & {\hei 数值} & {\hei 口径}\\
+\midrule[0.6pt]
+回归用例 & 170 全绿 & smoke\_test.py，约 5 s\\
+\midrule[0.45pt]
+示例文件 & 27 & 11 输入／9 输出／7 统计\\
+\midrule[0.45pt]
+报告章节 & 11 & 投行级结构，逐券 HTML\\
+\midrule[0.45pt]
+机检项 & 8 & 结构／数字／单位／免责声明\\
+\midrule[0.45pt]
+成分券 & 2{,}201 & 上证综指，沪市 A 股全市场\\
+\midrule[0.45pt]
+指数 & 5 & 上证 50／180、科创 50、沪深 300、综指\\
+\bottomrule[1.4pt]
+\end{tabularx}}
+\TabNote{注：数值取仓库与跑批记录口径；回归与机检只保证“没有明显错误”，不保证估值合理。}
+
+消融覆盖关专家、关主审、shadow 对 apply、门槛 0.55／0.65／0.75、caps 缩放、三种池化、指数加权对价格加权与 RIM／DDM 开关；以券-周为单元做配对 bootstrap，报告效应量与 95\% 置信区间，主指标预注册，多重比较用 BH-FDR。
+
+\Sec{6}{结论与局限}
+
+{\bfseries 结论}\quad 一、把估值写成条件映射而非价格拟合，明确“不以收盘为真值”的可检验边界：差异只诊断，不作监督信号。二、层次 MoE 让方法权重成为“阶段$\times$方法”的条件权重；模糊加权与 $\alpha$-cut 提供可解释区间，但属论文扩展。三、三专家加主审的协议把 LLM 的自由度压缩为有界、可审计、可回滚的参数编辑；shadow 提供反事实，caps 与 \(r>g\) 守住可行域。四、五指数、2{,}201 只上的落地与无真值评估协议，构成可复用的过程质量证据。
+
+{\bfseries 局限}\quad 无真值：合成基准测机制、盲评测判断，均不能替代样本外检验；准 PIT：估值日期仅作参考，历史成分与财务并非严格 as-of；LLM 非确定性：temperature 0.1 但无 seed；样本选择：示例为随包案例，非随机抽样；版本差：技能 v3.29.1、引擎 2.28.0 与批跑 v3.31.0 护栏并存，数值须锁定单一口径。
+
+{\bfseries 下一步}\quad 接入 PIT 数据与跨批参数台账；把 $\alpha$-cut、对数池与专家乘积做成可消融对照；扩大盲评至百券-周以上；公开协议与回归用例，接受外部复现。
+}
+
+% --------------------------------------------------------------- 高度检查 ---
+\colmax=\dimexpr\ht\colA+\dp\colA\relax
+\ifdim\dimexpr\ht\colB+\dp\colB\relax>\colmax\relax
+  \colmax=\dimexpr\ht\colB+\dp\colB\relax\fi
+\ifdim\dimexpr\ht\colC+\dp\colC\relax>\colmax\relax
+  \colmax=\dimexpr\ht\colC+\dp\colC\relax\fi
+\typeout{POSTER-COLA-PT=\the\dimexpr\ht\colA+\dp\colA\relax}
+\typeout{POSTER-COLB-PT=\the\dimexpr\ht\colB+\dp\colB\relax}
+\typeout{POSTER-COLC-PT=\the\dimexpr\ht\colC+\dp\colC\relax}
+\typeout{POSTER-COLMAX-PT=\the\colmax}
+
+\noindent\inset%
+\raisebox{-\height}[0pt][0pt]{\usebox{\colA}}\hspace{18mm}%
+\raisebox{-\height}[0pt][0pt]{\usebox{\colB}}\hspace{18mm}%
+\raisebox{-\height}[0pt][0pt]{\usebox{\colC}}\par
+\vspace{\colmax}
+
+\vfill
+
+% ============================================================================
+%  三、页脚：参考文献 + 免责声明
+% ============================================================================
+\noindent{\color{lacquer}\rule{\paperwidth}{0.55pt}}\par
+\vspace{2.0mm}
+\noindent\inset%
+\begin{minipage}{\contentw}
+\parindent=0pt\parskip=0pt\raggedright
+{\hei\bfseries\fontsize{12.8}{15}\selectfont 参考文献}\hspace{3mm}%
+{\hei\fontsize{9.5}{11.5}\selectfont\color{stone}REFERENCES}\par
+\vspace{0.6mm}
+\begin{minipage}[t]{0.492\contentw}
+{\fontsize{13}{15.2}\selectfont\hangindent=2.1em\hangafter=1
+[1]\ 李双宏, 杨利国, 王洪涛. 基于大语言模型的上市公司智能估值模型构建[J]. 证券信息技术, 2026.\par
+\vspace{0.4mm}
+[2]\ DAMODARAN A. Investment Valuation: Tools and Techniques for Determining the Value of Any Asset[M]. 3rd ed. Hoboken: Wiley, 2012.\par
+\vspace{0.4mm}
+[3]\ JACOBS R A, JORDAN M I, NOWLAN S J, et al. Adaptive Mixtures of Local Experts[J]. Neural Computation, 1991, 3(1): 79–87.\par}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.492\contentw}
+{\fontsize{13}{15.2}\selectfont\hangindent=2.1em\hangafter=1
+[4]\ DU Y, LI S, TORRALBA A, et al. Improving Factuality and Reasoning in Language Models through Multiagent Debate[C]//Proceedings of ICML. 2024.\par
+\vspace{0.4mm}
+[5]\ GNEITING T, RAFTERY A E. Strictly Proper Scoring Rules, Prediction, and Estimation[J]. Journal of the American Statistical Association, 2007, 102(477): 359–378.\par
+\vspace{0.4mm}
+[6]\ 上海证券交易所. 上证综合指数编制方案[EB/OL]. 2020.\par}
+\end{minipage}
+\par\vspace{1.1mm}
+{\color{hair}\rule{\contentw}{0.35pt}}\par
+\vspace{1.0mm}
+{\hei\bfseries\fontsize{10}{12}\selectfont 免责声明}\quad
+{\fontsize{11.5}{14}\selectfont\color{stone}%
+ 本海报为内部研究材料，不构成投资建议或指数编制承诺。估值结果为技能包在给定输入下的机制输出，不代表中证指数有限公司的官方观点；参考案例为随包示例，非随机抽样，亦非指数级回测。\hfill
+ {\hei 中证指数有限公司}\quad 上海\quad\textperiodcentered\quad 2026 年 11 月\par}
+\end{minipage}\par
+\vspace{4.2mm}
+\noindent{\color{lacquer}\rule{\paperwidth}{0.55mm}}\par
+
+\end{document}
