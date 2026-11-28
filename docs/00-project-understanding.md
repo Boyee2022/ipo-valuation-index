@@ -155,7 +155,7 @@ ipo-valuation-index/
 
 ## 10. 文档地图
 
-- 论文：为什么这样建模、贡献与实验 → [01-paper-proposal.md](01-paper-proposal.md) / [02-poster.tex](02-poster.tex)
+- 论文：为什么这样建模、贡献与实验 → [01-paper-proposal.md](01-paper-proposal.md) / [四张学术海报](posters/README.md)
 - 工程：下一步怎么改 → [03-engineering-roadmap.md](03-engineering-roadmap.md)
 - 技能：方法论与拆分 → [04-skill-methodology.md](04-skill-methodology.md)
 - 决策：本轮定了什么 → [05-decision-log.md](05-decision-log.md)

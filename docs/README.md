@@ -12,7 +12,7 @@
 |---|---|---|---|
 | 00 | [项目理解](00-project-understanding.md) | 所有人 | 5–10 分钟建立全局上下文：业务、架构、链路、公式、现状、风险 |
 | 01 | [论文构想](01-paper-proposal.md) | 研究线 | 论文主张、数学骨架、三阶段、论文矩阵、实验设计 |
-| 02 | [LaTeX 海报](02-poster.tex) | 研究线 | A0 海报初稿（`xelatex` 编译，产物 `02-poster.pdf`） |
+| 02 | [四张学术海报](posters/README.md) | 研究线/评审 | 中文金融、中文核心、英文 NLP、英文金融四版；LaTeX + PDF + 预览 |
 | 03 | [工程路线](03-engineering-roadmap.md) | 工程线 | 五层改进：解耦向量化 / 表达可视化 / Agent 迭代 / 指数拟合 / 合成池 |
 | 04 | [技能方法论](04-skill-methodology.md) | 研究线 + 工程线 | 技能包七步流程、六层架构、核心机制、可复用思想、拆分 TODO |
 | 05 | [决策日志](05-decision-log.md) | 所有人 | 本轮讨论形成的决策、理由、待决项 |
@@ -30,6 +30,7 @@
 ## HTML 版（内部宣讲/对齐）
 
 - [文档门户](html/index.html)
+- [四张学术海报](posters/README.md)（PDF + LaTeX 源码）
 - [论文建议 · 阅读版](html/paper-proposal.html)
 - [工程规划 · 终端风](html/engineering-roadmap.html)
 - [SKILL 讲解 · 终端风](html/skill-explainer.html)

@@ -97,7 +97,7 @@ bash scripts/valuation-down.sh && bash scripts/valuation-up.sh   # Web 3081
 ## 文档
 
 - [项目理解](docs/00-project-understanding.md)
-- [论文构想](docs/01-paper-proposal.md) / [LaTeX 海报](docs/02-poster.tex)
+- [论文构想](docs/01-paper-proposal.md) / [四张学术海报](docs/posters/README.md)
 - [工程路线](docs/03-engineering-roadmap.md)
 - [技能方法论](docs/04-skill-methodology.md)
 - [Spec](docs/spec/) / [决策日志](docs/05-decision-log.md)
