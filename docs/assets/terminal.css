@@ -506,6 +506,8 @@ table.table {
   white-space: pre-wrap;
 }
 
+.formula sub, .formula sup { font-size: 0.72em; line-height: 0; }
+.formula i { font-style: italic; }
 .formula .lbl {
   display: block;
   margin-bottom: 6px;

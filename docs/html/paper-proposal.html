@@ -179,7 +179,7 @@
       <!-- 02 -->
       <section id="math" class="section">
         <div class="section-hd"><span class="no">02</span><h2>五层数学骨架</h2><span class="en">MATHEMATICAL BACKBONE</span></div>
-        <p class="tiny faint" style="margin:0 0 12px">下列为 Unicode 近似，便于阅读；LaTeX 源码见 <span class="code">02-poster.tex</span>。</p>
+        <p class="tiny faint" style="margin:0 0 12px">下列为 HTML 排版（上下标）的阅读版；LaTeX 源码与完整符号见 <span class="code">02-poster.tex</span> / <span class="code">01-paper-proposal.md</span>。</p>
 
         <div class="stack">
           <div class="layer"><span class="lk">L1</span><span class="lv">层次 MoE：生命周期 × 方法<small>z 为上层的阶段门控，m 为下层的方法门控；w 由可用性、适用度与先验 logit 决定。</small></span></div>
@@ -191,33 +191,34 @@
 
         <div class="formula">
           <span class="lbl">EQ 01 · HIERARCHICAL MoE · LaTeX 源码见 02-poster.tex</span>
-          F(x; Θ) = Σ_z p(z | x) Σ_m w_{m|z}(x) · f_{m,z}(x; θ_{m,z})
-          w_{m|z}(x) = a_m(x) μ_{m,z}(x) e^{γ_m} / Σ_j a_j(x) μ_{j,z}(x) e^{γ_j}
+          <i>F</i>(<i>x</i>; Θ) = Σ<sub><i>z</i></sub> <i>p</i>(<i>z</i> | <i>x</i>) · Σ<sub><i>m</i></sub> <i>w</i><sub><i>m</i>|<i>z</i></sub>(<i>x</i>) · <i>f</i><sub><i>m</i>,<i>z</i></sub>(<i>x</i>; θ<sub><i>m</i>,<i>z</i></sub>)
+          <i>w</i><sub><i>m</i>|<i>z</i></sub>(<i>x</i>) = <i>a</i><sub><i>m</i></sub>(<i>x</i>) · μ<sub><i>m</i>,<i>z</i></sub>(<i>x</i>) · e<sup>γ<sub><i>m</i></sub></sup> / Σ<sub><i>j</i></sub> <i>a</i><sub><i>j</i></sub>(<i>x</i>) · μ<sub><i>j</i>,<i>z</i></sub>(<i>x</i>) · e<sup>γ<sub><i>j</i></sub></sup>
         </div>
 
         <div class="formula">
           <span class="lbl">EQ 02 · FUZZY WEIGHTED AVERAGE &amp; α-CUT</span>
-          Ṽ = Σ_m w̃_m ⊗ ṽ_m / Σ_m w̃_m
-          [V]_α = { Σ_m w_m v_m / Σ_m w_m : w_m ∈ [w_m]_α, v_m ∈ [v_m]_α }
-          V̂ = ½ (V⁻_0.5 + V⁺_0.5),  W_0.8 = (V⁺_0.1 − V⁻_0.1) / V̂
+          Ṽ = Σ<sub><i>m</i></sub> w̃<sub><i>m</i></sub> ⊗ ṽ<sub><i>m</i></sub> / Σ<sub><i>m</i></sub> w̃<sub><i>m</i></sub>
+          [<i>V</i>]<sub>α</sub> = { Σ<sub><i>m</i></sub> <i>w</i><sub><i>m</i></sub><i>v</i><sub><i>m</i></sub> / Σ<sub><i>m</i></sub> <i>w</i><sub><i>m</i></sub> :
+                     <i>w</i><sub><i>m</i></sub> ∈ [<i>w</i><sub><i>m</i></sub>]<sub>α</sub>, <i>v</i><sub><i>m</i></sub> ∈ [<i>v</i><sub><i>m</i></sub>]<sub>α</sub> }
+          V̂ = ½(<i>V</i><sup>−</sup><sub>0.5</sub> + <i>V</i><sup>+</sup><sub>0.5</sub>),  <i>W</i><sub>0.8</sub> = (<i>V</i><sup>+</sup><sub>0.1</sub> − <i>V</i><sup>−</sup><sub>0.1</sub>) / V̂
         </div>
 
         <div class="formula">
           <span class="lbl">EQ 03 · INDEX COMPOSITION</span>
-          V_idx = P_idx · Σ_i w_i (V_i / P_i) / Σ_i w_i
-          V_pw  = P_idx · Σ_i w_i V_i / Σ_i w_i P_i
+          <i>V</i><sup>idx</sup> = <i>P</i><sup>idx</sup> · Σ<sub><i>i</i></sub> <i>w</i><sub><i>i</i></sub>(<i>V</i><sub><i>i</i></sub> / <i>P</i><sub><i>i</i></sub>) / Σ<sub><i>i</i></sub> <i>w</i><sub><i>i</i></sub>
+          <i>V</i><sup>pw</sup>  = <i>P</i><sup>idx</sup> · Σ<sub><i>i</i></sub> <i>w</i><sub><i>i</i></sub><i>V</i><sub><i>i</i></sub> / Σ<sub><i>i</i></sub> <i>w</i><sub><i>i</i></sub><i>P</i><sub><i>i</i></sub>
         </div>
 
         <div class="formula">
           <span class="lbl">EQ 04 · BOUNDED AGENT OPERATOR</span>
-          T_apply(x) = F(x; θ + δ),  δ = A R G Π(e),  T_shadow(x) = F(x; θ)
-          δ* = argmin_{δ ∈ C} L(θ + δ; e) + λ‖δ‖₁
-          C = { δ : |δ_j| ≤ c_j(s), θ + δ ∈ Θ_feas }
+          <i>T</i><sub>apply</sub>(<i>x</i>) = <i>F</i>(<i>x</i>; θ + δ),  δ = <i>A R G</i> Π(<i>e</i>),  <i>T</i><sub>shadow</sub>(<i>x</i>) = <i>F</i>(<i>x</i>; θ)
+          δ* = argmin<sub>δ ∈ C</sub> <i>L</i>(θ + δ; <i>e</i>) + λ‖δ‖<sub>1</sub>
+          <i>C</i> = { δ : |δ<sub><i>j</i></sub>| ≤ <i>c</i><sub><i>j</i></sub>(<i>s</i>), θ + δ ∈ Θ<sub>feas</sub> }
         </div>
 
         <div class="formula">
           <span class="lbl">EQ 05 · SELF-ITERATION</span>
-          θ_{t+1} = θ_t + η_t A_t δ_t*
+          θ<sub><i>t</i>+1</sub> = θ<sub><i>t</i></sub> + η<sub><i>t</i></sub> <i>A</i><sub><i>t</i></sub> δ<sub><i>t</i></sub>*
         </div>
 
         <div class="callout blue">
@@ -315,6 +316,12 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div class="callout blue">
+          <span class="h">4–5 个版本，不是三篇的直译</span>
+          P1 / P2 各做中英文双版本：中文版偏工程约束与国内指数场景，英文版偏协议与方法论的一般性；
+          P3 先作为两篇的实验章，盲评规模足够再独立。首发建议 <b>P1-EN + P2-CN</b>，共享 P3 实验章。
         </div>
 
         <div class="grid cols-3">
