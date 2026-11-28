@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="zh" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SKILL 讲解 · LLM IPO Valuation v3.29.1 · Valuation System Docs</title>
+<link rel="stylesheet" href="../assets/terminal.css">
+<script src="../assets/terminal.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">V</span>
+    <span>VALUATION SYSTEM</span>
+    <span class="brand-sub">RESEARCH DOCS</span>
+  </a>
+  <nav class="topnav">
+    <a href="index.html">文档首页</a>
+    <a href="paper-proposal.html">论文建议</a>
+    <a href="engineering-roadmap.html">工程规划</a>
+    <a href="skill-explainer.html" class="on">SKILL 讲解</a>
+  </nav>
+  <button class="theme-toggle" data-theme-toggle aria-label="切换主题">☾</button>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <div class="kicker">SKILL EXPLAINER <span class="dim">/ 2026-11</span></div>
+    <h1 class="display">一个技能包，把估值做成可审计流程<small>LLM IPO VALUATION · v3.29.1</small></h1>
+    <p class="lede">
+      它不是一个估值函数，而是一套把「数据采集 → 画像 → 产业链 → 多方法估值 → 情景裁决 → 统计校验 → 投行级报告」
+      写成规约的完整工作流；每个数字都要能回答「从哪来、可不可复算、边界在哪」。
+    </p>
+    <div class="meta-row">
+      <span class="tag am">国金证券论文方法论</span>
+      <span class="tag">达莫达兰生命周期框架</span>
+      <span class="tag ok">170 用例全绿</span>
+      <span class="tag mut">基线 d06a5ed</span>
+      <span class="tag warn">与批跑存在版本差</span>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="kpis">
+      <div class="kpi">
+        <div class="kpi-k">SKILL VERSION</div>
+        <div class="kpi-v mono">v3.29.1</div>
+        <div class="kpi-s">SKILL.md 标题；frontmatter 仍写 3.16.12</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">ENGINE</div>
+        <div class="kpi-v mono">2.28.0</div>
+        <div class="kpi-s">输出与 argparse 一致；文档写 2.27.1</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">SMOKE TESTS</div>
+        <div class="kpi-v mono">170</div>
+        <div class="kpi-s">实跑全绿 3.9s；SKILL.md 写 169</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">SCRIPTS</div>
+        <div class="kpi-v mono">10</div>
+        <div class="kpi-s">纯标准库；引擎 5,681 行</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">REPORT</div>
+        <div class="kpi-v mono">11 段</div>
+        <div class="kpi-s">交付前过 8 项机检</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">六阶段样本</div>
+        <div class="kpi-v mono">25 例</div>
+        <div class="kpi-s">落点 <span class="mono">15/7/3/0/0/0</span>，初创·年轻成长·衰退无实证</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="flow">
+    <div class="section-hd">
+      <span class="no">01</span>
+      <h2>七步工作流</h2>
+      <span class="en">SEVEN STEPS</span>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-no">STEP 0</div>
+        <div class="step-t">参数解析</div>
+        <div class="step-d">四层阶梯取数，产物是解析台账 <span class="mono">_parse_ledger</span>，不是填满的模板</div>
+      </div>
+      <div class="step">
+        <div class="step-no">STEP 1</div>
+        <div class="step-t">数据采集</div>
+        <div class="step-d">抓取 ＞ 文档 ＞ 数据源 ＞ 检索；六路数据回填统一 JSON</div>
+      </div>
+      <div class="step">
+        <div class="step-no">STEP 2</div>
+        <div class="step-t">画像评分</div>
+        <div class="step-d">六模块画像 + 盈利质量评分卡（5 指标，基准 <span class="mono">60</span> 分）</div>
+      </div>
+      <div class="step">
+        <div class="step-no">STEP 3</div>
+        <div class="step-t">产业链可比</div>
+        <div class="step-d">图谱 + 三档可比 + 质量评分 + 环节中枢</div>
+      </div>
+      <div class="step">
+        <div class="step-no">STEP 4</div>
+        <div class="step-t">引擎计算</div>
+        <div class="step-d">多方法并行 + 四部分拆分；<span class="mono">4b</span> 统计校验，<span class="mono">4c–4l</span> 十个 opt-in 模块</div>
+      </div>
+      <div class="step">
+        <div class="step-no">STEP 5</div>
+        <div class="step-t">情景博弈</div>
+        <div class="step-d">五层机制叠加出 Bear/Base/Bull，再按 <span class="mono">25/50/25</span> 裁决</div>
+      </div>
+      <div class="step">
+        <div class="step-no">STEP 6</div>
+        <div class="step-t">投行级报告</div>
+        <div class="step-d">11 段、三口径并排、warnings 全列、八项机检</div>
+      </div>
+    </div>
+
+    <div class="prose" style="margin-top:16px">
+      <p>三条入口共用这条主链：<strong>一句话估值</strong>（自动解析并一次问清 ≤4 项）、
+      <strong>参数模板</strong>（填 <span class="mono">input_template.json</span>）、
+      <strong>增量重估</strong>（<span class="mono">--compare</span> 输出 diff 与收敛/发散）。
+      第四条「统计校验模式」不是入口，而是 A 级默认执行的横切层。</p>
+    </div>
+  </section>
+
+  <section class="section" id="layers">
+    <div class="section-hd">
+      <span class="no">02</span>
+      <h2>六层架构</h2>
+      <span class="en">SIX-LAYER STACK</span>
+    </div>
+    <div class="stack">
+      <div class="layer">
+        <div class="lk">F · OUTPUT</div>
+        <div class="lv">输出层<small>三口径区间 · 假设依据 · 敏感性 · 数据溯源 · 八项机检</small></div>
+      </div>
+      <div class="layer">
+        <div class="lk">E · REASONING</div>
+        <div class="lv">推理层<small>论文/专利：多空方博弈 + 高级 Agent 裁决｜技能：三情景参数化近似｜批跑：三专家 + 主审 + 有界回写——三层不是同一件事</small></div>
+      </div>
+      <div class="layer">
+        <div class="lk">D · VALUATION</div>
+        <div class="lv">估值层<small>DCF × 可比 × RIM/DDM/NAV/rNPV/SOTP × 增量维度修正 × IPO 定价约束</small></div>
+      </div>
+      <div class="layer">
+        <div class="lk">C · CHAIN</div>
+        <div class="lv">产业链层<small>产业链图谱 · 可比三档 · peer_screening 证据链 · β 60 个月回归</small></div>
+      </div>
+      <div class="layer">
+        <div class="lk">B · UNDERSTAND</div>
+        <div class="lv">理解层<small>六模块公司画像 · 盈利质量评分卡 · 生命周期判别与证据</small></div>
+      </div>
+      <div class="layer">
+        <div class="lk">A · DATA</div>
+        <div class="lv">数据层<small>结构化财务 × 公告/新闻/研报 × 行情，统一回填 <span class="mono">input_template.json</span></small></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="decisions">
+    <div class="section-hd">
+      <span class="no">03</span>
+      <h2>三个关键决策</h2>
+      <span class="en">KEY DESIGN CHOICES</span>
+    </div>
+
+    <h3 style="font-size:16px;margin:18px 0 10px">① 六阶段：阶段决定「用哪个工具」，而不是「重要几倍」</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>阶段</th><th>达莫达兰工具定位</th><th class="num">DCF</th><th class="num">可比</th><th class="num">舆情</th><th>25 例落点</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="ink">初创 startup</td><td>期权/VC 法；P/E 无意义、EV/Sales 为主</td><td class="num">0.25</td><td class="num">0.55</td><td class="num">0.20</td><td><span class="tag err">0</span></td></tr>
+          <tr><td class="ink">年轻成长 young_growth</td><td>情景 DCF + 生存概率；EV/Sales、EV/User</td><td class="num">0.30</td><td class="num">0.50</td><td class="num">0.20</td><td><span class="tag err">0</span></td></tr>
+          <tr><td class="ink">高速成长 high_growth</td><td>两阶段 DCF（增长 + fade），终值易吞估值</td><td class="num">0.30</td><td class="num">0.50</td><td class="num">0.20</td><td><span class="tag am">3</span></td></tr>
+          <tr><td class="ink">成熟成长 mature_growth</td><td>标准 DCF 与交易倍数并列</td><td class="num">0.35</td><td class="num">0.50</td><td class="num">0.15</td><td><span class="tag am">7</span></td></tr>
+          <tr><td class="ink">成熟稳定 mature_stable</td><td>DCF / DDM + 倍数</td><td class="num">0.40</td><td class="num">0.50</td><td class="num">0.10</td><td><span class="tag ok">15</span></td></tr>
+          <tr><td class="ink">衰退 decline</td><td>清算价值 vs 持续经营价值并列</td><td class="num">0.45</td><td class="num">0.45</td><td class="num">0.10</td><td><span class="tag err">0</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout red" style="margin-top:14px">
+      <div class="h">为什么弃用 k_lifecycle 乘数</div>
+      旧乘数有三处硬伤：初创档舆情归一化后占 <span class="mono">37.50%</span>（是 DCF 的两倍）；成长档恒等
+      <span class="mono">{1,1,1}</span>，最需约束的档反而零调整；衰退与成熟的舆情占比只差
+      <span class="mono">0.05pp</span>。更根本的是语义错位——阶段问「用哪个工具」，乘数答「重要几倍」。
+      25 例仅改开关，Δ 落在 <span class="mono">[−4.69%, +3.03%]</span>；但 <strong>base 权重为 0 与 Layer 0 否决的路径不得被表复活</strong>，
+      统一记入 <span class="mono">blocked_paths</span>。
+    </div>
+
+    <h3 style="font-size:16px;margin:24px 0 10px">② Layer 0：先问「FCFF 能不能定义」，再谈估值</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>行业类</th><th>DCF 准入</th><th>建议主方法</th><th class="num">DCF 权重上限</th><th>原因（简）</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="ink">financial</td><td><span class="tag err">否</span></td><td>RIM / DDM</td><td class="num">0.0</td><td>债务是经营原料，资本结构≈经营要素</td></tr>
+          <tr><td class="ink">resource</td><td><span class="tag err">否</span></td><td>NAV</td><td class="num">0.0</td><td>储量耗尽、价格外生</td></tr>
+          <tr><td class="ink">reit_utility</td><td><span class="tag warn">条件</span></td><td>NAV</td><td class="num">0.3</td><td>监管定价、重资产</td></tr>
+          <tr><td class="ink">pipeline_pharma</td><td><span class="tag warn">条件</span></td><td>rNPV</td><td class="num">0.2</td><td>现金流二元（成/败）</td></tr>
+          <tr><td class="ink">holdco</td><td><span class="tag warn">条件</span></td><td>SOTP</td><td class="num">0.3</td><td>多分部异质集团</td></tr>
+          <tr><td class="ink">negative_fcff</td><td><span class="tag warn">条件</span></td><td>概率加权 DCF</td><td class="num">0.3</td><td>负 FCFF 占比 &gt; 60%</td></tr>
+          <tr><td class="ink">general</td><td><span class="tag ok">是</span></td><td>DCF</td><td class="num">1.0</td><td>前提成立</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3 style="font-size:16px;margin:24px 0 10px">③ 四部分合成：谁承担什么，必须一眼看清</h3>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>部分</th><th class="num">缺省权重</th><th>包含</th><th>不包含</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="ink">① DCF</td><td class="num">0.30</td><td>内在价值、显式期 + 终值</td><td>市场修正、情绪、流动性</td></tr>
+          <tr><td class="ink">② 可比公司法</td><td class="num">0.50</td><td>盈利质量 + 商誉折价 + 因子校准 + 流动性折扣</td><td>市场情绪标量</td></tr>
+          <tr><td class="ink">③ 市场舆情</td><td class="num">0.20</td><td>板块热度 + 个股舆情 + 情景因子（clamp ±10%）</td><td>质量、流动性（口径 B 彻底解耦）</td></tr>
+          <tr><td class="ink">④ 统计检验</td><td class="num">—</td><td>MC 的 P5–P95 区间</td><td>不参与加权</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="formula" style="margin-top:12px">
+      <span class="lbl">SYNTHESIS</span>
+      value = ② × w_comp + ③ × w_sent + ① × w_dcf ；② ③ 共用 comp_v → 有效路径数按 <span class="mono">2.3</span> 计
+    </div>
+  </section>
+
+  <section class="section" id="stats">
+    <div class="section-hd">
+      <span class="no">04</span>
+      <h2>统计校验与报告</h2>
+      <span class="en">VALIDATION &amp; DELIVERY</span>
+    </div>
+    <div class="flow">
+      <div class="flow-node">引擎点估计<small>多方法 + 四部分</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">MC <span class="mono">3000</span> 次<small>seed 42，P5–P95</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">弹性 · Spearman · 稳健性<small>3 种权重方案 + 极端样本剔除</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">三情景裁决<small>25/50/25</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">11 段报告<small>三口径并排</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">八项机检<small>退出码非 0 不交付</small></div>
+    </div>
+
+    <div class="grid cols-2" style="margin-top:16px">
+      <div class="panel">
+        <div class="panel-hd">置信度构成 <span class="panel-code">X1</span></div>
+        <div class="panel-bd">
+          <div class="formula">
+            <span class="lbl">FACTOR</span>
+            (0.7 + 0.3 × 完整度) × (0.6 + 0.4 × 质量 / 60) × 因子校准系数
+          </div>
+          <p class="tiny dim" style="margin:10px 0 0">
+            高 ≥ <span class="mono">80</span>｜中 <span class="mono">60–80</span>｜低 &lt; <span class="mono">60</span>。
+            另有三类校正：方法覆盖度、方法分歧度、参数护栏，均封顶 <span class="mono">79.9</span>（不得评「高」）。
+          </p>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd">八项交付机检 <span class="panel-code">html_check</span></div>
+        <div class="panel-bd">
+          <div class="table-wrap">
+            <table class="table">
+              <tbody>
+                <tr><td>C1</td><td>占位符零残留 / 无外链</td><td>C5</td><td>符号根因防护</td></tr>
+                <tr><td>C2</td><td>标签平衡</td><td>C6</td><td>数字对照引擎输出</td></tr>
+                <tr><td>C3</td><td>符号重复</td><td>C7</td><td>章节结构 / 锚点</td></tr>
+                <tr><td>C4</td><td>单位符号冗余</td><td>C8</td><td>渲染残留</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="callout blue" style="margin-top:14px">
+      <div class="h">双口径，不是二选一</div>
+      报告必须同时给出<strong>情景区间</strong>（Step 5 裁决）与 <strong>MC 90% 区间</strong>（Step 4b），
+      再取交集得到修正区间；三者分工是「方向 / 带宽 / 中枢」，不可互相替代。
+      引擎 warnings 必须全量呈现——包括「终值占比 &gt; 85%」「可比仅 N 家」「WACC 与 CAPM 偏差」这类不阻断却改变结论可信度的提示。
+    </div>
+  </section>
+
+  <section class="section" id="ideas">
+    <div class="section-hd">
+      <span class="no">05</span>
+      <h2>设计思想</h2>
+      <span class="en">FIVE PRINCIPLES</span>
+    </div>
+    <div class="grid cols-2">
+      <div class="panel accent">
+        <div class="panel-hd">01 · 结构化先验优先于黑箱拟合</div>
+        <div class="panel-bd">
+          <p class="tiny dim">能用一张可读表表达的，就不写拟合或隐式系数：<span class="mono">DAMODARAN_STAGE_WEIGHTS</span>（六行三列）、
+          <span class="mono">PLC6_SHAPE_PARAMS</span>（n/CAP/形态）、<span class="mono">TV_SHARE_GRADES</span>（40/75/85）。
+          LLM 负责取数与叙事，不负责发明数值。</p>
+        </div>
+      </div>
+      <div class="panel accent">
+        <div class="panel-hd">02 · 可审计证据链优先于结论</div>
+        <div class="panel-bd">
+          <p class="tiny dim">每个数字都能回答「从哪来」：可比七项判据 + 剔除理由枚举 + 状态机；
+          <span class="mono">growth_seq_detail[{t,g,src,clamped_by}]</span> 逐年标来源；
+          <span class="mono">coefficient_detail</span> 让权重可逐项复算。</p>
+        </div>
+      </div>
+      <div class="panel accent">
+        <div class="panel-hd">03 · 边界护栏优先于「算得出来」</div>
+        <div class="panel-bd">
+          <p class="tiny dim"><span class="mono">blocked_paths</span> 防止被表复活；阶段间 n 与 CAP 违反直接抛错；
+          权益下限 <span class="mono">max(0, net_cash)</span> 守住股东有限责任；PEG 双道护栏；
+          终值占比 &gt; <span class="mono">85%</span> 禁出单点。宁可不出数，不出错数。</p>
+        </div>
+      </div>
+      <div class="panel accent">
+        <div class="panel-hd">04 · 单一真源与版本化参数</div>
+        <div class="panel-bd">
+          <p class="tiny dim">常量集中在引擎顶部与 <span class="mono">industry_params.json</span>；报告层不自算、只渲染引擎输出。
+          参数库带版本（industry_params <span class="mono">1.0.1→1.0.3</span>，calibration 有 default + case 覆盖），改表即改口径。</p>
+        </div>
+      </div>
+      <div class="panel accent">
+        <div class="panel-hd">05 · 机器可检 + 诚实退化</div>
+        <div class="panel-bd">
+          <p class="tiny dim"><span class="mono">170</span> 个用例包含结构断言、反向断言、性质测试、AST 断言与逐字节零回归；
+          未选中的口径只输出 <span class="mono">skipped + reason</span>，不产数值——「算了但没用的数字，最终一定会被引用一次」。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="todo">
+    <div class="section-hd">
+      <span class="no">06</span>
+      <h2>拆分 TODO</h2>
+      <span class="en">DECOMPOSITION</span>
+    </div>
+    <p class="prose" style="max-width:none">目标不是把 5,681 行切小，而是让每个模块有稳定输入/输出契约，可独立测试、可被批跑按需组合。
+    拆分红线：<strong>11 个 examples + 25 例批跑的中枢/区间/置信度必须逐位不变</strong>。</p>
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>#</th><th>模块</th><th>输入 → 输出</th><th>依赖</th><th>验收标准</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="mono">M1</td><td class="ink">数据与财务口径</td><td>代码/文档/行情 → 归一化 <span class="mono">financials</span> + 来源</td><td>—</td><td>缺字段显式 null；同代码两次抓取一致</td></tr>
+          <tr><td class="mono">M2</td><td class="ink">画像与生命周期</td><td><span class="mono">financials</span> → <span class="mono">lifecycle</span> / 评分卡</td><td>M1</td><td>25 例落点与 v3.29.1 逐位一致</td></tr>
+          <tr><td class="mono">M3</td><td class="ink">可比池与证据链</td><td>可比 + 画像 → 三档 / 证据链 / β</td><td>M1</td><td>七项判据可复算；诊断模式零数值影响</td></tr>
+          <tr><td class="mono">M4</td><td class="ink">DCF 内核</td><td>财务 + 开关 → <span class="mono">scenarios.*.dcf</span></td><td>M2、M5</td><td>11 例 DCF 逐位一致；单调性断言全过</td></tr>
+          <tr><td class="mono">M5</td><td class="ink">相对估值与替代法</td><td>可比 + 中枢 + 管线 → 可比/RIM/DDM/NAV/rNPV/SOTP</td><td>M1、M3</td><td>手算交叉校验；未选中口径不产数值</td></tr>
+          <tr><td class="mono">M6</td><td class="ink">舆情与增量维度</td><td>事件/政策/热度 → <span class="mono">impact_map</span> / 情绪修正 / 商誉</td><td>M1</td><td>方向/强度正交；band 与上限可复算</td></tr>
+          <tr><td class="mono">M7</td><td class="ink">合成与裁决</td><td>各方法 + 权重 → <span class="mono">synthesis</span> / 置信度</td><td>M2、M4–M6</td><td>四部分自洽；有效路径 2.3 留痕</td></tr>
+          <tr><td class="mono">M8</td><td class="ink">统计校验</td><td>输入 + 引擎输出 → MC / 弹性 / 稳健性</td><td>M7</td><td>seed 42 两次跑逐位一致</td></tr>
+          <tr><td class="mono">M9</td><td class="ink">报告与机检</td><td>全部输出 → 11 段 HTML + 机检码</td><td>M1–M8</td><td>八项机检全过；15+ 案例 A/B 逐字节一致</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" id="risks">
+    <div class="section-hd">
+      <span class="no">07</span>
+      <h2>局限与风险</h2>
+      <span class="en">LIMITS</span>
+    </div>
+    <div class="prose">
+      <ul>
+        <li><strong>无真值。</strong>校验的是内部一致、可复算、可解释；没有一例用事后股价或发行定价做样本外检验，案例校验不等于回测。</li>
+        <li><strong>参数经验性强。</strong>六阶段权重、PoS 表、商誉折价档、情绪强度矩阵多为先验；形态差异对总估值上限约 <span class="mono">2%</span>，但 <span class="mono">g₁/tg</span> 选错会整体平移路径。</li>
+        <li><strong>样本覆盖窄。</strong>25 例落点 <span class="mono">15/7/3/0/0/0</span>，初创·年轻成长·衰退三档零实证——而这恰是 IPO 估值最需要的三档。</li>
+        <li><strong>复杂度高。</strong>引擎 <span class="mono">5,681</span> 行，十个 opt-in 模块彼此有仲裁规则；改一处要同时看常量、导入期断言、冒烟用例、报告披露。</li>
+        <li><strong>LLM 报告层与引擎层的边界靠纪律。</strong>报告 11 段大量文案由引擎字段拼装，「渲染型自由文本未全量覆盖」同族缺陷已暴露 <span class="mono">6</span> 次。</li>
+      </ul>
+    </div>
+    <div class="callout red" style="margin-top:6px">
+      <div class="h">版本漂移已经发生，联调必须逐字段核对</div>
+      工作树：标题 <span class="mono">v3.29.1</span> / frontmatter <span class="mono">3.16.12</span> / 引擎 <span class="mono">2.28.0</span> /
+      文档 <span class="mono">2.27.1</span> / 冒烟 <span class="mono">170</span> vs 文档 <span class="mono">169</span>。
+      实测 <span class="mono">examples/input_example.json</span>：中枢 <span class="mono">261.4</span> 亿、置信度「高」、输出<strong>无</strong>
+      <span class="mono">industry_fallback</span>。
+      批跑（d06a5ed）已按 <span class="mono">v3.31.0</span> 适配：<span class="mono">pipeline.py</span> 判
+      <span class="mono">synthesis.industry_fallback</span>、<span class="mono">input_builder.py</span> 写
+      <span class="mono">financials.net_assets_fallback</span>——工作树引擎<strong>两者都不支持</strong>，替换上线会让两处护栏静默失效
+      （不报错，只是不生效）。
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <span>技能工作树 <span class="mono">skills/llm-ipo-valuation</span> · 引擎 <span class="mono">2.28.0</span> · 冒烟 <span class="mono">170</span> 用例</span>
+  <span>对照基线 <span class="mono">origin/main d06a5ed</span>（2026-11-27）</span>
+  <span>正文：<a href="../04-skill-methodology.md">04-skill-methodology.md</a></span>
+  <span>文献：[A] 论文系 · [B] 课题解读 · [C] 专利 <span class="mono">CN121765307A</span> / <span class="mono">ZL202410113286.8</span> · [D] 技术论文</span>
+  <span>内部研究资料 · 不构成投资建议</span>
+</footer>
+
+</body>
+</html>

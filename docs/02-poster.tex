@@ -1,0 +1,444 @@
+% !TEX program = xelatex
+% ============================================================
+%  模糊证据下的有界校准 · A0 竖版三栏海报（论文初稿）
+%  编译（在 docs/ 下跑两遍）：
+%    cd docs && xelatex -interaction=nonstopmode 02-poster.tex
+%    cd docs && xelatex -interaction=nonstopmode 02-poster.tex
+%  产物：docs/02-poster.pdf
+%  依赖：TeX Live（xelatex + ctex + beamerposter + tikz），无需联网。
+% ============================================================
+\documentclass[final]{beamer}
+\usepackage[orientation=portrait,size=a0,scale=1.15]{beamerposter}
+\usepackage[UTF8,fontset=mac]{ctex}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+\usetheme{default}
+
+% ---------- 颜色 ----------
+\definecolor{csred}{HTML}{C8102E}
+\definecolor{ink}{HTML}{101828}
+\definecolor{dim}{HTML}{5B6573}
+\definecolor{paper}{HTML}{F6F3ED}
+\definecolor{panel}{HTML}{FFFFFF}
+\definecolor{line}{HTML}{D8D2C4}
+\definecolor{amber}{HTML}{B45309}
+\definecolor{teal}{HTML}{0E7490}
+\definecolor{softred}{HTML}{FBEAEC}
+\definecolor{softblue}{HTML}{EAF2F7}
+\definecolor{softamber}{HTML}{FDF3E3}
+
+% ---------- 全局样式 ----------
+\setbeamercolor{background canvas}{bg=paper}
+\setbeamercolor{normal text}{fg=ink,bg=paper}
+\setbeamercolor{block title}{fg=white,bg=csred}
+\setbeamercolor{block body}{fg=ink,bg=panel}
+\setbeamercolor{itemize item}{fg=csred}
+\setbeamercolor{itemize subitem}{fg=csred}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{blocks}[rounded][shadow=false]
+\setbeamertemplate{itemize items}[circle]
+\setbeamerfont{normal text}{size*={28}{38}}
+\setbeamerfont{block title}{size*={38}{44},series=\bfseries}
+\setbeamerfont{block body}{size*={28}{38}}
+\setbeamersize{text margin left=14mm,text margin right=14mm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1ex}
+\setlength{\columnsep}{9mm}
+\renewcommand{\arraystretch}{1.22}
+
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcommand{\kw}[1]{\textcolor{csred}{\textbf{#1}}}
+\newcommand{\muted}[1]{\textcolor{dim}{#1}}
+
+\begin{document}
+\begin{frame}[t]
+
+% ============================================================
+% 页眉
+% ============================================================
+\begin{center}
+{\color{csred}\rule{\linewidth}{2.4mm}}\\[7mm]
+{\fontsize{74}{82}\selectfont\bfseries 模糊证据下的有界校准}\\[5mm]
+{\fontsize{35}{43}\selectfont 指数成分券估值：层次化 MoE、多 Agent 评审与无真值评估}\\[4mm]
+{\fontsize{20}{26}\selectfont\color{dim}Bounded Calibration under Fuzzy Evidence: Hierarchical MoE, Multi-Agent Review, and Ground-Truth-Free Evaluation}\\[7mm]
+{\fontsize{25}{31}\selectfont 宋泊毅 / 项目组 \quad·\quad 中证指数有限公司 · 创新项目 \quad·\quad 2026-11 · 工作稿 v0.1}
+\end{center}
+
+\vspace{3mm}
+
+% ============================================================
+% 三栏
+% ============================================================
+\begin{columns}[t,onlytextwidth]
+
+% ============================== 左栏 ==============================
+\begin{column}{0.315\textwidth}
+
+\begin{block}{01 ·  问题与三重模糊}
+{\bfseries 一句话主张：}企业估值是模糊证据下的条件非线性映射；多 Agent 是有界、可审计的参数更新器；优化方向是“人定 → Agent 提 → 系统学”。
+
+\vspace{2mm}
+{\fontsize{22}{28}\selectfont
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.17\linewidth}YY@{}}
+\toprule
+\kw{模糊} & \kw{表现} & \kw{当前处理} \\
+\midrule
+输入 & 财报口径、缺失、新股/ST、可比不足、舆情真假、时点不 PIT & 四层取值阶梯；缺失跳过或降置信度 \\
+模型 & DCF、可比、舆情、RIM、DDM、NAV、rNPV、SOTP 各有边界；生命周期有误差 & Layer 0 门 + 六阶段 + 路由 + 三路加权；剔除后归一 \\
+目标 & 无真值；市价$\neq$价值；指数收盘$\neq$答案；“准/稳/可审”冲突 & 只诊断、不反向校正；多指标三角验证 \\
+\bottomrule
+\end{tabularx}}
+
+\vspace{3mm}
+\colorbox{softred}{\parbox{\dimexpr\linewidth-2\fboxsep}{%
+\kw{不把“贴近指数收盘”当目标。}定义诊断残差
+{\fontsize{24}{30}\selectfont
+\[
+e_i=\frac{V_i}{P_i}-1,\qquad \bar e_w=\frac{\sum_i w_i e_i}{\sum_i w_i}.
+\]
+}
+\(e_i\) 只用于解释偏离方向、截面分布、行业集中度与点位贡献；不据此改写 \(V_i\)，也不把 \(P_i\) 当监督信号。价格含噪声与情绪，以收盘为目标会把“复制指数”当成“估值”。}}
+
+\vspace{3mm}
+{\bfseries 三条主张}\\[1mm]
+\begin{enumerate}
+\item \kw{估值是映射，不是查表}：\(V_i=F(x_i;\Theta)+\varepsilon_i\)，价格是含噪观测。
+\item \kw{Agent 是参数更新器}：只在证据域内提有界修改，不写估值叙事。
+\item \kw{人定 → Agent 提 → 系统学}：当前处于阶段 II 早期。
+\end{enumerate}
+
+\vspace{2mm}
+\muted{\footnotesize 方法论来源：国金证券李双宏、杨利国、王洪涛《基于大语言模型的上市公司智能估值模型构建》（《证券信息技术》）；六层架构 A–F 与“多空方并行博弈 + 高级 Agent 裁决”见技能 \texttt{methodology.md}。本文把 Agent 改为参数评审，不做估值博弈。}
+\end{block}
+
+\begin{block}{02 ·  基础模型：层次 MoE + 模糊加权}
+{\bfseries 记号：}\(x_i\) 特征，\(V_i\) 不可观测价值，\(P_i\) 收盘价，\(m\) 方法，\(f_m\) 方法估值，\(a_m\in\{0,1\}\) 可用性，\(\mu_m\in[0,1]\) 适用度，\(w_m\) 门控，\(z\) 生命周期，\(\theta\) 参数。
+
+\vspace{2mm}
+{\fontsize{24}{30}\selectfont
+\begin{align}
+F(x;\Theta)&=\sum_{z\in Z}p(z\mid x)\sum_{m\in M}w_{m\mid z}(x)\,f_{m,z}(x;\theta_{m,z}),\tag{1}\\
+w_{m\mid z}(x)&=\frac{a_m(x)\,\mu_{m,z}(x)\,e^{\gamma_m}}{\sum_{j}a_j(x)\,\mu_{j,z}(x)\,e^{\gamma_j}}.\tag{2}
+\end{align}
+}
+
+\muted{\(z\)：六阶段生命周期；\(a_m\)：Layer 0 / 方法路由；\(\gamma_m\)：方法先验 logit。金融走 RIM/DDM，管线药企可走 rNPV，报表驱动 FCFF；PEG 单列；估值/价 \(\ge5\times\) 或 \(\le0.2\times\) 只标记、不改点位。}
+
+\vspace{3mm}
+{\bfseries 模糊加权与 \(\alpha\)-cut（论文扩展，当前为清晰权重）：}
+{\fontsize{24}{30}\selectfont
+\begin{center}
+\resizebox{\linewidth}{!}{$\displaystyle
+\tilde V=\frac{\sum_m \tilde w_m\otimes \tilde v_m}{\sum_m \tilde w_m},\qquad
+[V]_\alpha=\left\{\frac{\sum_m w_mv_m}{\sum_m w_m}:w_m\in[w_m]_\alpha,\ v_m\in[v_m]_\alpha\right\}
+$}
+\end{center}
+}
+\(M\le4\) 时可顶点枚举或用 Charnes-Cooper 变换求精确端点；工程上可先用安全外包络。去模糊化
+{\fontsize{24}{30}\selectfont
+\[
+\hat V=\frac12\left(V^-_{0.5}+V^+_{0.5}\right),\qquad
+W_{0.8}=\frac{V^+_{0.1}-V^-_{0.1}}{\hat V},
+\]
+}
+并报告 \([V]_{0.1},[V]_{0.5},[V]_{0.9}\)。当前只有清晰权重、情景区间与 MC 区间，模糊层尚未上线。
+
+\vspace{3mm}
+{\bfseries 指数点位合成（当前主口径）：}
+{\fontsize{24}{30}\selectfont
+\[
+V^{idx}=P^{idx}\cdot\frac{\sum_i w_i\left(V_i/P_i\right)}{\sum_i w_i},\qquad
+V^{idx}_{pw}=P^{idx}\cdot\frac{\sum_i w_iV_i}{\sum_i w_iP_i}.
+\]
+}
+跳过券不计入分子分母；若 \(V_i=kP_i\)，两者都等于 \(kP^{idx}\)。三情景点位由逐券区间按同一权重合成；前者为主口径，价格加权只作对照。
+
+\vspace{3mm}
+{\bfseries 方法路由（当前）}
+{\fontsize{22}{28}\selectfont
+\begin{tabularx}{\linewidth}{@{}p{0.22\linewidth}Y@{}}
+\toprule
+路由 & 主方法 / 说明 \\
+\midrule
+一般 & DCF + 可比 + 舆情；Layer 0 A/B 门 \\
+金融 & RIM + DDM；DCF 权重 0；WACC 面为 Ke \\
+管线药企 & rNPV + 可比；个股覆写 \\
+多分部 & SOTP + 可比；控股折价 \\
+\bottomrule
+\end{tabularx}}
+
+\vspace{2mm}
+{\bfseries 三种合成语义}
+{\fontsize{22}{28}\selectfont
+\begin{tabularx}{\linewidth}{@{}p{0.18\linewidth}YY@{}}
+\toprule
+语义 & 公式 & 性质 \\
+\midrule
+线性池 & \(\sum w_mv_m\) & 当前基线；不惩罚分歧；极端值主导 \\
+对数池 & \(\exp(\sum w_m\ln v_m)\) & 隐含分歧惩罚；要求 \(v_m>0\) \\
+专家乘积 & \(\prod p_m^{w_m}\) & 精度加权；相关专家会过度自信 \\
+\bottomrule
+\end{tabularx}}
+\end{block}
+
+\end{column}
+
+% ============================== 中栏 ==============================
+\begin{column}{0.315\textwidth}
+
+\begin{block}{03 ·  多 Agent：有界校准，不是自由定价}
+{\fontsize{22}{28}\selectfont
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.13\linewidth}YYp{0.24\linewidth}@{}}
+\toprule
+\kw{角色} & \kw{证据域} & \kw{可提参数} & \kw{门槛 / 上限} \\
+\midrule
+可比质量 & 样本量、覆盖率、规模倍数、倍数质量、会计可比 & 仅 \texttt{comp\_weight\_pp} & 置信 \(\ge0.65\)；5/8/10pp \\
+折现参数 & CAPM、\(\beta\)、生命周期、增长、现金流质量 & \texttt{wacc\_pp}、\texttt{tg\_pp} & 0.4/1.0pp；0.2/0.6pp \\
+舆情 & 口径、标签、幅度、证据条数、方向 & 仅 \texttt{sent\_weight\_pp} & 置信 \(\ge0.65\)；5/10pp \\
+主审 & 三专家证据合并 + 基线 + 建议 & 不新增参数，只裁决 & accept / clamp / reject；\(r>g\) \\
+\bottomrule
+\end{tabularx}}
+
+\vspace{1mm}
+{\bfseries 证据门槛：}置信 \(\ge0.65\)、证据含具体数字、severity 与幅度匹配、方向自洽；未过门槛只留痕；专家不得跨域，主审不得新增参数。
+
+{\fontsize{22}{28}\selectfont
+\begin{tabularx}{\linewidth}{@{}p{0.14\linewidth}YY@{}}
+\toprule
+模式 & 参数 / 估值 & 审计 \\
+\midrule
+shadow & 参数不变；估值不变 & 只留痕；反事实对照 \\
+apply & 回写并通过重跑 & baseline；失败回滚；改前/改后 \\
+\bottomrule
+\end{tabularx}}
+
+\vspace{2mm}
+专家提议 \(P_k=\Pi_k(e_i^k)\)，门控 \(G\) 过滤证据，主审 \(R\) 裁决，\(A\) 选择被接受坐标：
+{\fontsize{24}{30}\selectfont
+\[
+T_{\mathrm{apply}}(x)=F(x;\theta+\delta),\quad \delta=A\,R\,G\,\Pi(e),\quad
+T_{\mathrm{shadow}}(x)=F(x;\theta).
+\]
+}
+{\fontsize{24}{30}\selectfont
+\[
+\delta^*=\arg\min_{\delta\in\mathcal C}\ \mathcal L(\theta+\delta;e)+\lambda\|\delta\|_1,\qquad
+\mathcal C=\{\delta:|\delta_j|\le c_j(s),\ \theta+\delta\in\Theta_{\mathrm{feas}}\}.
+\]
+}
+\(\mathcal C\) 是信赖域：severity 分档 caps、权重单纯形、WACC/Ke > 永续增速。\(\lambda\|\delta\|_1\) 鼓励“少改、只改有证据的坐标”。系统不真的求解该式，专家提议是热启动，门控与主审是近似投影。
+
+\vspace{3mm}
+\colorbox{softblue}{\parbox{\dimexpr\linewidth-2\fboxsep}{%
+\kw{命题 1（可行域保持）}若 \(\mathcal C\subseteq\{\delta:\theta+\delta\in\Theta_{\mathrm{feas}}\}\)，则 apply 输出仍在可行域；shadow 对 \(\theta\) 恒等，故估值不变。\\[1mm]
+\kw{命题 2（弹性上界）}若 \(F\) 可微、\(\|\delta\|_1\le c\)，则
+{\fontsize{24}{30}\selectfont
+\[
+\left|\ln F(\theta+\delta)-\ln F(\theta)\right|\le L_\theta c+o(\|\delta\|).
+\]
+}
+对 Gordon 终值 DCF，\(\partial\ln V/\partial g\approx s_T/(r-g)\)，\(\partial\ln V/\partial r\approx-D_{\mathrm{mod}}\)。取 \(s_T=0.7\)、\(r-g=4\%\)，0.6pp 的 \(g\) 上限约 10.5\% 弹性；1pp 的 \(r\) 上限约 12\%（解析示例）。caps 并不小，必须配合主审、shadow 与回滚。}}
+
+\vspace{3mm}
+\muted{\footnotesize \texttt{shadow} 只留痕、不改参数；\texttt{apply} 回写并重跑，baseline 保留、失败回滚；每批配置快照进 \texttt{state.json}。}
+\end{block}
+
+\begin{block}{04 ·  工程化与可审计}
+\begin{center}
+\begin{tikzpicture}[
+  box/.style={draw=line, fill=white, rounded corners=2mm, minimum width=42mm, minimum height=22mm, align=center, font=\fontsize{18}{22}\selectfont},
+  ar/.style={-{Stealth[length=3.5mm]}, draw=csred, line width=0.9mm}
+]
+\node[box] (a) {提交\\参数};
+\node[box, right=5mm of a] (b) {逐券\\输入组装};
+\node[box, right=5mm of b] (c) {引擎\\三路加权};
+\node[box, right=5mm of c] (d) {MC 3000\\报告 + 机检};
+\node[box, right=5mm of d] (e) {shadow\\/ apply};
+\draw[ar] (a)--(b); \draw[ar] (b)--(c); \draw[ar] (c)--(d); \draw[ar] (d)--(e);
+\end{tikzpicture}
+\end{center}
+
+\vspace{2mm}
+\begin{itemize}
+\item \kw{链路：}DSH 客户端插件（React 仪表盘 + 智能体面板）→ Python 批跑服务 \texttt{:3089} → 逐券引擎/统计/报告 → 汇总。
+\item \kw{审计：}每批 \texttt{agents.json} 快照、逐券 \texttt{shadow.json}、\texttt{summary.html} / \texttt{shadow.html}、八项机检；报告落盘 + 侧栏 DOM 注入；历史列表区分“回/影”。
+\item \kw{回写：}apply 逐券“改前/改后”可视化；baseline 保留，重跑失败回滚；失败券跳过、不阻断整批。
+\item \kw{边界：}无 ground truth、无仓库级 CI；只有 \texttt{html\_check} 与 \texttt{smoke\_test}；估值日期目前仅“参考”，非 PIT。
+\end{itemize}
+
+\vspace{2mm}
+{\fontsize{22}{28}\selectfont
+\begin{tabularx}{\linewidth}{@{}p{0.30\linewidth}Y@{}}
+\toprule
+审计产物 & 内容 \\
+\midrule
+\texttt{state.json} & 逐券状态 + 每批配置快照 \\
+\texttt{shadow.json} & 证据 / 建议 / 主审 / 回写 / 采纳 \\
+\texttt{summary.html} & 拟合点位、三情景、apply 明细 \\
+逐券报告 & 八项机检 + 改前/改后区块 \\
+\bottomrule
+\end{tabularx}}
+
+\vspace{1mm}
+\muted{\footnotesize 代码：\texttt{packages/batch/*}、\texttt{packages/workbench/*}、\texttt{docs/spec/01--03}。}
+\end{block}
+
+\end{column}
+
+% ============================== 右栏 ==============================
+\begin{column}{0.315\textwidth}
+
+\begin{block}{05 · 评估协议：无真值不等于无评估}
+\colorbox{softamber}{\parbox{\dimexpr\linewidth-2\fboxsep}{%
+\kw{不设单一排行榜。}评估目标是过程质量：离散度、置信度校准、周环比稳定、人工采纳、区间宽度、弹性；市场指标只作诊断，不作优化目标。}}
+
+\vspace{3mm}
+\begin{tabularx}{\linewidth}{@{}YYY@{}}
+\kw{合成基准} & \kw{人工盲评} & \kw{内部一致性} \\
+\midrule
+已知 \(V_i^\star\)，注入财报错误、可比缺失、路由错误；测恢复误差、区间覆盖、路由准确、参数恢复 & 隐藏 Agent 建议与点位；4–6 人独立打证据/方向/幅度/置信；两轮 Delphi + 仲裁；报 Krippendorff \(\alpha\) & 同输入多 seed；股票排列、单位缩放、行业标签扰动；shadow 空操作；apply 回滚；八项机检 \\
+\end{tabularx}
+
+\vspace{3mm}
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{0.28\linewidth}Y@{}}
+\toprule
+\kw{指标} & \kw{用途} \\
+\midrule
+覆盖率 / 跳过率 & 可用性与失败结构 \\
+离散度 / IQR & 过度反应或过度保守 \\
+ECE / Brier & 置信度校准（合成基准） \\
+周环比稳定 & 参数是否抖动 \\
+人工采纳率 & 人工认可；防“全采纳”偏差 \\
+区间宽度 & 不确定性表达 \\
+弹性 & \(\partial\ln V/\partial r\)、\(\partial\ln V/\partial g\) \\
+\bottomrule
+\end{tabularx}
+
+\vspace{2mm}
+{\bfseries 消融（首批）}
+{\fontsize{22}{28}\selectfont
+\begin{tabularx}{\linewidth}{@{}p{0.30\linewidth}Y@{}}
+\toprule
+消融 & 问题 \\
+\midrule
+关专家 / 关主审 & 边际贡献；主审是否减错 \\
+shadow vs apply & 回写是否改善过程指标 \\
+阈值 / caps & 门槛与幅度是否抑制过度反应 \\
+线性 / 对数 / 乘积 & 分歧惩罚与极端值 \\
+指数 / 价格加权 & 合成口径敏感性 \\
+\bottomrule
+\end{tabularx}}
+
+\vspace{2mm}
+\muted{\footnotesize 诊断性市场指标：\(\mathrm{corr}(e_i,\mathrm{PE}_i)\)、行业偏差、对拟合点位的贡献 pp；只解释偏离结构，不进入损失函数。首轮：1,200 个合成案例；100–150 个券-周盲评；预注册主指标与停时规则。}
+\end{block}
+
+\begin{block}{06 ·  路线图：人定 → Agent 提 → 系统学}
+\begin{center}
+\begin{tikzpicture}[
+  stage/.style={draw=line, fill=white, rounded corners=3mm, minimum width=64mm, minimum height=42mm, align=center, font=\fontsize{18}{22}\selectfont},
+  ar/.style={-{Stealth[length=4.5mm]}, draw=csred, line width=1.1mm}
+]
+\node[stage] (s1) {\textbf{I 基础模型}\\人写死参数\\三情景 + MC};
+\node[stage, right=11mm of s1] (s2) {\textbf{II Agent 化}\\证据评审 + 主审\\shadow / apply};
+\node[stage, right=11mm of s2] (s3) {\textbf{III 自迭代}\\门控学习\\时序校准};
+\draw[ar] (s1)--(s2); \draw[ar] (s2)--(s3);
+\node[above=1mm of s1, font=\fontsize{14}{17}\selectfont\color{dim}] {参数来源};
+\node[above=1mm of s2, font=\fontsize{14}{17}\selectfont\color{dim}] {人的角色：审批};
+\node[above=1mm of s3, font=\fontsize{14}{17}\selectfont\color{dim}] {人的角色：定目标};
+\end{tikzpicture}
+\end{center}
+
+\vspace{2mm}
+\kw{当前定位：}阶段 II 早期。shadow/apply 已落地；每批配置只保留当前一版，无跨批参数台账，阶段 III 只是雏形。
+
+\vspace{2mm}
+{\fontsize{22}{28}\selectfont
+\begin{tabularx}{\linewidth}{@{}p{0.18\linewidth}YYY@{}}
+\toprule
+维度 & I 基础 & II Agent & III 自迭代 \\
+\midrule
+参数 & 人写死 & 专家提议 + 主审 & 门控学习 \\
+不确定性 & 情景 + MC & 置信 + caps & 校准后验 \\
+人的角色 & 定参 & 审批 / 否决 & 定目标 / 审计 \\
+评价 & 覆盖 / 离散 & 采纳 / 校准 & 泛化 / 稳健 \\
+\bottomrule
+\end{tabularx}}
+
+\vspace{2mm}
+{\fontsize{24}{30}\selectfont
+\[
+\theta_{t+1}=\theta_t+\eta_tA_t\delta_t^*.
+\]
+}
+不动点要求 \(\delta^\star(\theta^\star)=0\)；阈值离散会造成振荡，证据漂移会破坏收敛。工程上用阻尼 \(\eta_t=\eta_0/(1+t/T)\)、Polyak 平均、信赖域回缩与“连续多批一致才升级”。
+
+\vspace{2mm}
+\begin{itemize}
+\item \kw{论文矩阵：}P1 系统/工程（DSH 插件、批跑、审计、可复现）；P2 方法（三重模糊 + 层次 MoE + 有界 Agent 校准）；P3 评估（合成基准 + 盲评 + 自洽/稳定/校准）。
+\item \kw{顺序：}P1 → P3 → P2。P1 先锁定 artifact；P3 可作 P1 实验章或独立；P2 最后整合理论与实证。
+\item \kw{下一步：}定载体与真值口径 → 盲评 pilot → 数学命题 → 合成基准 → P1 初稿。
+\end{itemize}
+\end{block}
+
+\end{column}
+\end{columns}
+
+% ============================================================
+% 底部：论文矩阵 + 关键数字
+% ============================================================
+\begin{block}{论文矩阵：P1 系统 / P2 方法 / P3 评估}
+{\fontsize{21}{26}\selectfont
+\begin{columns}[t,onlytextwidth]
+\begin{column}{0.32\textwidth}
+\kw{P1 工程 / 系统}\\[1mm]
+题目：面向指数成分券的估值跑批系统\\
+核心：可复现、可审计、可回滚\\
+贡献：DSH 插件 + 3089 + shadow/apply + 八项机检\\
+载体：系统/软件工程 industry track、金融科技\\
+风险：需 artifact evaluation，避免 demo 化
+\end{column}
+\begin{column}{0.32\textwidth}
+\kw{P2 业务 / 方法论}\\[1mm]
+题目：模糊证据下的有界估值校准\\
+核心：三重模糊 + 层次 MoE + 受限 Agent\\
+贡献：两个命题、$\alpha$-cut、三阶段递进\\
+载体：估值/金融工程/管理科学期刊\\
+风险：与 BMA / opinion pooling 对话，防“拼装”
+\end{column}
+\begin{column}{0.32\textwidth}
+\kw{P3 评估 / 基准}\\[1mm]
+题目：无真值估值评估协议\\
+核心：合成基准 + 盲评 + 内部一致性\\
+贡献：指标、预注册、反循环设计\\
+载体：评估/数据科学；或 P1/P2 实验章\\
+风险：基准规模与外部效度
+\end{column}
+\end{columns}}
+
+{\fontsize{20}{24}\selectfont
+\begin{columns}[t,onlytextwidth]
+\begin{column}{0.16\textwidth}\colorbox{softamber}{\parbox{\dimexpr\linewidth-2\fboxsep}{\centering\kw{5 指数}\\SH50·SH180·KC50·HS300·SSE}}\end{column}
+\begin{column}{0.16\textwidth}\colorbox{softamber}{\parbox{\dimexpr\linewidth-2\fboxsep}{\centering\kw{2,201 只}\\上证综指全市场}}\end{column}
+\begin{column}{0.16\textwidth}\colorbox{softamber}{\parbox{\dimexpr\linewidth-2\fboxsep}{\centering\kw{3 + 1}\\三专家 + 主审}}\end{column}
+\begin{column}{0.16\textwidth}\colorbox{softamber}{\parbox{\dimexpr\linewidth-2\fboxsep}{\centering\kw{8 项}\\报告机检}}\end{column}
+\begin{column}{0.16\textwidth}\colorbox{softamber}{\parbox{\dimexpr\linewidth-2\fboxsep}{\centering\kw{3,000}\\MC 抽样}}\end{column}
+\begin{column}{0.16\textwidth}\colorbox{softred}{\parbox{\dimexpr\linewidth-2\fboxsep}{\centering\kw{0 真值}\\只做三角验证}}\end{column}
+\end{columns}}
+\end{block}
+
+% ============================================================
+% 页脚
+% ============================================================
+\vfill
+{\color{line}\rule{\linewidth}{0.4mm}}\\[2mm]
+{\fontsize{14}{18}\selectfont\color{dim}
+方法论来源：国金证券李双宏、杨利国、王洪涛《基于大语言模型的上市公司智能估值模型构建》（《证券信息技术》）；六层架构 A–F 与“多空方并行博弈 + 高级 Agent 裁决”见技能 \texttt{methodology.md}。本文差异：Agent 只做参数评审，估值仍由结构化引擎完成。\\
+仓库 \texttt{origin/main} \texttt{d06a5ed} · 2026-11-28 · 技能 v3.29.1（引擎实际 2.28.0；批跑层 v3.31 护栏）· 探索性研究，不构成投资建议。}
+
+\end{frame}
+\end{document}

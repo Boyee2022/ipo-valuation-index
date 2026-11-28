@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="zh" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>文档门户 · ValuationSystem Docs</title>
+<link rel="stylesheet" href="../assets/terminal.css">
+<script src="../assets/terminal.js"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">V</span>
+    <span>VALUATION SYSTEM</span>
+    <span class="brand-sub">RESEARCH DOCS</span>
+  </a>
+  <nav class="topnav">
+    <a class="on" href="index.html">文档首页</a>
+    <a href="paper-proposal.html">论文建议</a>
+    <a href="engineering-roadmap.html">工程规划</a>
+    <a href="skill-explainer.html">SKILL 讲解</a>
+  </nav>
+  <button class="theme-toggle" data-theme-toggle aria-label="切换主题">☾</button>
+</header>
+
+<main class="wrap">
+
+  <section class="hero">
+    <div class="kicker">VALUATION WORKBENCH <span class="dim">/ INTERNAL DOCS · 2026-11-28</span></div>
+    <h1 class="display">研究文档<small>RESEARCH &amp; ENGINEERING</small></h1>
+    <p class="lede">
+      用估值替代价格，逐券估算指数成分券，按权重合成指数点位。这里集中项目理解、论文构想、
+      技能方法论、工程路线与接口 spec，作为项目组内部对齐与后续实现的单一入口。
+    </p>
+    <div class="meta-row">
+      <span class="tag am">基线 d06a5ed</span>
+      <span class="tag">51 commits</span>
+      <span class="tag">五指数 × 三情景</span>
+      <span class="tag">三专家 + 主审</span>
+      <span class="tag">技能 v3.29.1</span>
+      <span class="tag mut">探索性研究 · 不构成投资建议</span>
+    </div>
+  </section>
+
+  <div class="ticker" aria-label="项目速览">
+    <div class="ticker-item"><span>Indices</span>SH50 / SH180 / STAR50 / CSI300 / SSE</div>
+    <div class="ticker-item"><span>Universe</span>2,201 只 <span>沪市 A 股</span></div>
+    <div class="ticker-item"><span>Synthesis</span>指数加权 <span>Σw·(V/P)/Σw</span></div>
+    <div class="ticker-item"><span>Review</span>shadow / apply <span>有界 + 可回滚</span></div>
+    <div class="ticker-item"><span>Skill</span>7 步 / 6 层 <span>v3.29.1</span></div>
+  </div>
+
+  <section class="section">
+    <div class="section-hd"><span class="no">01</span><h2>核心文档</h2><span class="en">READ IN ORDER</span></div>
+    <div class="doc-grid">
+      <a class="doc-card" href="../00-project-understanding.md">
+        <span class="no">00 / UNDERSTANDING</span>
+        <h3>项目理解</h3>
+        <p>业务、架构、跑批链路、核心公式、多 Agent、数据源、现状与风险。新成员先读这一篇。</p>
+        <span class="foot">MD · 5–10 MIN</span>
+      </a>
+      <a class="doc-card" href="paper-proposal.html">
+        <span class="no">01 / PAPER</span>
+        <h3>论文构想</h3>
+        <p>三重模糊、层次 MoE、模糊加权、Agent 受限算子、三阶段递进、论文矩阵与实验设计。</p>
+        <span class="foot">MD + HTML + LATEX</span>
+      </a>
+      <a class="doc-card" href="engineering-roadmap.html">
+        <span class="no">03 / ROADMAP</span>
+        <h3>工程改进路线</h3>
+        <p>解耦向量化、表达可视化、Agent 迭代、指数拟合、线性池/对数池/专家乘积——本轮只规划不实现。</p>
+        <span class="foot">MD + HTML · 内部对齐</span>
+      </a>
+      <a class="doc-card" href="skill-explainer.html">
+        <span class="no">04 / SKILL</span>
+        <h3>技能方法论</h3>
+        <p>七步流程、六层架构、生命周期与方法定位、Layer 0 路由、统计校验、可复用思想与拆分 TODO。</p>
+        <span class="foot">MD + HTML · 10 MIN</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-hd"><span class="no">02</span><h2>项目速览</h2><span class="en">AT A GLANCE</span></div>
+    <div class="kpis">
+      <div class="kpi">
+        <div class="kpi-k">拟合口径</div>
+        <div class="kpi-v am">指数加权</div>
+        <div class="kpi-s">P × Σw·(V/P) / Σw，跳过券不计入</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">方法</div>
+        <div class="kpi-v">DCF + 可比 + 舆情</div>
+        <div class="kpi-s">金融 RIM/DDM；无真值，自洽优先</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">Agent 评审</div>
+        <div class="kpi-v">3 + 1</div>
+        <div class="kpi-s">三专家 + 主审；shadow / apply</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-k">技能</div>
+        <div class="kpi-v">v3.29.1</div>
+        <div class="kpi-s">已入库 skills/，后续拆分 8 模块</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-hd"><span class="no">03</span><h2>系统分层</h2><span class="en">ARCHITECTURE</span></div>
+    <div class="grid cols-2">
+      <div class="panel">
+        <div class="panel-hd">运行时链路 <span class="panel-code">RUNTIME</span></div>
+        <div class="panel-bd">
+          <div class="stack">
+            <div class="layer"><span class="lk">UI 3081</span><span class="lv">估值跑批工作台 + 估值智能体面板<small>DSH client bundle，React + CSS Modules</small></span></div>
+            <div class="layer"><span class="lk">API 3089</span><span class="lv">Python 批跑服务<small>成分/行情/输入组装/逐券调度/评审/合成/存档</small></span></div>
+            <div class="layer"><span class="lk">SKILL</span><span class="lv">llm-ipo-valuation<small>引擎 / 统计校验 / 报告 / 机检，仓库内随包交付</small></span></div>
+            <div class="layer"><span class="lk">OUTPUT</span><span class="lv">summary.html / shadow.html / 逐券报告<small>落盘 + 侧栏工作区浏览</small></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd">一次跑批 <span class="panel-code">PIPELINE</span></div>
+        <div class="panel-bd">
+          <div class="flow compact">
+            <div class="flow-node">提交参数<small>/api/run</small></div>
+            <div class="flow-node">成分 + 行情<small>东财 / 腾讯</small></div>
+            <div class="flow-node">逐券估值<small>引擎 + 统计</small></div>
+            <div class="flow-node">多 Agent 评审<small>shadow / apply</small></div>
+            <div class="flow-node">合成 + 报告<small>指数加权 / 三情景</small></div>
+          </div>
+          <p class="tiny dim" style="margin:14px 0 0">
+            失败券标记 skip 并留痕，不阻断整批；apply 失败自动回滚 baseline；服务重启清理遗留 running。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-hd"><span class="no">04</span><h2>Spec 索引</h2><span class="en">CONTRACTS</span></div>
+    <div class="doc-grid">
+      <a class="doc-card" href="../spec/01-architecture.md">
+        <span class="no">SPEC 01</span><h3>系统架构</h3>
+        <p>组件、进程端口、DSH 集成、批跑内部、持久化、失败恢复、安全边界。</p>
+        <span class="foot">ARCHITECTURE</span>
+      </a>
+      <a class="doc-card" href="../spec/02-valuation-model.md">
+        <span class="no">SPEC 02</span><h3>估值模型与口径</h3>
+        <p>输入 schema、Layer 0 路由、生命周期、增长函数、合成、区间、置信度与兜底。</p>
+        <span class="foot">MODEL</span>
+      </a>
+      <a class="doc-card" href="../spec/03-agent-review-protocol.md">
+        <span class="no">SPEC 03</span><h3>多 Agent 评审协议</h3>
+        <p>角色权限、证据门槛、严重度、主审裁决、apply 回写、采纳、指标、配置。</p>
+        <span class="foot">PROTOCOL</span>
+      </a>
+      <a class="doc-card" href="../spec/04-data-and-api.md">
+        <span class="no">SPEC 04</span><h3>数据源与 API</h3>
+        <p>HTTP 路由、请求响应、五指数口径、缓存 TTL、个股覆写、失败语义。</p>
+        <span class="foot">DATA / API</span>
+      </a>
+      <a class="doc-card" href="../spec/05-skill-package.md">
+        <span class="no">SPEC 05</span><h3>技能包</h3>
+        <p>目录、版本、批跑调用、回归资产、拆分 8 模块、升级流程、版本差。</p>
+        <span class="foot">SKILL PACKAGE</span>
+      </a>
+      <a class="doc-card" href="../05-decision-log.md">
+        <span class="no">05 / LOG</span><h3>决策日志</h3>
+        <p>本轮 D01–D14 决策、Q1–Q10 待决问题、明确未做事项。</p>
+        <span class="foot">DECISIONS</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-hd"><span class="no">05</span><h2>当前判断</h2><span class="en">POSITION</span></div>
+    <div class="grid cols-2">
+      <div class="panel accent">
+        <div class="panel-hd">已经能拿出手 <span class="panel-code">READY</span></div>
+        <div class="panel-bd">
+          <ul class="prose" style="margin:0">
+            <li>五指数真实跑批（含上证综指全市场），三情景点位与指数加权合成。</li>
+            <li>三专家 + 主审的有界评审，shadow / apply 双模式，可回滚、可审计。</li>
+            <li>逐券报告、汇总报告、评审 sidecar、apply 改前/改后可视化。</li>
+            <li>技能包入库，方法论可版本化、可回归。</li>
+          </ul>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-hd">仍待解决 <span class="panel-code">GAPS</span></div>
+        <div class="panel-bd">
+          <ul class="prose" style="margin:0">
+            <li>无真值：论文评估需合成基准 + 人工盲评 + 自洽/稳定三件套。</li>
+            <li>估值日期未真正生效；PIT 数据与 API 透传待做。</li>
+            <li>技能版本差（v3.29.1 vs 批跑 v3.31 护栏）需回归确认。</li>
+            <li>无仓库级 CI；五层工程改造尚未实现。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>中证指数有限公司 · 创新项目 · ValuationSystem</span>
+    <span class="mono">BASELINE d06a5ed · DOCS 2026-11-28</span>
+    <span>探索性研究，不构成投资建议</span>
+  </footer>
+
+</main>
+
+</body>
+</html>

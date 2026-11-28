@@ -1,0 +1,792 @@
+<!doctype html>
+<html lang="zh" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>工程路线 · Valuation System Docs</title>
+<link rel="stylesheet" href="../assets/terminal.css">
+<script src="../assets/terminal.js"></script>
+<style>
+  /* 本页专用：只做布局，不新造视觉语言（颜色/字号全部取自 terminal.css 变量） */
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: stretch; }
+  @media (max-width: 860px) { .vs { grid-template-columns: 1fr; } }
+  .lst { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 8px; }
+  .lst li { position: relative; padding-left: 14px; color: var(--dim); font-size: 12.5px; line-height: 1.65; }
+  .lst li::before { content: ""; position: absolute; left: 0; top: 7px; width: 5px; height: 1px; background: var(--amber); }
+  .lst.mut li::before { background: var(--faint); }
+  .lst b { color: var(--ink); font-weight: 600; }
+  .lbl { display: block; margin-bottom: 6px; color: var(--faint); font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 860px) { .pair { grid-template-columns: 1fr; } }
+  .blk { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .blk:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+  .pair > .blk { margin-top: 0; padding-top: 0; border-top: 0; }
+  .blk + .pair { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .blk p { max-width: 860px; margin: 0; color: var(--dim); font-size: 12.5px; line-height: 1.8; }
+  .blk p + p { margin-top: 6px; }
+  .blk p b { color: var(--ink); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .lay-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .lay-top .lv { color: var(--ink); font-size: 14px; font-weight: 700; }
+  .stack .layer .lv { font-weight: 600; }
+  .lay-top .mini { color: var(--faint); font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+  .gap { height: 14px; }
+  .formula code { font: inherit; color: inherit; }
+  .formula .cm { color: var(--faint); }
+  .kpi .kpi-v { font-size: 24px; letter-spacing: -.02em; }
+  .tbl-note { margin: 8px 0 0; color: var(--faint); font-size: 11.5px; line-height: 1.7; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="index.html">
+    <span class="brand-mark">V</span>
+    <span>VALUATION SYSTEM</span>
+    <span class="brand-sub">RESEARCH DOCS</span>
+  </a>
+  <nav class="topnav">
+    <a href="index.html">文档首页</a>
+    <a href="paper-proposal.html">论文建议</a>
+    <a href="engineering-roadmap.html" class="on">工程规划</a>
+    <a href="skill-explainer.html">SKILL 讲解</a>
+  </nav>
+  <button class="theme-toggle" data-theme-toggle aria-label="切换主题">☾</button>
+</header>
+
+<main class="wrap">
+
+  <!-- ── HERO ───────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="kicker">ENGINEERING ROADMAP <span class="dim">/ 2026-11 · BASELINE d06a5ed</span></div>
+    <h1 class="display">工程路线<small>ENGINEERING ROADMAP</small></h1>
+    <p class="lede">
+      现在跑一批指数，是对每只券各跑一次完整流水线：50 只券 = 200 次子进程，上证综指 2,201 只 = 8,800 次量级。
+      目标是把「方法」从「券」里抽出来——一层对全部企业统一算完，再进入下一层。
+      本页是内部对齐用的路线视图；实施细节与验收口径见 <span class="mono">docs/03-engineering-roadmap.md</span>。
+    </p>
+    <div class="meta-row">
+      <span class="tag am">规划 · 不改代码</span>
+      <span class="tag">5 层改进</span>
+      <span class="tag">5 个里程碑 · 17 周</span>
+      <span class="tag mut">数值零回归为前置</span>
+      <span class="tag warn">5 个决策点待拍板</span>
+    </div>
+  </section>
+
+  <!-- ── 5 LAYER KPI ────────────────────────────────────── -->
+  <div class="kpis">
+    <div class="kpi">
+      <div class="kpi-k">L1 · DECOUPLE</div>
+      <div class="kpi-v">W3–W6</div>
+      <div class="kpi-s">解耦与向量化<br>基础层一次算完，非基础层逐券</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-k">L2 · EXPRESS</div>
+      <div class="kpi-v">W7–W9</div>
+      <div class="kpi-s">表达与可视化<br>模型履历 · 方法树 · 证据链</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-k">L3 · AGENT LOOP</div>
+      <div class="kpi-v">W10–W13</div>
+      <div class="kpi-s">Agent 评估与迭代<br>参数台账 · 次日生效</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-k">L4 · INDEX FIT</div>
+      <div class="kpi-v">W14–W17</div>
+      <div class="kpi-s">指数选择与拟合<br>五指数 · 三情景 · 双权重</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-k">L5 · POOL</div>
+      <div class="kpi-v">W14–W17</div>
+      <div class="kpi-s">合成池<br>线性 / 对数 / 专家乘积</div>
+    </div>
+  </div>
+
+  <!-- ── 01 现状 vs 目标 ────────────────────────────────── -->
+  <section class="section" id="baseline">
+    <div class="section-hd">
+      <span class="no">01</span>
+      <h2>现状 vs 目标</h2>
+      <span class="en">AS-IS / TO-BE</span>
+    </div>
+
+    <div class="vs">
+      <div class="panel">
+        <div class="panel-hd">
+          <span>AS-IS · 逐券 pipeline</span>
+          <span class="panel-code">d06a5ed</span>
+        </div>
+        <div class="panel-bd">
+          <ul class="lst mut">
+            <li><b>执行单元 = 券。</b>1 券 = 4 次子进程（引擎 600s / 统计 1200s / 报告 600s / 机检 300s）+ 1 次进程内组装。</li>
+            <li><b>方法在券内串行。</b>DCF → 可比 → 舆情，同一批券的同一方法被重复调度 50–2,201 次。</li>
+            <li><b>并行只在最外层。</b><span class="mono">ThreadPoolExecutor</span>，<span class="mono">parallel ∈ {3,10}</span>；服务是单进程 <span class="mono">ThreadingHTTPServer</span>，全市场 2,201 只的中间态都在同一进程里。</li>
+            <li><b>跨券信息每券重算。</b>行业分位、可比长名单、指数权重都在单券内部现拼。</li>
+            <li><b>状态。</b><span class="mono">state.json</span> 全量重写；<span class="mono">&gt;800</span> 行时每 10 行落盘；无逐券计时。</li>
+            <li><b>评审只在一批之内。</b>三专家 + 主审，shadow / apply；参数只保留当前一版，<b>无跨批台账</b>。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="panel accent">
+        <div class="panel-hd">
+          <span>TO-BE · 分层向量化</span>
+          <span class="panel-code">TARGET</span>
+        </div>
+        <div class="panel-bd">
+          <ul class="lst">
+            <li><b>执行单元 = 方法。</b>一层一次，<span class="mono">V_m = f_m(X; θ_m)</span> 对全部企业一次计算。</li>
+            <li><b>层间 barrier。</b>全市场 DCF / RIM 完成才进可比；非基础层（舆情 / 覆写 / 评审）异步 join。</li>
+            <li><b>宽表 + 掩码。</b><span class="mono">X(N×F)</span>、<span class="mono">M(N×3)</span>；失败粒度是「方法 × 券」的单元格。</li>
+            <li><b>产物分级。</b>层产物 / 行产物 / <span class="mono">manifest</span>（as_of、参数 hash、跳过清单）。</li>
+            <li><b>模型履历。</b>每券 <span class="mono">model_trace.json</span>：方法树、参数溯源、证据链、敏感度。</li>
+            <li><b>参数台账。</b>T 日评审 → 主审判适用 → T+1 默认参数 <span class="mono">P_{v+1}</span>；可回放、可回滚。</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="gap"></div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span>能力对照</span>
+        <span class="panel-code">CAPABILITY GAP</span>
+      </div>
+      <div class="panel-bd flush">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>维度</th><th>现状（d06a5ed）</th><th>目标</th><th>门槛</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="ink">执行粒度</td><td>券级 worker，线程池 3 / 10</td><td>方法级 kernel + chunk 并行</td><td>同一 as_of 数值逐位一致</td></tr>
+              <tr><td class="ink">跨券信息</td><td>每券内重算行业分位 / 可比</td><td>一次算完全市场分位与邻接</td><td>可比集与 legacy 完全一致</td></tr>
+              <tr><td class="ink">失败隔离</td><td>券级 <span class="mono">skip</span>，整批继续</td><td>单元格掩码，层内不 abort</td><td>注入故障只影响 1 券</td></tr>
+              <tr><td class="ink">中间产物</td><td>每券 input / out / stat / report</td><td>层产物 + 行产物 + manifest</td><td>可定位到方法 / 券</td></tr>
+              <tr><td class="ink">参数演进</td><td>单版配置，版本号自增</td><td>版本台账 + 次日默认</td><td>可重放、可回滚</td></tr>
+              <tr><td class="ink">指数层</td><td>一条加权比率公式；权重口径三套</td><td>口径 A/B + 三情景 + 双权重</td><td>情景点位单调</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <p class="tbl-note">现状证据：<span class="mono">pipeline.py:715</span>（线程池）、<span class="mono">:50–54 / 282–293</span>（四脚本子进程）、<span class="mono">:76–83</span>（落盘节流）、<span class="mono">agent_config.py:6</span>（不做跨批台账）。</p>
+  </section>
+
+  <!-- ── 02 目标架构 ────────────────────────────────────── -->
+  <section class="section" id="arch">
+    <div class="section-hd">
+      <span class="no">02</span>
+      <h2>目标架构</h2>
+      <span class="en">THREE-LAYER SPLIT</span>
+    </div>
+
+    <div class="stack">
+      <div class="layer">
+        <div class="lk">LAYER 03 · STORY</div>
+        <div class="lv">
+          故事层
+          <small>指数选择 · 点位与三情景 · 逐券 / 汇总报告 · 工作台展示。只消费聚合产物，不碰单券数值。</small>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="lk">LAYER 02 · MODEL</div>
+        <div class="lv">
+          模型层
+          <small>universe 宽表 → kernels{dcf, rim, ddm, nav, rel} → sidecar{舆情 / rNPV / 覆写 / 评审} → pool 合成。</small>
+        </div>
+      </div>
+      <div class="layer">
+        <div class="lk">LAYER 01 · AGENT</div>
+        <div class="lv">
+          Agent 评估层
+          <small>评审 · 适用性判定 · 参数台账 · 池子裁决。只读写接口与参数，不直接改数值。</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="gap"></div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span>一次跑批的数据流</span>
+        <span class="panel-code">DATA PATH</span>
+      </div>
+      <div class="panel-bd">
+        <div class="flow">
+          <div class="flow-node">universe.build<small>宽表 X(N×F) + 掩码 + manifest</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">kernels<small>基础层一次算 N 只 · 层间 barrier</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">sidecar<small>非基础层逐券异步 · 无 barrier</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">pool.combine<small>线性 / 对数 / 乘积 + 掩码重归一</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">index_fit<small>五指数聚合 · 三情景 · 双权重</small></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node">narrative<small>报告 / 工作台 / trace</small></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gap"></div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span>层 → 模块 → 接口</span>
+        <span class="panel-code">CONTRACTS</span>
+      </div>
+      <div class="panel-bd flush">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>层</th><th>模块</th><th>接口（输入 → 输出）</th><th>现状对应</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><span class="tag">MODEL</span></td><td class="mono">universe.build</td><td>index → (X, M0, meta)</td><td class="mono">input_builder.build_input</td></tr>
+              <tr><td><span class="tag">MODEL</span></td><td class="mono">kernels.&lt;m&gt;</td><td>宽表 → (V∈R^N, M∈{0,1}^N, diag)</td><td>引擎单券方法</td></tr>
+              <tr><td><span class="tag">MODEL</span></td><td class="mono">pool.combine</td><td>方法矩阵 → (V*, interval, why)</td><td>引擎 <span class="mono">synthesis</span></td></tr>
+              <tr><td><span class="tag">MODEL</span></td><td class="mono">index_fit</td><td>行级结果 → 点位 / 情景 / 偏差分解</td><td class="mono">pipeline._finalize</td></tr>
+              <tr><td><span class="tag ok">AGENT</span></td><td class="mono">review</td><td>单券输入输出 → 评审记录</td><td class="mono">shadow.review</td></tr>
+              <tr><td><span class="tag ok">AGENT</span></td><td class="mono">evaluate / ledger</td><td>当日评审集合 → 裁决 → params_v(n+1)</td><td class="mono">agent_config.save</td></tr>
+              <tr><td><span class="tag am">STORY</span></td><td class="mono">report / plugin</td><td>聚合产物 → HTML / 页面</td><td class="mono">summary.html + Results.tsx</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <p class="tbl-note">边界：DSH 插件只是故事层前端壳（现直调 <span class="mono">:3089</span>）；批跑服务保留为唯一执行入口与状态源；技能包仍是「方法字典」，M1 起以函数形式被 import，拆分留到 M4 之后。</p>
+  </section>
+
+  <!-- ── 03 五层改进 ────────────────────────────────────── -->
+  <section class="section" id="layers">
+    <div class="section-hd">
+      <span class="no">03</span>
+      <h2>五层改进</h2>
+      <span class="en">FIVE LAYERS</span>
+    </div>
+
+    <div class="steps">
+      <div class="step"><div class="step-no">L1</div><div class="step-t">解耦向量化</div><div class="step-d">方法从券里抽出来</div></div>
+      <div class="step"><div class="step-no">L2</div><div class="step-t">表达可视化</div><div class="step-d">可审计可解释可对比</div></div>
+      <div class="step"><div class="step-no">L3</div><div class="step-t">Agent 迭代</div><div class="step-d">适用判定与参数台账</div></div>
+      <div class="step"><div class="step-no">L4</div><div class="step-t">指数拟合</div><div class="step-d">五指数三情景双权重</div></div>
+      <div class="step"><div class="step-no">L5</div><div class="step-t">合成池</div><div class="step-d">线性/对数/乘积</div></div>
+    </div>
+
+    <div class="gap"></div>
+
+    <!-- L1 -->
+    <article class="panel accent">
+      <div class="panel-hd">
+        <span>L1 · 建模流程的解耦与向量化</span>
+        <span class="panel-code">DECOUPLE / VECTORIZE · W3–W6</span>
+      </div>
+      <div class="panel-bd">
+        <div class="pair">
+          <div class="blk">
+            <span class="lbl">问题 / Problem</span>
+            <p>一只券跑完整 pipeline，方法在券内串行；同一批券的同一方法被重复调度 50–2,201 次，跨券信息（行业分位、可比长名单）只能每券重算。结构上做不到「一层对所有企业统一处理」。</p>
+          </div>
+          <div class="blk">
+            <span class="lbl">方案 / Approach</span>
+            <p><b>(a) 基础层（客观数据）</b>：DCF / RIM / DDM / NAV / 相对估值抽成纯函数，对全部企业一次计算，层间 barrier。<b>(b) 非基础层</b>：舆情、rNPV、个股覆写、LLM 评审逐券单独调度，sidecar 合并，不设 barrier。</p>
+          </div>
+        </div>
+
+        <div class="formula"><span class="lbl">VECTORIZED FORM</span>
+X ∈ R^(N×F)        财务块 | 行情块 | 行业块 | 政策块
+V_m = f_m(X; θ_m) ∈ R^N        第 m 个方法一次算完
+M_m ∈ {0,1}^N                  有效性掩码（缺数据 / 路由否决 / 越界）
+
+DCF（显式期 T_i 因券而异，填充 + 掩码）
+V_dcf,i = Σ_{t≤T_i} FCFF_{i,t} / (1+r_i)^t  +  TV_i / (1+r_i)^{T_i}
+
+合成（三方法 + 掩码 + 重归一）
+V* = ((W ⊙ M) · V_methods) / ((W ⊙ M) · 1)</div>
+
+        <div class="formula"><span class="lbl">PSEUDOCODE</span>X, M0, meta = universe.build(as_of, index)     <span class="cm"># 一次装配</span>
+V, M, D = {}, {}, {}
+for m in ("dcf","rim","ddm","nav","rel"):     <span class="cm"># 层内按方法</span>
+    V[m], M[m], D[m] = KERNEL[m](X, THETA)    <span class="cm"># 一次算 N 只</span>
+    store_layer(job, "base", m, V[m], M[m])   <span class="cm"># 层产物 + 参数 hash</span>
+side = schedule_per_stock(X, M0)              <span class="cm"># 非基础层：逐券异步</span>
+V["sent"], M["sent"] = join_sidecar(side, key="secucode")
+Vstar, interval, why = pool.combine(V, M, W, mode=POOL)
+rows = merge_rows(V, M, D, side)              <span class="cm"># 行产物 = join</span></div>
+
+        <div class="blk">
+          <span class="lbl">接口与数据结构</span>
+          <p>
+            宽表 <span class="code">universe.&lt;as_of&gt;.jsonl</span> + 列块元数据；层产物 <span class="code">layer_outputs/&lt;method&gt;.json</span>；行产物 <span class="code">rows/&lt;code&gt;.json</span>；任务级 <span class="code">manifest.json</span>（as_of、代码版本、参数 hash、行数、跳过清单、层耗时）。
+            缓存键从「资源名」升级为「资源名 + as_of + 参数 hash」；<span class="code">state.json</span> 只存索引与摘要。
+          </p>
+        </div>
+
+        <div class="blk">
+          <span class="lbl">编排 · 内存 · 隔离</span>
+          <p>基础层内 chunk 流水（建议 200 只），层间 barrier；非基础层不设 barrier，并行后 join。N=2,201、F≈60 的宽表约 1.1MB，内存主项是 MC（3000 次抽样必须分块，数十 MB 级，<b>待实测</b>）。失败隔离用行级掩码 + 行级 error：单券异常只置 <span class="mono">M_m,i = 0</span>；整层异常才降级 legacy。</p>
+          <p><b>但非基础层不能矩阵化。</b>舆情 1 次 + 评审 4 次 LLM 调用/券，默认并发 <span class="mono">6</span>，2,201 只券在单进程里不可能全量跑——全市场只走规则舆情，评审按「权重 top-N + 低置信 + 极端偏离」分层抽样。</p>
+          <p><b>断点续跑。</b>行级 <span class="mono">status</span> 已随 <span class="mono">state.json</span> 落盘（<span class="mono">&gt;800</span> 行每 10 行一次）；原任务目录只增 <span class="mono">layer_outputs/</span>、<span class="mono">rows/</span>、<span class="mono">manifest.json</span>，层产物按 <span class="mono">(as_of, method, params_hash)</span> 幂等，重启从最后完成 chunk 续跑，旧 <span class="mono">runtime/jobs</span> 任务仍可读。</p>
+        </div>
+
+        <div class="pair">
+          <div class="blk">
+            <span class="lbl">验收 / Acceptance</span>
+            <p>同 as_of、同参数下覆盖率与跳过率与 legacy 逐券一致；11 组 examples + 170 个用例数值零回归（逐位或 |Δ| ≤ 1e-9）；单券耗时中位 ↓≥30%（待测）；内存 ≤1.5× 基线（待测）；四类故障注入只掩码目标券；杀进程重启可续跑。</p>
+          </div>
+          <div class="blk">
+            <span class="lbl">风险 / Risk</span>
+            <p>零回归是最大风险；向量化把「分支」变「掩码」，生命周期路由、Layer 0 否决、夹断最易漏；内存放大；调试可读性下降。依赖：引擎可 import、是否引入 numpy、宽表 as_of 一致。</p>
+          </div>
+        </div>
+
+        <div class="tags">
+          <span class="tag am">层间 barrier</span>
+          <span class="tag">chunk 200</span>
+          <span class="tag">dual 模式</span>
+          <span class="tag mut">pipeline_mode 开关</span>
+          <span class="tag err">零回归前置</span>
+        </div>
+      </div>
+    </article>
+
+    <div class="gap"></div>
+
+    <!-- L2 -->
+    <article class="panel">
+      <div class="panel-hd">
+        <span>L2 · 建模表达与可视化</span>
+        <span class="panel-code">EXPRESS / AUDIT · W7–W9</span>
+      </div>
+      <div class="panel-bd">
+        <div class="pair">
+          <div class="blk">
+            <span class="lbl">问题 / Problem</span>
+            <p>工作台只给中枢、区间、置信度一句备注、<span class="mono">basis</span>、前 6 条 warning。看不到：为什么选这个方法（Layer 0 路由 / 生命周期判定在引擎内部）、参数从哪来、可比剔除台账、<span class="mono">stat.json</span> 的弹性与 MC 分位、两批之间到底哪个参数变了。</p>
+          </div>
+          <div class="blk">
+            <span class="lbl">方案 / Approach</span>
+            <p>每券产出 <span class="mono">model_trace.json</span>：<b>方法树</b>（候选 → 选中 / 否决 + 理由）、<b>参数溯源</b>（data / industry_base / override / agent_apply / skill_default）、<b>证据链</b>（可比 / 财务 / 舆情）、<b>敏感度与区间</b>（±1σ 弹性 + MC 分位 + 三情景）。</p>
+          </div>
+        </div>
+
+        <div class="blk">
+          <span class="lbl">接口</span>
+          <p><span class="code">model_trace.schema.json</span> v1；工作台新增「模型履历」抽屉（左方法树 / 右证据）；逐券报告改为消费同一 JSON 渲染；<span class="code">diff(trace_a, trace_b)</span> 支撑两批对比。</p>
+        </div>
+
+        <div class="pair">
+          <div class="blk">
+            <span class="lbl">验收</span>
+            <p>trace 覆盖率 100%；数值与引擎输出逐位一致（派生，不重算）；参数可点回来源；任改一个参数在 trace 中可见；两批 diff 可列出「哪只券哪个参数变了」。</p>
+          </div>
+          <div class="blk">
+            <span class="lbl">风险</span>
+            <p>双写不一致；字段膨胀（trace 独立文件，不进 state.json）；报告与工作台再次渲染漂移。依赖：引擎诊断结构化。</p>
+          </div>
+        </div>
+
+        <div class="tags">
+          <span class="tag">方法树</span>
+          <span class="tag">参数溯源</span>
+          <span class="tag">证据链</span>
+          <span class="tag">敏感度</span>
+          <span class="tag mut">trace v1</span>
+        </div>
+      </div>
+    </article>
+
+    <div class="gap"></div>
+
+    <!-- L3 -->
+    <article class="panel">
+      <div class="panel-hd">
+        <span>L3 · Agent 评估与参数迭代</span>
+        <span class="panel-code">AGENT LOOP · W10–W13</span>
+      </div>
+      <div class="panel-bd">
+        <div class="pair">
+          <div class="blk">
+            <span class="lbl">问题 / Problem</span>
+            <p>shadow 只做「批内逐券评审 + 人工采纳」；参数只有当前一版（版本号自增、<b>明确不做跨批台账</b>）。「昨天通过的参数今天用」不存在；没有人对评估 Agent 的意见做适用 / 不适用判定；没有收敛与振荡判据。</p>
+          </div>
+          <div class="blk">
+            <span class="lbl">方案 / Approach</span>
+            <p>三角色分工：<b>专家</b>提建议 → <b>评估 Agent</b> 把当日建议聚类成参数议题（方向 / 证据覆盖家数 / 离散度 / 行业）→ <b>主 Agent</b> 判适用 / 不适用 / 观察，写入台账。次日跑批默认读台账最新已生效版本。</p>
+          </div>
+        </div>
+
+        <div class="formula"><span class="lbl">STATE MACHINE</span>P_v = {weights, wacc_pp, tg_pp, caps, pool_mode} + meta{v, created, source_job, verdicts, approved_by, hash}
+
+proposed → evaluated → approved | rejected | expired → applied → superseded | rolled_back
+
+T 日 09:00 跑批(P_v) → 10:00 评审 → 10:30 评估汇总 → 11:00 主审裁决 → T+1 09:00 跑批(P_{v+1})</div>
+
+        <div class="blk">
+          <span class="lbl">收敛 / 振荡 / 指标</span>
+          <p>
+            稳定：连续 k 期同方向且 |Δ| 递减 → <span class="mono">converged</span>，冻结 4 周。
+            振荡：4 期内方向翻转 ≥2 次，或周环比中位 |Δ| 不降 → <span class="mono">freeze</span> + 人工介入 + 回退上一 converged 版本。
+            判据复用 <span class="mono">shadow.metrics</span>：<span class="mono">dispersion</span>（中位 / IQR）、<span class="mono">wow</span>（同指数上期共同券中位绝对变动）、<span class="mono">adoption.rate</span>。
+          </p>
+        </div>
+
+        <div class="blk">
+          <span class="lbl">shadow / apply / 回滚 / 审批</span>
+          <p>
+            保留 off / shadow / apply 三档；跨批只经台账传参，apply 仍只在单批内回写输入。
+            台账写入前快照；若 P_{v+1} 跳过率上升超阈值、或 apply 后 |Δ| 超 caps，自动回 P_v 并标 <span class="mono">rolled_back</span>。
+            审批点：版本晋升需一次点击确认；caps / gate 变更走 AgentsPage 严格校验；池子切换需主审 + 人工双确认。
+          </p>
+        </div>
+
+        <div class="pair">
+          <div class="blk">
+            <span class="lbl">验收</span>
+            <p>给定 v 可完整还原参数与来源；次日默认 = 最新 approved（自动化测试）；apply 失败回滚零泄漏；构造序列能触发振荡检测。</p>
+          </div>
+          <div class="blk">
+            <span class="lbl">风险</span>
+            <p>LLM 随机性（固定温度 / 种子并记录）；成本（每券 5 次 × 2,201 券不可行，需分层抽样）；自指偏差；参数漂移。</p>
+          </div>
+        </div>
+
+        <div class="tags">
+          <span class="tag am">参数台账</span>
+          <span class="tag">次日生效</span>
+          <span class="tag">收敛 / 振荡</span>
+          <span class="tag mut">人工审批点</span>
+        </div>
+      </div>
+    </article>
+
+    <div class="gap"></div>
+
+    <!-- L4 -->
+    <article class="panel">
+      <div class="panel-hd">
+        <span>L4 · 指数选择与估值拟合</span>
+        <span class="panel-code">INDEX FIT · W14–W17</span>
+      </div>
+      <div class="panel-bd">
+        <div class="pair">
+          <div class="blk">
+            <span class="lbl">问题 / Problem</span>
+            <p>五指数是「选一个跑一批」，指数层只有 <span class="mono">P × Σw(V/P)/Σw</span> 一条公式；三情景点位由逐券区间端点合成后与点位夹逼，不是同情景一致加总；权重口径<b>三套</b>（官方 WEIGHT / 自由流通市值 / 总市值；上证综指剔除 ST 与未满计入期新股）；无交叉校验、无偏差分解。<b>README 的「权重因子×当日市值」尚未实现</b>，不当作现状。</p>
+          </div>
+          <div class="blk">
+            <span class="lbl">方案 / Approach</span>
+            <p>独立 <span class="mono">index_fit</span>：口径 A 保留（零回归锚点）；口径 B 用加权最小二乘估系统性偏离 α；三情景同权加总并强制单调；权重口径显式标注 + 双口径 ΔP；上证50 ⊂ 上证180 ⊂ 上证综指做成分包含一致性检验。</p>
+          </div>
+        </div>
+
+        <div class="formula"><span class="lbl">FIT</span>口径 A（现口径）  P_A = close × Σ w_i (ps_i / close_i) / Σ w_i
+
+口径 B（拟合）    r_i = ps_i / close_i = α + β·log(mcap_i) + γ·行业固定效应 + ε_i
+                 α_w = Σ w_i · r̂_i / Σ w_i
+                 P_B = close × α_w
+
+三情景一致        P_bear ≤ P_base ≤ P_bull   （同一权重、同一池子）</div>
+
+        <div class="blk">
+          <span class="lbl">验收</span>
+          <p>五指数同日并列表；情景点位单调；权重口径标注 100%；交叉一致性通过或每条差异有解释；偏差可分解为 α + 权重效应 + 残差。</p>
+        </div>
+
+        <div class="blk">
+          <span class="lbl">风险</span>
+          <p>N=50 时回归过拟合（行业固定效应 + 收缩）；包含关系会直接暴露计算权重与官方权重的差异；指数收盘时点与成分 as_of 不同日。依赖：行级产物含 mcap / industry / weight。</p>
+        </div>
+
+        <div class="tags">
+          <span class="tag">口径 A / B</span>
+          <span class="tag">三情景</span>
+          <span class="tag">双权重</span>
+          <span class="tag mut">交叉一致性</span>
+        </div>
+      </div>
+    </article>
+
+    <div class="gap"></div>
+
+    <!-- L5 -->
+    <article class="panel">
+      <div class="panel-hd">
+        <span>L5 · 线性池 vs 对数池 vs 专家乘积</span>
+        <span class="panel-code">POOL · W14–W17</span>
+      </div>
+      <div class="panel-bd">
+        <div class="pair">
+          <div class="blk">
+            <span class="lbl">问题 / Problem</span>
+            <p>现在只有加权算术平均：方法分歧大时（DCF 与可比差 3 倍）被大值主导；区间端点线性加总不满足尺度不变；没有「什么时候换池子」的判据。</p>
+          </div>
+          <div class="blk">
+            <span class="lbl">方案 / Approach</span>
+            <p>三种池子全部实现，评估 Agent 按「方法间离散度 + 是否同号 + σ 是否可用」提议、主审复核并记录 <span class="mono">pool_choice + reason</span>；单批可逐券切换，但指数层必须报告池子分布，且三情景同一池子。</p>
+          </div>
+        </div>
+
+        <div class="formula"><span class="lbl">THREE POOLS</span>线性池   V = Σ w_m V_m / Σ w_m
+对数池   log V = Σ w_m log V_m   →   V = Π V_m^(w_m)
+专家乘积 p(V) ∝ p0(V) · Π p_m(V)^(w_m)
+         正态近似：V* = (Σ w_m V_m / σ_m²) / (Σ w_m / σ_m²)，1/σ*² = Σ w_m / σ_m²
+
+区间（模糊）传递
+线性池   [Σ w·a_m , Σ w·b_m]
+对数池   [exp(Σ w·ln a_m) , exp(Σ w·ln b_m)]
+乘积池   [V* − z·σ* , V* + z·σ*]   （σ_m 须先校准）</div>
+
+        <div class="blk">
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr><th>池子</th><th>数学性质</th><th>适用</th><th>不适用</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="ink">线性</td>
+                  <td>算术均值；可加可分解；对离群线性放大</td>
+                  <td>方法数 ≤2、分歧小（IQR/中位 &lt;30%）、需按方法分解</td>
+                  <td>单方法极端值；跨行业尺度差异大</td>
+                </tr>
+                <tr>
+                  <td class="ink">对数</td>
+                  <td>几何均值；尺度不变；对低值更敏感（下行保守）</td>
+                  <td>同号且量级差 &gt;2×；乘数型方法为主</td>
+                  <td>有 ≤0 值（需 mask/nudge）；需线性加总到指数</td>
+                </tr>
+                <tr>
+                  <td class="ink">乘积</td>
+                  <td>精度加权；方差收缩；需概率解释</td>
+                  <td>每方法有校准 σ / 区间；方法近似条件独立</td>
+                  <td>σ 未校准；方法高度相关（重复计信息）</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="blk">
+          <span class="lbl">切换策略与实验</span>
+          <p>
+            默认线性（零回归）；评估 Agent 提议 → 主审复核 → 记录理由。
+            实验：同一 as_of 三池并算（离线 shadow，不进生产），比较与收盘偏离分布、周环比稳定性、极端券（估值/价 ≥5×）占比、MC p5–p95 是否覆盖收盘；跑满 4 周再定默认池子。
+          </p>
+        </div>
+
+        <div class="pair">
+          <div class="blk">
+            <span class="lbl">验收</span>
+            <p>三池可切换、可复算；区间单调且覆盖；选择有 reason 且可审计；线性池与现引擎逐位一致。</p>
+          </div>
+          <div class="blk">
+            <span class="lbl">风险</span>
+            <p>对数池遇负值 / 缺失的定义（mask 与 nudge 引入人为偏移）；乘积池 σ 未校准会系统性收窄区间；池子选择的可解释性。</p>
+          </div>
+        </div>
+
+        <div class="tags">
+          <span class="tag">linear 默认</span>
+          <span class="tag">log</span>
+          <span class="tag">product</span>
+          <span class="tag mut">4 周 A/B</span>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ── 04 里程碑 ──────────────────────────────────────── -->
+  <section class="section" id="milestones">
+    <div class="section-hd">
+      <span class="no">04</span>
+      <h2>里程碑</h2>
+      <span class="en">MILESTONES · 17 WEEKS</span>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span>相对周次（不绑定日历日期）</span>
+        <span class="panel-code">M0 → M4</span>
+      </div>
+      <div class="panel-bd">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-when">M0 · W1–W2 · BASELINE</div>
+            <div class="tl-title">基线固化 <span class="tag ok">仅增基线</span></div>
+            <div class="tl-desc">
+              W1：核验本轮已完成事实——技能包在 <span class="mono">skills/</span> 随仓库版本化、<span class="mono">config.py</span> 三级解析（仓库内 → <span class="mono">VALUATION_SKILL_DIR</span> → 旧部署路径）、前端无「陈老师 vs 石总」双模型对比、<span class="mono">docs/</span> 建立；<span class="mono">smoke_test</span> 170 用例全绿 + 11 组 examples 快照（<span class="mono">runtime/baseline/&lt;tag&gt;/</span>，含 hash）。
+              W2：legacy 双跑脚本（同 as_of 同参数两次逐位 diff）；仓库级最小门禁（lint + 单测，可选）。
+              <br><b>验收</b>：快照可复算；冒烟全绿；双跑 diff = 0；<span class="mono">config.py</span> 三级解析有测试。
+              <br><b>回滚</b>：无运行路径变更，只增目录与测试。
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-when">M1 · W3–W6 · DECOUPLE</div>
+            <div class="tl-title">解耦向量化（基础层）</div>
+            <div class="tl-desc">
+              W3 kernel 抽取（先单券调用，只移位置）· W4 宽表 + 层产物 + manifest · W5 批量 DCF / 相对估值 + 合成 · W6 dual 模式 + 失败隔离 + 性能测量。
+              <br><b>验收</b>：11 组 examples + sh50 零回归；单券耗时中位 ↓≥30%（待测）；内存 ≤1.5×（待测）；注入故障只影响 1 券。
+              <br><b>回滚</b>：<span class="mono">pipeline_mode</span> 回 legacy；层产物按 job 隔离。
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-when">M2 · W7–W9 · EXPRESS</div>
+            <div class="tl-title">表达与可视化</div>
+            <div class="tl-desc">
+              W7 trace schema v1 + 引擎诊断结构化 · W8 工作台「模型履历」面板 + 两批 diff · W9 报告消费同一 JSON + 字段完整率检查。
+              <br><b>验收</b>：trace 覆盖率 100%；数值一致；溯源可点；可读性内部评分 ≥4/5。
+              <br><b>回滚</b>：面板 feature flag；旧报告模板保留。
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-when">M3 · W10–W13 · AGENT LOOP</div>
+            <div class="tl-title">Agent 迭代</div>
+            <div class="tl-desc">
+              W10 参数台账 schema + 状态机 · W11 评估 Agent（议题聚类）· W12 主审适用性判定 + 次日默认参数 · W13 振荡检测 + 回滚 + 审批 UI。
+              <br><b>验收</b>：台账可重放；次日默认 = 最新 approved；振荡用例触发；apply 回滚零泄漏。
+              <br><b>回滚</b>：跑批可显式指定 P_v；一键回退。
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-when">M4 · W14–W17 · POOL / INDEX</div>
+            <div class="tl-title">合成池与指数拟合</div>
+            <div class="tl-desc">
+              W14 三池实现 + 线性零回归 · W15 指数拟合（口径 A/B + 三情景 + 双权重）· W16 五指数并列 + 交叉一致性 · W17 三池离线实验报告 + 默认池子决策材料。
+              <br><b>验收</b>：三池可复算；线性 = 现引擎；五指数并列表；交叉一致性通过。
+              <br><b>回滚</b>：<span class="mono">pool_mode=linear</span> 为默认；<span class="mono">index_fit</span> 双口径并存。
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="tbl-note">M1 与 M4 是唯二会动数值的里程碑，均以「零回归 + dual 对比 + 开关」为前置；M2、M3 只增字段与流程，不改估值路径。</p>
+  </section>
+
+  <!-- ── 05 指标 ────────────────────────────────────────── -->
+  <section class="section" id="metrics">
+    <div class="section-hd">
+      <span class="no">05</span>
+      <h2>指标与验收</h2>
+      <span class="en">METRICS</span>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span>九个验收指标</span>
+        <span class="panel-code">ACCEPTANCE</span>
+      </div>
+      <div class="panel-bd flush">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>指标</th><th>定义</th><th>现状</th><th class="num">目标</th><th>采集</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="ink">覆盖率</td><td>ok / total（按指数）</td><td class="faint">待测</td><td class="num">≥ 基线</td><td class="mono">state.json summary</td></tr>
+              <tr><td class="ink">跳过率</td><td>skip / total，按原因分类</td><td class="faint">待测</td><td class="num">≤ 基线</td><td class="mono">row.error 归类</td></tr>
+              <tr><td class="ink">单券耗时</td><td>pending → ok 墙钟，中位 / p95</td><td class="faint">待测（无计时字段）</td><td class="num">中位 −30%</td><td class="mono">新增 row.timing_ms</td></tr>
+              <tr><td class="ink">批跑总时长</td><td>created → finished</td><td class="faint">待测</td><td class="num">sh50 ≤ 0.7×</td><td class="mono">state.json</td></tr>
+              <tr><td class="ink">内存峰值</td><td>服务进程 RSS 峰值</td><td class="faint">待测</td><td class="num">≤ 1.5× 基线</td><td class="mono">采样 / psutil</td></tr>
+              <tr><td class="ink">数值零回归</td><td>对基线快照的 max|Δ|</td><td class="faint">基线未固化</td><td class="num">0 或 ≤1e-9</td><td class="mono">dual diff</td></tr>
+              <tr><td class="ink">报告可读性</td><td>trace 字段完整率 + 人工评分</td><td class="faint">无</td><td class="num">100% / ≥4 分</td><td>schema 校验 + 问卷</td></tr>
+              <tr><td class="ink">Agent 采纳率</td><td>adopted / (adopted + rejected)</td><td class="faint">有字段无历史</td><td class="num">≥ 60%</td><td class="mono">shadow_metrics.adoption</td></tr>
+              <tr><td class="ink">参数稳定性</td><td>周环比中位 |Δ|、方向翻转率</td><td class="faint">有 wow 字段</td><td class="num">翻转 ≤1/4 期</td><td class="mono">shadow_metrics.wow</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <p class="tbl-note">「待测」项须在 M0 补基线测量，否则 M1 验收没有分母。</p>
+  </section>
+
+  <!-- ── 06 决策点 ──────────────────────────────────────── -->
+  <section class="section" id="decisions">
+    <div class="section-hd">
+      <span class="no">06</span>
+      <h2>待拍板决策点</h2>
+      <span class="en">OPEN DECISIONS</span>
+    </div>
+
+    <div class="panel">
+      <div class="panel-hd">
+        <span>5 项 · 不拍板则 M1 代码形态无法定稿</span>
+        <span class="panel-code">BLOCKING</span>
+      </div>
+      <div class="panel-bd flush">
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th class="num">#</th><th>决策点</th><th>选项</th><th>倾向</th><th>影响面</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="num">1</td><td class="ink">向量化粒度</td>
+                <td>A 方法级 kernel + 宽表（引入 numpy/pandas）<br>B 只做进程复用与批量 IO（保持零依赖）<br>C 混合：基础层 numpy，非基础层纯 Python</td>
+                <td><span class="tag am">C</span></td><td>依赖、内存、可移植性</td>
+              </tr>
+              <tr>
+                <td class="num">2</td><td class="ink">层间 barrier</td>
+                <td>A 全量 barrier（简单、内存高）<br>B chunk 内 barrier + 层内流水（省内存、复杂）</td>
+                <td><span class="tag am">B · chunk=200</span></td><td>峰值内存 vs 复杂度</td>
+              </tr>
+              <tr>
+                <td class="num">3</td><td class="ink">池子切换由谁决定</td>
+                <td>A 评估 Agent 提议 + 主审复核（自动）<br>B 人工固定<br>C 逐指数固定 + 异常时提议</td>
+                <td><span class="tag am">A + 人工确认</span></td><td>可解释性、稳定性</td>
+              </tr>
+              <tr>
+                <td class="num">4</td><td class="ink">Agent 迭代频率</td>
+                <td>A 每日（跑批日频、参数日晋级）<br>B 每周　C 事件驱动（离散度触发）</td>
+                <td><span class="tag am">A · 周频回退</span></td><td>LLM 成本、收敛速度</td>
+              </tr>
+              <tr>
+                <td class="num">5</td><td class="ink">技能拆分边界</td>
+                <td>A 按 <span class="mono">spec/05</span> 的 8 模块一次拆<br>B 保留单体 + 批跑侧适配层<br>C 先把 scripts 变成可 import 模块</td>
+                <td><span class="tag am">C 起步 · 8 模块为目标</span></td><td>交付形态、版本管理</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 07 本次不实现 ──────────────────────────────────── -->
+  <section class="section" id="out-of-scope">
+    <div class="section-hd">
+      <span class="no">07</span>
+      <h2>本次不实现</h2>
+      <span class="en">OUT OF SCOPE</span>
+    </div>
+
+    <div class="callout red">
+      <span class="h">PLANNING ONLY / 规划文件</span>
+      <b>本文件是规划，代码不改、其他 docs 不动、不提交 git。</b>
+      五层改进的落地顺序与验收见里程碑与指标两节；本文不承诺任何具体日期，周次均为相对 Week。
+      M1 与 M4 会动数值，因此都以「零回归 + dual 对比 + 开关」为前置条件；M2、M3 只增字段与流程，不改估值路径。
+      未定项：numpy 依赖、chunk 大小、池子默认值、台账晋级是否人工确认——这四项属于上方 5 个决策点，需先拍板。
+    </div>
+
+    <div class="callout">
+      <span class="h">RISK REGISTER / 已知风险</span>
+      数值零回归（最大）· 向量化后单券失败隔离 · 单进程内存峰值 · 缓存与数据 PIT 一致性 · 技能拆分接口 · LLM 成本与随机性 · 版本漂移。
+      版本漂移已有实例：<span class="mono">SKILL.md</span> frontmatter <span class="mono">3.16.12</span>、变更记录到 <span class="mono">v3.29.1</span>、引擎 <span class="mono">2.28.0</span>、冒烟脚本头注「100 用例」而实际 170 个 <span class="mono">test_*</span> 方法；根目录另有一份未入库的技能副本。
+    </div>
+  </section>
+
+</main>
+
+<div class="wrap">
+  <footer class="foot">
+    <span>VALUATION SYSTEM · RESEARCH DOCS · 内部对齐用</span>
+    <span class="mono">BASELINE d06a5ed · 2026-11 · PLANNING ONLY</span>
+    <span>正文：<a href="../03-engineering-roadmap.md">03-engineering-roadmap.md</a></span>
+  </footer>
+</div>
+
+</body>
+</html>
