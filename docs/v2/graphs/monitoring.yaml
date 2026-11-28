@@ -1,3 +1,4 @@
+# demo 修订（2026-11-28）：不鉴权/不脱敏/不做数据域隔离；DCM 作为 V2 可选模块，本示例图暂未展开。
 # docs/v2/graphs/monitoring.yaml
 # VCG 图规范 v1 · 已上市指数监控（monitoring）
 #

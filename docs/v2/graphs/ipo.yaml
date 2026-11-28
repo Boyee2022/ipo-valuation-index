@@ -1,3 +1,4 @@
+# demo 修订（2026-11-28）：domain 只作 mode/缓存口径，不做保密/鉴权/隔离；o_compliance 为定价约束检查（demo），不是合规结论。
 # docs/v2/graphs/ipo.yaml
 # VCG 图规范 v1 · 拟上市单公司估值与定价约束检查（ipo）
 #

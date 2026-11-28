@@ -55,6 +55,7 @@ from .graph import (
 from .modules import (
     ALL_MODULES,
     COMPARABLE,
+    DCM,
     DCF,
     INDUSTRY_BASELINE,
     SENTIMENT,
@@ -106,6 +107,7 @@ __all__ = [
     # modules
     "ALL_MODULES",
     "COMPARABLE",
+    "DCM",
     "DCF",
     "INDUSTRY_BASELINE",
     "SENTIMENT",

@@ -3,7 +3,9 @@
 > 状态：**原型 / 研究用，不进入生产**。只写 `prototype/valnet/`，不 import
 > `packages/batch`，不调用网络或 LLM；运行时不修改任何生产状态。
 > 对应设计文档：[docs/v2/README.md](../../docs/v2/README.md)（构想）、
-> [02-architecture.md](../../docs/v2/02-architecture.md)（模块协议/执行器/算子语义）。
+> [02-architecture.md](../../docs/v2/02-architecture.md)（模块协议/执行器/算子语义）、
+> [05-implementation-plan.md](../../docs/v2/05-implementation-plan.md)（V0–V4）、
+> [08-demo-first-revision.md](../../docs/v2/08-demo-first-revision.md)（demo 口径）。
 
 这是一个**纯标准库（Python 3.11+）**的最小实现，用来验证
 "类型化模块 + DAG 执行器 + 门控/残差/池化 + trace" 的接口形状是否成立，
@@ -14,14 +16,19 @@
 ```bash
 cd prototype
 
-# 单元测试（70 个，stdlib unittest）
+# 单元测试（83 个，stdlib unittest）
 python3 -m unittest discover -s valnet/tests -v
 
 # 运行示例：3 家公司跑 monitoring 图，打印逐券输出、trace 与指数合成
 python3 -m valnet.runner
+
+# 四段式 demo：A 数据 → B 模型加载 → C 批处理/断点 → D 指数拟合
+python3 -m valnet.runner_stages
 ```
 
-测试输出末尾应为 `Ran 70 tests ... OK`（全部通过）。
+测试输出末尾应为 `Ran 83 tests ... OK`（全部通过）。第二次运行 `runner_stages`
+会命中已完成 chunk，`executed_this_run=0`，用于演示断点恢复；删除
+`prototype/runtime/graph/demo-3/` 可强制重算。
 
 ## 目录与职责
 
@@ -32,11 +39,14 @@ prototype/valnet/
                      # NodeSpec / EdgeSpec / PoolSpec / GraphSpec
   graph.py           # DAG 执行器：校验、Kahn 拓扑、门控、残差、失败隔离、trace
   pooling.py         # 线性池 / 对数池 / 专家乘积；权重归一；区间/置信度合成
-  modules.py         # 4 个 stub 模块：DCF / Comparable / Sentiment / IndustryBaseline
+  modules.py         # 5 个 stub 模块：DCF / DCM / Comparable / Sentiment / IndustryBaseline
+  stages.py          # 四段式 A/B/C/D：数据、模块加载、批处理/断点、指数拟合
+  runner_stages.py   # 四段式 demo（含 DCM、chunk、resume）
   runner.py          # 3 家合成数据、monitoring 图、逐券打印、市值加权指数合成
   tests/
     test_pooling.py  # 池化边界：归一、None 跳过、非正值报错、区间传播
     test_graph.py    # 拓扑/环/门控/残差/失败隔离/确定性/trace/数据契约
+    test_stages.py   # A/B/C/D、chunk 一致性、断点恢复、DCM 约束
   README.md          # 本文件
 ```
 
@@ -47,7 +57,7 @@ prototype/valnet/
                                   │
               ┌───────────────────┴───────────────────┐
               ▼                                       ▼
-   industry_baseline (encoder)                 dcf / comparable (valuation)
+   industry_baseline (encoder)          dcf / dcm / comparable (valuation)
        value = industry_median                    value = 模型 stub 输出
               │                                       │
               └──────────► sentiment ◄────────────────┘

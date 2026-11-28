@@ -410,3 +410,94 @@ ALL_MODULES: tuple[ModuleSpec, ...] = (
     SENTIMENT,
     INDUSTRY_BASELINE,
 )
+
+
+# ---------------------------------------------------------------------------
+# DCM（折现/资本化模型）stub
+# ---------------------------------------------------------------------------
+
+#: DCM 输入特征：基期现金流/股利、增长率、折现率。
+F_DCM_BASE = "dcm_base"
+F_DCM_DISCOUNT = "discount"
+M_HAS_DCM = "has_dcm"
+DCM_INTERVAL_PCT = 0.20
+
+
+def run_dcm(
+    batch: Batch, upstream: Mapping[str, ModuleOutput]
+) -> ModuleOutput:
+    """DCM stub：``base * (1 + g) / (1 + r)``，要求 ``r > g``、结果为正。
+
+    这是**单期折现**的简化演示，不是最终 DCM 口径；DCM 的具体公式（资本化/多期）
+    在实现前确认。保留 ``r > g`` 的约束，是为了让接口形状与最终模型一致。
+    """
+    values: list[Scalar] = []
+    intervals: list[Interval] = []
+    confidence: list[Scalar] = []
+    computed = 0
+    missing = 0
+    invalid = 0
+
+    for position in range(_size(batch)):
+        base = _feature(batch, F_DCM_BASE, position)
+        growth = _feature(batch, F_GROWTH, position)
+        discount = _feature(batch, F_DCM_DISCOUNT, position)
+        if (
+            base is None
+            or growth is None
+            or discount is None
+            or not _available(batch, M_HAS_DCM, position)
+        ):
+            missing += 1
+            values.append(None)
+            intervals.append(None)
+            confidence.append(None)
+            continue
+        if discount <= growth:
+            invalid += 1
+            values.append(None)
+            intervals.append(None)
+            confidence.append(None)
+            continue
+        value = base * (1.0 + growth) / (1.0 + discount)
+        if value <= 0:
+            invalid += 1
+            values.append(None)
+            intervals.append(None)
+            confidence.append(None)
+            continue
+        computed += 1
+        values.append(value)
+        intervals.append(_interval(value, DCM_INTERVAL_PCT))
+        confidence.append(0.60)
+
+    return ModuleOutput(
+        values=values,
+        intervals=intervals,
+        confidence=confidence,
+        evidence=[
+            f"DCM v{VERSION}: value = base*(1+g)/(1+r)，要求 r>g；"
+            f"区间 ±{DCM_INTERVAL_PCT:.0%}，n={computed}/{_size(batch)}"
+        ],
+        diagnostics={
+            "module": "dcm",
+            "computed": computed,
+            "missing": missing,
+            "invalid": invalid,
+            "interval_pct": DCM_INTERVAL_PCT,
+            "note": "DCM 公式为单期折现 stub，最终口径待确认",
+        },
+    )
+
+
+DCM = ModuleSpec(
+    name="dcm",
+    kind="valuation",
+    version=VERSION,
+    inputs=(F_DCM_BASE, F_GROWTH, F_DCM_DISCOUNT),
+    outputs=("value", "interval", "confidence"),
+    run=run_dcm,
+    gate=_mask_gate(M_HAS_DCM),
+)
+
+ALL_MODULES = ALL_MODULES + (DCM,)

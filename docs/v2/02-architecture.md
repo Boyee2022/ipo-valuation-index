@@ -1,6 +1,7 @@
 # 02 · 架构：类型化估值计算图（VCG）与智能体评论家
 
 > 状态：**设计稿（design）**，不进入生产；执行器、模块协议与 API 均为规划。  
+> **2026-11-28 修订**：demo 优先；不鉴权、不脱敏、不做数据域隔离；完全重构（技能只作参照）；执行架构改为 **A 数据 → B 模型加载 → C 批处理/断点 → D 指数拟合**。与本文冲突处以 [08-demo-first-revision.md](08-demo-first-revision.md) 为准。
 > 定位：**VCG / MVN（Valuation Computation Graph / Modular Valuation Network）**，前向是带类型的估值计算图，后向是带合成目标的智能体评论家（Agentic Critic）；**不是端到端可训练的神经网络**。  
 > 与同批文档的关系：为什么这样定位见 [00-evaluation.md](00-evaluation.md)，形式化与命题见 [01-theory.md](01-theory.md)，模块清单见 [03-module-catalog.md](03-module-catalog.md)，落地顺序见 [05-implementation-plan.md](05-implementation-plan.md)，两个用途见 [04-use-cases.md](04-use-cases.md)。
 
@@ -10,11 +11,11 @@
 
 现在生产里的执行单元是「一只券跑一次完整流水线」：`pipeline._worker()` 依次做输入组装 → 引擎子进程 → 统计校验 → 报告 → 机检（`packages/batch/pipeline.py:223`）。方法路由、DCF、可比、舆情、合成、置信度全部封在单券引擎内部（`skills/llm-ipo-valuation/scripts/valuation_engine.py`，5,681 行），跨券只共享只读缓存；多 Agent 评审是券内的一次 sidecar 调用（`packages/batch/shadow.py:702`），参数只有当前一版（`packages/batch/agent_config.py:6`）。
 
-本架构要做的是**把「方法」从「券」里抽出来变成图节点**，而不是重写估值算法：
+本架构要做的是**把「方法」从「券」里抽出来变成图节点**；实现上**完全重构**，现有技能只作公式/行为参照与回归 oracle，不做运行时 legacy 包装：
 
 - **前向**：`GraphSpec` 描述节点（编码器、估值模块、门控、池化、指数合成、报告）与边（类型化端口）；执行器按阶段批处理或逐券调度，每节点输出值、区间、置信度、证据、诊断与 trace。
 - **后向**：多专家提议 → 主审核准 → 影子对照 → 有界回写 → 回滚，写入参数台账；用**合成校准目标**（一致性、稳定、校准、人评）排序，而不是用「更贴近指数收盘」当损失。市价只作诊断。
-- **双入口**：`monitor(index, date)` 跑指数成分券监控，`valuate(ipo_input)` 跑单公司 IPO 估值与定价约束检查；共享估值模块，隔离数据域、证据域与合规域。
+- **双入口**：`monitor(index, date)` 跑指数成分券监控，`valuate(ipo_input)` 跑单公司 IPO 估值与定价约束检查；共享估值模块；`mode=monitoring|ipo` 只作行为/缓存口径开关，demo 阶段**不是安全边界**，不做鉴权/隔离。
 
 本架构明确**不**做：重写引擎、端到端训练、自动交易/自动定价、把「神经网络反向传播」当已实现。见 §9。
 
@@ -28,7 +29,33 @@
 | ④ 指数选择与拟合 | `idx.index_fit` 节点：口径 A/B、三情景一致、双权重口径、交叉校验 | `idx.index_fit`、`§4.7` |
 | ⑤ 线性池/对数池/专家乘积 | `pool.linear` / `pool.log` / `pool.product` 三池可切换，区间同步传播 | `pool.*`、`§4.6` |
 
-路线里的 M0–M4 与本架构 V0–V4 的映射在 [05](05-implementation-plan.md) 中给出；两者不是两套方案，V0–V2 与路线 M0–M3 基本重叠，只是把「图」作为统一表达。
+路线里的 M0–M4 与 V0–V4 的映射见 [05](05-implementation-plan.md)；本架构的“层”是模块语义，§1.0 的 A/B/C/D 是执行视角。V0 起**完全重构**，不包 legacy。
+
+---
+
+## 1.0 四段式执行架构（demo 版）
+
+> 本节的 A/B/C/D 是**执行**视角；§1 的七层是**模块语义**视角，两者不冲突。
+
+```text
+A. 数据资料收集
+   源适配器（公开行情/财报/公告/舆情）→ 标准化 → 宽表/列式缓存 + manifest（as_of、来源、缺失掩码）
+        │
+B. 模型层加载
+   模块注册表 → 依赖图 → 参数包 → 常驻 worker 池 → 预热/健康检查
+        │
+C. 批处理 + 断点恢复
+   按模块/层 chunk → 向量化计算 → 每 chunk 原子落盘 → manifest 记录完成/失败 → 可恢复
+        │
+D. 指数选择与拟合
+   选指数/权重 → 池化 → 拟合点位 → 三情景 → 诊断/报告
+```
+
+- **模块常驻**：B 段加载一次，C 段批量跑完再退出；避免每券重复 import/初始化。
+- **向量化**：基础层（DCF/DCM/可比/池化）按列式/矩阵批处理；非基础层（舆情/LLM）逐券或小批并发。
+- **断点**：manifest 记录 `batch_id + as_of + module_version + params_hash + chunk_id + status`；已完成 chunk 跳过，失败 chunk 重跑。
+- **失败隔离**：单券/单模块失败只写 mask/错误，不阻断整批；D 段按剩余权重再归一。
+- **demo 边界**：只用公开/构造数据；不做鉴权、脱敏、数据域隔离、合规认证（见 08）。
 
 ---
 
@@ -97,7 +124,7 @@
 
 协议目标：**模块可插拔、类型可校验、失败可隔离、结果可复现**。V1 用纯标准库 dataclass 实现（与 `prototype/valnet/` 原型一致的取向），参数存储与执行器都不要求 numpy。
 
-> 已有参照：同批原型 `prototype/valnet/` 用纯标准库把本节协议跑通了最小闭环（`spec.py` 类型契约、`graph.py` DAG/门控/残差/失败隔离/trace、`pooling.py` 三池，70 个单元测试通过）。它的 `Batch` 是列式最小实现（`ids/features/masks/meta`）；生产协议在此基础上增加 `rows/provenance/errors/cache`，字段只增不改。原型不接生产、不 import `packages/batch`。
+> 已有参照：同批原型 `prototype/valnet/` 用纯标准库把本节协议跑通了最小闭环（`spec.py` 类型契约、`graph.py` DAG/门控/残差/失败隔离/trace、`pooling.py` 三池，83 个单元测试通过）。它的 `Batch` 是列式最小实现（`ids/features/masks/meta`）；生产协议在此基础上增加 `rows/provenance/errors/cache`，字段只增不改。原型不接生产、不 import `packages/batch`。
 
 ### 2.1 类型表达式（TypeExpr）
 
@@ -255,8 +282,8 @@ class NodeSpec:
 
 ### 3.3 缓存
 
-- 键：`sha256(module_id@version | params_hash | 输入值哈希 | as_of | data_resource_hashes | domain)`；内容寻址，存 `runtime/cache/graph/<hash>.json`。
-- 命中条件必须包含数据 as_of；**禁止跨 as_of / 跨 domain 复用**（IPO 与 monitoring 缓存键含 `domain`）。
+- 键：`sha256(module_id@version | params_hash | 输入值哈希 | as_of | data_resource_hashes | mode)`；内容寻址，存 `runtime/cache/graph/<hash>.json`。
+- 命中条件必须包含数据 as_of；**禁止跨 as_of 复用**；`mode` 只区分 monitoring/ipo 的表达口径，不是安全隔离。
 - 缓存只缓存**纯函数节点**；LLM 节点缓存记录模型名、`prompt_hash`、温度与输出，命中与否都写 trace。
 - 失效：模块版本升级、图版本升级、数据源 TTL 到期、显式 `--no-cache`。
 
@@ -267,7 +294,7 @@ class NodeSpec:
 ```text
 runtime/jobs/<job_id>/
 ├── state.json                  # 既有：任务状态 + 逐券摘要（新增 graph 摘要字段）
-├── <code>.input.json ...       # 既有：legacy 产物（V0 保真）
+├── <code>.input.json ...       # 旧技能产物：仅作对拍参照，不进入新运行时
 └── graph/                      # 新增：仅图模式写
     ├── manifest.json           # 图版本、params_hash、节点状态、chunk 进度、resume_from
     ├── nodes/<node_id>.json    # 层产物（值 + 掩码 + 证据 + trace）
@@ -289,7 +316,7 @@ runtime/jobs/<job_id>/
 
 ### 3.6 与现有 `pipeline.py` 的兼容策略
 
-- V0/V1 **不改现有执行路径**：新增 `packages/valuation_net/`（Python 包目录，import 名即 `valuation_net`）与 `packages/batch/graph_bridge.py`（薄适配），由 `graph_mode` 开关选择；关闭时行为与今天逐位一致。
+- V0/V1 **新增独立包 `packages/valuation_net/`**（import 名 `valuation_net`），完全重构；旧 `packages/batch` 保持不动，新包通过 CLI/API 接入。不做 `graph_bridge` 式的 legacy 包装。
 - 任务 ID 复用 `job_<timestamp>_<hex>` 命名空间，`/api/jobs/<id>` 继续可用；前端 2.5s 轮询逻辑不变（`ValuationPage.tsx:130`）。
 - 图模式产出的 `state.json` 字段只增不改（`graph` 摘要 + `run_id` 别名）；旧字段 `rows/summary/shadow_metrics` 仍由池化/报告适配器填充，保证工作台与报告存档无感。
 - 报告仍由 `report_generator.py` 生成（图节点 `out.report` 包装它），不重写报告模板。
@@ -394,7 +421,7 @@ V1 起增加：
 
 ### 5.2 把 `shadow.py` 包成 CriticModule
 
-V0/V1 不改 `shadow.py` 的协议，只做类型适配：
+V5 才接评论家；旧 `shadow.py` 保持不动，只做类型适配，不做运行时依赖：
 
 ```python
 class ShadowCriticAdapter(CriticModule):
@@ -447,12 +474,12 @@ exclude    ：|V − P|（价格偏离只作诊断，绝不进目标）
 | 输入 | 指数成分 + 权重 + 收盘；全市场/指数宇宙 | 单公司申报期财务、锁定可比、发行条款、行业 |
 | 共享模块 | 编码层、估值模块层、门控、池化、评论家 | 同左（同一 ModuleSpec 与版本） |
 | 特有节点 | `entry.monitor`、`idx.index_fit`、交叉一致性检查 | `entry.ipo`、`gate.ipo_eligibility`、`out.compliance`（发行 PE/PS 偏离、募资、流通比） |
-| 输出 | 逐券区间、指数拟合点位、偏离/分解、稳定性 | 估值区间、方法分解、敏感性、可比证据链、定价约束、合规声明；**不输出单一建议发行价** |
-| 数据域 | 公开市场数据；缓存可共享（同 as_of） | deal 级保密数据；独立命名空间；禁止跨域缓存/台账继承 |
+| 输出 | 逐券区间、指数拟合点位、偏离/分解、稳定性 | 估值区间、方法分解、敏感性、可比证据链、定价约束检查（研究口径）；**不输出单一建议发行价** |
+| 数据域 | 公开数据；缓存按 as_of | **公开/构造数据 demo；不做隔离**；`mode` 仅作缓存/行为开关 |
 | 失败语义 | 单券 skip；整指数降级到 legacy | 单公司失败即整单失败（返回明确原因，不产出半成品） |
-| 合规 | 估值温度计，不构成交易信号 | 研究参考 + 人工复核 + 利益冲突/静默期披露 |
+| 边界 | 估值温度计，不构成交易信号 | 研究参考；**demo 不做鉴权/脱敏/合规认证** |
 
-**共享而不混同**：模块共享是「同一实现 + 同一版本」，不是「同一份缓存/同一份参数台账」。IPO 的可比池、发行条款、覆写参数与 monitoring 的指数成分、公开行情在存储层物理隔离（不同子目录/不同 scope），图执行器通过 `domain` 字段拒绝跨域复用。
+**共享而不混同（demo 版）**：模块共享是「同一实现 + 同一版本」；`mode=monitoring|ipo` 只用于缓存/行为口径，**不是安全边界**。demo 不接真实保密材料，不做物理隔离；生产化以后再补权限/脱敏/审计。
 
 ---
 
@@ -473,7 +500,7 @@ exclude    ：|V − P|（价格偏离只作诊断，绝不进目标）
 | GET | `/api/params/ledger?scope=` | 参数台账版本列表 | V2 |
 | POST | `/api/params/approve` | 人工批准某版本（写 approved_by） | V2 |
 | POST | `/api/params/rollback` | 回滚到指定版本（记 rolled_back） | V2 |
-| POST | `/api/ipo/valuate` | 提交单公司 IPO 估值（deal 域） | V3 |
+| POST | `/api/ipo/valuate` | 提交单公司 IPO 估值（demo，公开/构造样例） | V4 |
 
 **请求草图：**
 
@@ -511,7 +538,7 @@ POST /api/graph/run
 
 - 旧 `/api/run` 不改行为：内部映射为 `graph=monitoring, critic_mode=agent_mode`；响应仍为 `{"job_id": ...}`。前端（`packages/workbench/src/client/page/api.ts`）无需先改。
 - 图模式失败仍走任务状态（`error/degraded`），不返回 5xx；提交期非法图/参数返回 400，未知 run 返回 404，未启用 IPO 图返回 404（feature flag）。
-- 新增字段一律可选；旧客户端读取时忽略未知字段即可。接口无鉴权与 CORS `*` 沿用现状（仅内网），IPO 入口必须在部署层加访问控制，不能只靠路由。
+- 新增字段一律可选；旧客户端读取时忽略未知字段即可。接口无鉴权与 CORS `*` 沿用现状（仅内网）；**demo 不加入侵式鉴权**，IPO 入口也不做生产级访问控制；生产化另议。
 
 ---
 
@@ -533,7 +560,7 @@ UI POST /api/graph/run(graph=monitoring)
  → UI 轮询 GET /api/runs/<id>（与 /api/jobs/<id> 同 id）→ 结果区不变
 
 ipo：
-POST /api/ipo/valuate(deal) → 编译 ipo 图（domain=ipo，独立命名空间）
+POST /api/ipo/valuate(deal) → 编译 ipo 图（mode=ipo；demo 不做独立命名空间）
  → entry.ipo 校验输入 → gate.ipo_eligibility（板块/盈利/流通比/募资/截点）
  → 与 monitoring 相同的编码/估值模块（单行 Batch；可比来自 deal 锁定清单）
  → 池化/区间 → out.compliance（发行 PE/PS 偏离、募资、流通比、免责声明）
@@ -546,21 +573,21 @@ POST /api/ipo/valuate(deal) → 编译 ipo 图（domain=ipo，独立命名空间
 
 **非目标（本分支不承诺）：**
 
-1. 不重写 `valuation_engine.py`；V0 先把现有引擎包成 `LegacyModule`，数值零回归是硬门槛。
+1. **完全重构**：新包不 import `valuation_engine.py`；V0 提取 golden fixtures，旧引擎只作对拍 oracle，不做运行时包装。
 2. 不做端到端训练/反向传播；可微部分只做敏感度（隐式微分属于 V4 研究）。
 3. 不做自动交易/自动定价；不输出单一建议发行价；不用市价当训练标签。
 4. 不在本分支改生产 `pipeline.py` 主路径；图模式由开关控制，可随时回退。
-5. 不做权限系统与多租户；IPO 访问控制由部署层与 V3 补。
+5. **demo 不做权限/鉴权/多租户/脱敏**；IPO 只用公开/构造样例；生产化另议。
 
 **已知风险：**
 
 | 风险 | 影响 | 缓解 |
 |---|---|---|
-| 零回归被打破 | 数值不可信，评审否决 | V0 快照 + 170 用例 + dual 逐位 diff；非线性池默认关闭 |
+| 零回归被打破 | 数值不可信，评审否决 | V0 golden fixtures + 170 用例对拍 + 差异清单；非线性池默认关闭 |
 | 层间 barrier/掩码遗漏 | 生命周期/Layer0 否决被绕开 | 约束与图级 checks；故障注入；dual 对比 |
 | 评估指标自指 | 合成目标过拟合 | 预注册权重、留出专家、对抗扰动、跨指数/跨期复现 |
 | LLM 非确定性/成本 | 不可复现、全市场不可行 | 抽样评审、缓存记录 prompt_hash、离线对照；不承诺逐位一致 |
-| 缓存跨 as_of 污染 | 混期结果 | 缓存键含 as_of/domain；manifest 记录资源版本 |
-| 图过度设计 | 维护成本 > 收益 | 模块状态诚实标注；V0/V1 先包不拆；每模块契约测试 |
+| 缓存跨 as_of 污染 | 混期结果 | 缓存键含 as_of/mode；manifest 记录资源版本 |
+| 图过度设计 | 维护成本 > 收益 | 模块状态诚实标注；V0 参照+新包骨架；每模块契约测试 |
 
-**待决问题**（详见 [05](05-implementation-plan.md) 决策表）：是否引入 numpy 与列式 Batch；层间 barrier 的 chunk 粒度；池化切换由评论家还是人工；图执行器放 `packages/valuation_net/` 还是 `packages/batch/graph/`；引擎以 import 还是子进程方式被模块调用。这些问题不影响 V0（包住现有引擎）与 V1（最小图执行器）先行。
+**待决问题**（详见 [05](05-implementation-plan.md) 决策表）：是否引入 numpy 与列式 Batch；层间 barrier 的 chunk 粒度；池化切换由评论家还是人工；图执行器放 `packages/valuation_net/` 还是 `packages/batch/graph/`；引擎以 import 还是子进程方式被模块调用。这些问题不影响 V0（参照提取+骨架）与 V1（数据段）先行。

@@ -102,6 +102,14 @@
     </div>
   </section>
 
+  <div class="callout red" style="margin:6px 0 14px">
+    <span class="h">2026-11-28 修订 · DEMO FIRST</span>
+    <b>不鉴权、不脱敏、不做数据域隔离</b>；完全重构（技能只作参照）；执行改为
+    <b>A 数据 → B 模型加载 → C 批处理/断点 → D 指数拟合</b>；V0–V4 主路径 15 周。
+    旧稿的“包 legacy / V3 合规”作废，以
+    <a href="../08-demo-first-revision.md">08</a> 与 <a href="../05-implementation-plan.md">05</a> 为准。
+  </div>
+
   <div class="ticker" aria-label="本页速览">
     <div class="ticker-item"><span>Forward</span>数据编码 → 模块 → 门控 → 池化 → 指数</div>
     <div class="ticker-item"><span>Backward</span>专家 actor · 主审 critic · 信赖域</div>
@@ -127,7 +135,7 @@
       <a href="#analogy">04 类比的边界</a>
       <a href="#scenes">05 双场景</a>
       <a href="#roadmap">06 V0–V4 路线</a>
-      <a href="#compliance">07 风险与合规</a>
+      <a href="#compliance">07 风险与边界</a>
       <div class="toc-title" style="margin-top:16px">SOURCE / 依据</div>
       <a href="../00-evaluation.md">00 · 评估</a>
       <a href="../README.md">v2 · 分支说明</a>
@@ -589,13 +597,13 @@ C = { δ : |δ<sub>j</sub>| ≤ c<sub>j</sub>(s),  θ + δ ∈ Θ<sub>feas</sub>
       <section class="section" id="scenes">
         <div class="section-hd">
           <span class="no">05</span>
-          <h2>双场景：同一张图，两套域</h2>
+          <h2>双场景：同一张图，两种模式</h2>
           <span class="en">TWO SCENARIOS</span>
         </div>
         <div class="prose">
           <p>
             同一组估值模块，两个场景：<b>monitoring（已上市监控）</b>与 <b>IPO（拟上市定价）</b>。
-            共享的是模块与类型契约，隔离的是数据域、证据域与合规域；输出天然不同——一个给诊断，一个给区间与约束检查。
+            共享模块与类型契约；<span class="mono">mode=monitoring|ipo</span> 只是行为/缓存口径，demo 不做数据域隔离。输出天然不同——一个给诊断，一个给区间与约束检查。
             （场景细节见 <a href="../04-use-cases.md">04 · 两个用途</a>）
           </p>
         </div>
@@ -603,15 +611,15 @@ C = { δ : |δ<sub>j</sub>| ≤ c<sub>j</sub>(s),  θ + δ ∈ Θ<sub>feas</sub>
         <div class="stack" style="margin-bottom:14px">
           <div class="layer">
             <span class="lk">SHARED · 6</span>
-            <span class="lv">共享模块<small>财报编码 / 可比 / DCF / 池化 / 评论家 / 审计：接口与类型契约相同，差别只在配置、数据域与池化规则。</small></span>
+            <span class="lv">共享模块<small>财报编码 / DCF / DCM / 可比 / 池化 / 评论家 / 审计：接口与类型契约相同，差别只在配置、方法与池化规则。</small></span>
           </div>
           <div class="layer">
-            <span class="lk">ISOLATED</span>
-            <span class="lv">数据域与证据域<small>监控用公开行情、财报、公告、舆情；IPO 用公开数据 + 保密材料（招股书、问询回复、发行方案），独立缓存、最小必要授权、脱敏、留痕与归档。</small></span>
+            <span class="lk">MODE · DEMO</span>
+            <span class="lv">公开/构造数据<small>监控用公开行情、财报、公告、舆情；IPO 用公开或构造公司样例。demo 不接真实保密材料，不做鉴权/脱敏/隔离；生产化另议。</small></span>
           </div>
           <div class="layer">
             <span class="lk">CONTEXT</span>
-            <span class="lv">输出与合规<small>监控给估值诊断与拟合点位；IPO 给估值区间与定价约束检查；两者都不输出单一决策，由人和机构按程序决策。</small></span>
+            <span class="lv">输出与边界<small>监控给估值诊断与拟合点位；IPO 给估值区间与定价约束检查；两者都不输出单一决策，由人和机构按程序决策。</small></span>
           </div>
         </div>
 
@@ -635,17 +643,17 @@ C = { δ : |δ<sub>j</sub>| ≤ c<sub>j</sub>(s),  θ + δ ∈ Θ<sub>feas</sub>
           </div>
 
           <div class="panel">
-            <div class="panel-hd"><span>IPO · 拟上市定价</span><span class="panel-code">RESTRICTED</span></div>
+            <div class="panel-hd"><span>IPO · 拟上市定价 Demo</span><span class="panel-code">PUBLIC DEMO</span></div>
             <div class="panel-bd">
               <ul class="lst">
-                <li><b>输入</b> · 监管通道的结构化财报、招股书要点、可比、行业参数、发行条款与募投；独立数据域、按项目授权、脱敏、全链留痕。</li>
+                <li><b>输入</b> · 公开/构造的公司样例：财报、业务、可比、行业参数、发行条款（可选）；<b>不接真实保密材料</b>。</li>
                 <li><b>输出</b> · 估值区间、方法分解、敏感性、可比证据链、IPO 定价约束检查；不输出单一“建议发行价”。</li>
                 <li><b>决策</b> · 定价委员会、保荐机构与主承销商按监管规则与内部程序决策；系统只是研究参考，不替代保荐核查与信息披露。</li>
-                <li><b>合规</b> · 公平披露、静默期、利益冲突、内幕信息隔离、模型风险、可解释与复核；所有输出标注“研究参考”。</li>
-                <li><b>状态</b> · V3 目标形态；当前尚无保密数据通道、权限系统与审计登录，不能直接承接真实 IPO 项目。</li>
+                <li><b>Demo 边界</b> · 不做鉴权、脱敏、数据域隔离、合规认证；只验证“同一组模块能否服务单公司定价”。</li>
+                <li><b>状态</b> · V4 demo 目标；当前只有公开/构造样例，不是生产系统。</li>
               </ul>
               <div class="card-tags">
-                <span class="tag">监管通道</span>
+                <span class="tag">公开/构造样例</span>
                 <span class="tag">区间定价</span>
                 <span class="tag warn">不输出单一发行价</span>
               </div>
@@ -655,54 +663,77 @@ C = { δ : |δ<sub>j</sub>| ≤ c<sub>j</sub>(s),  θ + δ ∈ Θ<sub>feas</sub>
 
         <div class="callout blue">
           <span class="h">一句话 · TWO MODES</span>
-          双场景不是“两个产品”，而是<b>同一张前向图 + 两套域约束</b>：共享模块降低维护成本，
-          隔离数据域与合规域守住边界；跨域适配只研究特征 / 先验迁移，不引入目标域标签。
+          双场景不是“两个产品”，而是<b>同一张前向图 + 两种模式</b>：共享模块降低维护成本，
+          <span class="mono">mode</span> 只作行为/缓存口径；demo 不做隔离，跨 listed/IPO 的迁移只研究特征与先验，不引入目标域标签。
         </div>
       </section>
 
-      <!-- ── 06 V0–V4 路线 ────────────────────────────────── -->
+      <!-- ── 06 四段式 + V0–V4 路线 ─────────────────────── -->
       <section class="section" id="roadmap">
         <div class="section-hd">
           <span class="no">06</span>
-          <h2>V0–V4 路线</h2>
-          <span class="en">ROADMAP</span>
+          <h2>四段式执行 + V0–V4 路线</h2>
+          <span class="en">A/B/C/D · 15 WEEKS</span>
         </div>
         <div class="prose">
           <p>
-            周数与验收按 <a href="../05-implementation-plan.md">05 · 实施计划</a>（草案）：V0 3 周、V1 5 周、V2 5 周、V3 7 周，
-            主路径 20 周；V4 是 6 周研究线，可在 V3 后段并行。00 §7 另给出 2–3 / 4–6 / 4–6 / 6–8 周的区间估算，本页取 05 的细化值。
-            原则是<b>先包住、再拆开、再校准、再复用</b>，最后才谈研究项。
+            执行架构按 <b>A 数据 → B 模型加载 → C 批处理/断点 → D 指数拟合</b> 重排；
+            模块常驻、批量跑完退出；尽量向量化。V0 不再包 legacy，而是从技能提取参照、在新包
+            <span class="mono">packages/valuation_net/</span> 完全重构。周次按
+            <a href="../05-implementation-plan.md">05</a>：V0 2 周、V1 3 周、V2 3 周、V3 4 周、V4 3 周，主路径 15 周；
+            V5 评论家/校准为研究线。
           </p>
         </div>
 
         <div class="panel">
-          <div class="panel-hd"><span>五个阶段 · 交付与验收</span><span class="panel-code">V0 → V4</span></div>
+          <div class="panel-hd"><span>A / B / C / D · 执行段</span><span class="panel-code">PIPELINE</span></div>
+          <div class="panel-bd">
+            <div class="flow compact">
+              <div class="flow-node">A 数据<small>源适配 / 宽表 / manifest</small></div>
+              <div class="flow-node">B 模型加载<small>注册 / 参数 / 常驻 worker</small></div>
+              <div class="flow-node">C 批处理<small>chunk / 向量化 / 断点</small></div>
+              <div class="flow-node">D 指数拟合<small>权重 / 三池 / 点位 / 报告</small></div>
+            </div>
+            <p class="tiny faint" style="margin:12px 0 0">
+              断点：manifest 记 <span class="mono">batch_id + as_of + module_version + params_hash + chunk_id</span>；
+              已完成 chunk 跳过，失败 chunk 重跑。Demo 不鉴权/不脱敏/不做数据域隔离。
+            </p>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:14px">
+          <div class="panel-hd"><span>V0–V4 · 交付与验收</span><span class="panel-code">ROADMAP</span></div>
           <div class="panel-bd">
             <div class="timeline">
               <div class="tl-item done">
-                <div class="tl-when">V0 · 3 周 · 先包住</div>
-                <div class="tl-title">LegacyValuationModule 接入图执行器</div>
-                <div class="tl-desc">交付：把 <span class="mono">input_builder → engine → stat → report</span> 包成一个 <span class="mono">LegacyValuationModule</span>，接入图执行器；冻结图协议 v1 与基线快照。<br>验收：同一 as_of 数值零回归（逐位 diff = 0，|Δ|≤1e-9）、<span class="mono">170</span> 用例全绿（05）。</div>
+                <div class="tl-when">V0 · 2 周 · 参照与骨架</div>
+                <div class="tl-title">提取 golden fixtures + 新包骨架</div>
+                <div class="tl-desc">从技能提取公式/参数/样例，生成 golden fixtures；建 <span class="mono">valuation_net</span> 的 ModuleSpec/Batch/ModuleOutput/GraphSpec；<b>不包 legacy</b>。</div>
               </div>
               <div class="tl-item">
-                <div class="tl-when">V1 · 5 周 · 再拆开</div>
-                <div class="tl-title">模块注册表 + DAG 执行器 + 三种池化 + trace</div>
-                <div class="tl-desc">交付：模块注册表、DAG 执行器、线性 / 对数 / 专家乘积池化、trace；DCF / 可比 / 舆情拆成独立模块（可先调用现有脚本）。<br>验收：sh50 线性池零回归（逐位）、三池可切换、区间单调且包含中枢；<span class="mono">ok</span> 券 trace 覆盖率 100%（05）。</div>
+                <div class="tl-when">V1 · 3 周 · 数据段 A</div>
+                <div class="tl-title">公开数据 → 宽表 → manifest</div>
+                <div class="tl-desc">源适配器、标准化宽表、缓存、缺失掩码；同 as_of 可复现。</div>
               </div>
               <div class="tl-item">
-                <div class="tl-when">V2 · 5 周 · 再校准</div>
-                <div class="tl-title">Agentic Critic 独立成层</div>
-                <div class="tl-desc">交付：参数存储、提案 / 审批 / 回写 / 回滚；合成目标与校准指标。<br>验收：台账可重放、apply 回滚零泄漏、次日默认取最新 approved、振荡检测可触发；L<sub>synth</sub> 四项可复算且不含价格项（05）。</div>
+                <div class="tl-when">V2 · 3 周 · 模型加载 B</div>
+                <div class="tl-title">DCF / DCM / 可比 / 舆情 / RIM + 门控 / 三池</div>
+                <div class="tl-desc">模块注册、参数包、常驻 worker、健康检查；换模块不改 A/C/D。</div>
               </div>
               <div class="tl-item">
-                <div class="tl-when">V3 · 7 周 · 再复用</div>
-                <div class="tl-title">双模式：monitoring / IPO</div>
-                <div class="tl-desc">交付：数据域与合规模块、IPO 输入 schema。<br>验收：IPO 定价约束检查全过、两域隔离测试双向通过、输出不出现单一“建议发行价”、monitoring 零回归（05）。</div>
+                <div class="tl-when">V3 · 4 周 · 批处理 C</div>
+                <div class="tl-title">向量化 chunk + 原子落盘 + 断点恢复</div>
+                <div class="tl-desc">杀进程后从最后完成 chunk 继续；单券失败隔离；全市场内存/时长基线。</div>
               </div>
               <div class="tl-item">
-                <div class="tl-when">V4 · 6 周研究线 · 可与 V3 后段并行</div>
-                <div class="tl-title">离散搜索、隐式微分与迁移</div>
-                <div class="tl-desc">交付：门控 / 池化的离散搜索、可微模块的隐式微分、跨市场迁移（研究）。<br>验收：实验可重放、每个结论有消融 / 对照、负结果如实记录；任何成果进生产需重走 V1–V3 门槛（05）。</div>
+                <div class="tl-when">V4 · 3 周 · 指数拟合 D</div>
+                <div class="tl-title">五指数 / 三情景 / 报告 + IPO demo</div>
+                <div class="tl-desc">点位贡献可追溯；IPO 单公司区间/敏感性/定价约束；不输出单一发行价。</div>
+              </div>
+              <div class="tl-item">
+                <div class="tl-when">V5 · 研究线</div>
+                <div class="tl-title">评论家 / 校准 / 缓存与同结论</div>
+                <div class="tl-desc">LLM 用 <span class="mono">temperature=0</span> + 固定 prompt + 缓存 + 3 次一致性，不依赖 seed。</div>
               </div>
             </div>
           </div>
@@ -711,16 +742,16 @@ C = { δ : |δ<sub>j</sub>| ≤ c<sub>j</sub>(s),  θ + δ ∈ Θ<sub>feas</sub>
         <div class="callout blue">
           <span class="h">低耦合原则 · DECOUPLING</span>
           模块只依赖 typed <span class="mono">Batch</span> / <span class="mono">ModuleOutput</span>；
-          不共享可变全局状态；所有参数版本化；失败隔离到单模块 / 单券；图可部分执行。
+          参数版本化；失败隔离到单模块/单券；换模块/口径只改图与参数包，不改 A/C/D。
         </div>
       </section>
 
-      <!-- ── 07 风险与合规 ────────────────────────────────── -->
+      <!-- ── 07 风险与边界 ────────────────────────────────── -->
       <section class="section" id="compliance">
         <div class="section-hd">
           <span class="no">07</span>
-          <h2>风险与合规</h2>
-          <span class="en">RISK &amp; COMPLIANCE</span>
+          <h2>风险与边界</h2>
+          <span class="en">RISK &amp; SCOPE</span>
         </div>
         <div class="prose">
           <p>
@@ -767,7 +798,7 @@ C = { δ : |δ<sub>j</sub>| ≤ c<sub>j</sub>(s),  θ + δ ∈ Θ<sub>feas</sub>
           <div class="panel">
             <div class="panel-hd"><span>03 · 内部一致性</span><span class="panel-code">CONSISTENCY</span></div>
             <div class="panel-bd">
-              <p class="card-p">同输入多 seed；股票 / 节点顺序、单位缩放、行业标签扰动；shadow 严格空操作；apply 回滚；8 项机检。</p>
+              <p class="card-p">同输入缓存/一致性；股票 / 节点顺序、单位缩放、行业标签扰动；shadow 严格空操作；apply 回滚；8 项机检。</p>
             </div>
           </div>
         </div>
@@ -785,8 +816,8 @@ C = { δ : |δ<sub>j</sub>| ≤ c<sub>j</sub>(s),  θ + δ ∈ Θ<sub>feas</sub>
                   <tr><td class="ink">合成目标过拟合</td><td>L<sub>synth</sub> 由评审偏好与规则构成</td><td>预注册、留出专家、对抗扰动、负结果、跨指数 / 跨期复现</td></tr>
                   <tr><td class="ink">参数不可识别</td><td>无真值；门控 / 权重 / 池化联合估计</td><td>先验、单调性、约束与敏感性分析</td></tr>
                   <tr><td class="ink">层数膨胀</td><td>“多加一层看起来更聪明”</td><td>每增加一层或模块，都要有单独的消融与证据</td></tr>
-                  <tr><td class="ink">数据保密与公平性</td><td>IPO 材料、内幕信息、静默期</td><td>数据域隔离、监管通道、访问控制、审计、利益冲突披露</td></tr>
-                  <tr><td class="ink">维护成本</td><td>模块与协议数量增长</td><td>V0 先包现有引擎为单模块、V1 再拆；每模块契约测试</td></tr>
+                  <tr><td class="ink">demo 被误读为生产</td><td>无真值、公开/构造数据、无鉴权</td><td>报告标注“研究/demo”；IPO 只输出区间；不接真实保密材料</td></tr>
+                  <tr><td class="ink">维护成本</td><td>模块与协议数量增长</td><td>V0 参照提取 + 新包骨架、完全重构；每模块契约测试</td></tr>
                   <tr><td class="ink">价格当标签的诱惑</td><td>市价 / 指数收盘看似“答案”</td><td>L<sub>synth</sub> 不含 |V−P|；价格只作诊断，不反向校正</td></tr>
                 </tbody>
               </table>
@@ -797,7 +828,7 @@ C = { δ : |δ<sub>j</sub>| ≤ c<sub>j</sub>(s),  θ + δ ∈ Θ<sub>feas</sub>
         <div class="callout red">
           <span class="h">本页边界 · SCOPE</span>
           本页是构想传播页，不是实施文档；数字与判断以 <a href="../00-evaluation.md">00 · 评估</a> 与
-          <a href="../../posters/CONTENT.md">CONTENT.md</a> 为准，合规细节见 <a href="../07-compliance.md">07 · 合规与治理</a>。
+          <a href="../../posters/CONTENT.md">CONTENT.md</a> 为准，demo 边界见 <a href="../07-compliance.md">07 · Demo 边界</a> 与 <a href="../08-demo-first-revision.md">08 · 修订</a>。
           分支 <span class="mono">design-valuation-net</span>
           为构想 / 原型，<b>不进入生产</b>，合并前需组内评审；所有输出标注“研究参考”，不构成投资建议。
         </div>

@@ -16,7 +16,7 @@
 - **输入/输出**使用 [02](02-architecture.md) §2.1 的类型名（`FinancialsBatch`、`MethodValue` 等），不是随意 dict。
 - 每个模块的「验收」都默认包含三条共性门槛：契约测试（端口/类型/约束）、失败隔离（单格失败不阻断整批）、可复算（同输入同参数同 as_of 输出稳定）。个别模块另有专项门槛。
 
-## 1. 模块总览（42 个）
+## 1. 模块总览（43 个）
 
 | # | ID | 名称 | 类型 | 状态 | 层/组 |
 |---|---|---|---|---|---|
@@ -29,6 +29,7 @@
 | 7 | `enc.pit_quality` | PIT/质量掩码 | encoder | new | 数据/编码 |
 | 7a | `agent.evidence` | 前置采样/证据智能体 | encoder | new | 数据/编码 |
 | 8 | `val.dcf` | DCF 现金流贴现 | valuation | wrap | 估值 |
+| 8a | `val.dcm` | 折现/资本化模型（DCM） | valuation | new | 估值 |
 | 9 | `val.comparable` | 可比法（PE/PS/EV-EBITDA/PB；PEG 护栏） | valuation | existing | 估值 |
 | 10 | `val.sentiment` | 舆情修正法 | valuation | existing | 估值 |
 | 11 | `val.rim` | 剩余收益模型 | valuation | wrap | 估值 |
@@ -61,9 +62,9 @@
 | 38 | `entry.monitor` | 指数监控入口 | entry | existing | 入口/输出 |
 | 39 | `entry.ipo` | 单公司 IPO 入口 | entry | new | 入口/输出 |
 | 40 | `out.report` | 报告生成与机检 | report | existing | 入口/输出 |
-| 41 | `out.compliance` | 定价约束/合规输出 | report | new | 入口/输出 |
+| 41 | `out.compliance` | 定价约束检查（demo） | report | new | 入口/输出 |
 
-**状态统计**：existing 13、wrap 15、new 13、proposed 1。即：**28 个模块的「算法本体」在仓库里已有实现**（13 个生产在用、15 个待包装），13 个要新写（含前置证据智能体），1 个纯研究模块（另有 1 个既有模块的研究子项）。这个比例决定了 [05](05-implementation-plan.md) 的 V0–V1 策略：**先包再拆，先图后搜**。
+**状态统计**：existing 13、wrap 15、new 14、proposed 1。即：**28 个模块的「算法本体」在仓库里已有实现**（13 个生产在用、15 个待包装），14 个要新写（含前置证据智能体与 DCM），1 个纯研究模块（另有 1 个既有模块的研究子项）。这个比例决定了 [05](05-implementation-plan.md) 的 V0–V1 策略：**先包再拆，先图后搜**。
 
 ---
 
@@ -153,6 +154,15 @@
 - **状态**：wrap（引擎 `dcf_valuation` 已实现且批跑在用；需抽为纯函数并输出统一 `ModuleOutput`）
 - **代码**：`valuation_engine.py:4075`、`:3101 growth_model_schedule`、`:847 wacc_model`
 - **验收**：11 组 examples + 170 用例数值零回归（|Δ|≤1e-9）；TV 极端档用例禁出单点；失败只掩码本格
+
+### 8a. `val.dcm` · 折现/资本化模型族（DCM）
+- **类型**：valuation
+- **输入**：`FinancialsBatch`（利润/股利/现金流）、`CostBatch`（折现率 r）、增长假设（g1、g∞）、期限/资本化口径
+- **输出**：`MethodValue`（中枢、区间、显式期/终值分解、敏感性）、`evidence[]`
+- **约束**：`g∞ < r`；显式期与终值口径显式声明；负现金流/负利润时不得静默套用；DCM 的具体公式口径（股利资本化/现金流资本化/DCF 变体）在实现前确认，**不与 DCF 合并**
+- **状态**：new（现有技能有 DCF/DDM/RIM 子项，但没有独立 DCM 模块；按用户口径作为可替换插槽新写）
+- **代码**：参照 `valuation_engine.py` 的折现/终值/增长函数；新写 `val.dcm`，不 import 旧引擎
+- **验收**：与 DCF 同输入的口径差异可解释；换 DCM 口径只改参数包/图，不改数据段与批处理段；`g∞<r` 与正值约束有测试
 
 ### 9. `val.comparable` · 可比法（PE/PS/EV-EBITDA/PB；PEG 护栏）
 - **类型**：valuation
@@ -459,14 +469,14 @@
 - **代码**：`skills/.../report_generator.py`、`html_check.py`、`packages/batch/report_theme.py`、`apply_view.py`
 - **验收**：报告与现网逐项一致；机检通过；主题双模式；apply 区块正确
 
-### 41. `out.compliance` · 定价约束/合规输出
+### 41. `out.compliance` · 定价约束检查（demo）
 - **类型**：report
 - **输入**：`Valuation`、`Interval`、`Issuance`、`IpoConstraints`
 - **输出**：`ComplianceBlock`（发行 PE/PS 偏离、募资/流通比、板块条件、免责声明、人工复核清单）
 - **约束**：不输出单一建议发行价；不输出交易信号；偏离阈值按 `ipo_rules_checklist.md`；输出标「研究参考」
-- **状态**：new（引擎 `ipo_check` 是单点检查，缺独立的合规输出模块与领域隔离）
+- **状态**：new（引擎 `ipo_check` 是单点检查，缺独立输出模块；demo 不做领域隔离）
 - **代码**：`valuation_engine.py:4795 ipo_check`、`skills/.../assets/ipo_rules_checklist.md`
-- **验收**：ipo.yaml `checks` 全过；禁用词/单点发行价检查；合规声明必含；人工复核清单可导出
+- **验收**：ipo.yaml `checks` 全过；禁用词/单点发行价检查；研究声明必含；人工复核清单可导出
 
 ---
 
@@ -478,6 +488,6 @@
 
 **论文扩展**：`ens.dropout`（1 个独立模块），以及 `comb.attention` 的可学习 softmax 版本（既有模块内的研究子项，不计入状态统计；现有实现只到静态/退化注意力）。
 
-**与技能包 8 模块拆分 TODO（`docs/spec/05-skill-package.md` §7）的关系**：本文的 42 个模块比技能拆分的 8 个更细（数据/财务、画像、可比池、DCF、可比法、舆情、合成、统计/报告）。映射：技能 1→`enc.financials`；2→`enc.industry`+`enc.lifecycle`+`gate.layer0`；3→`enc.peers`+`comb.attention`；4→`val.dcf`+`enc.cost_capital`；5→`val.comparable`+`val.quality_adjust`；6→`enc.sentiment`+`val.sentiment`；7→`pool.*`+`unc.interval`；8→`out.report`。技能拆分仍按「先接口、后实现」推进，不因本目录而提前重构单体技能。
+**与技能包 8 模块拆分 TODO（`docs/spec/05-skill-package.md` §7）的关系**：本文的 43 个模块比技能拆分的 8 个更细（数据/财务、画像、可比池、DCF、可比法、舆情、合成、统计/报告）。映射：技能 1→`enc.financials`；2→`enc.industry`+`enc.lifecycle`+`gate.layer0`；3→`enc.peers`+`comb.attention`；4→`val.dcf`+`enc.cost_capital`；5→`val.comparable`+`val.quality_adjust`；6→`enc.sentiment`+`val.sentiment`；7→`pool.*`+`unc.interval`；8→`out.report`。技能拆分仍按「先接口、后实现」推进，不因本目录而提前重构单体技能。
 
 **不在本目录里的东西**：`stat_validation.py` 的 MC/弹性算法归 `unc.interval` 的实现细节；`report_generator.py` 的 11 段内容归 `out.report`；数据源客户端（`dsources.py`/`fetch_data.py`）不是图节点，是 `enc.*` 的依赖；`pipeline._summary_html`、`_archive_reports` 属故事层，归 `out.report`。
