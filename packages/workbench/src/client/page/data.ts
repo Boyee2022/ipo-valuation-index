@@ -2,6 +2,12 @@
 
 import type { AgentMode } from './api'
 
+/** 示例口径的逐券值（真实批跑结果走 JobRow）；仅保留价格与中枢，不再承载第二套模型。 */
+export interface ValuationResult {
+  price: number
+  chen: number
+}
+
 export interface BatchParams {
   sentiment: number
   dcf: number

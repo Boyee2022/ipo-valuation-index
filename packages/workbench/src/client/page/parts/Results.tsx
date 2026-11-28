@@ -321,7 +321,7 @@ export function Results(props: {
         <ReportModal
           name={sel.name}
           i={sel.idx}
-          r={{ price: sel.close ?? 0, chen: sel.per_share ?? 0, shi: 0 }}
+          r={{ price: sel.close ?? 0, chen: sel.per_share ?? 0 }}
           w={sel.weight ?? 0}
           real={sel}
           jobId={job.id}
